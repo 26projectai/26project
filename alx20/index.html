@@ -52,8 +52,10 @@
   /* animated heart cursor + trail (desktop) */
   .heart-cursor {
     position: fixed; left: 0; top: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px;
-    pointer-events: none; z-index: 30; will-change: transform; transition: transform 0.07s ease-out;
+    pointer-events: none; z-index: 1002; will-change: transform; transition: transform 0.07s ease-out;
   }
+  /* on desktop the heart replaces the system pointer everywhere */
+  .heart-cursor-on, .heart-cursor-on * { cursor: none !important; }
   .heart-cursor svg {
     width: 100%; height: 100%; display: block; transform-origin: center;
     filter: drop-shadow(0 0 7px rgba(255,70,130,0.85));
@@ -63,7 +65,7 @@
   @keyframes curBeat { 0%,100% { transform: scale(1); } 22% { transform: scale(1.22); } 38% { transform: scale(1.04); } 56% { transform: scale(1.14); } }
   .trail {
     position: fixed; left: 0; top: 0; width: 15px; height: 15px; margin: -7px 0 0 -7px;
-    pointer-events: none; z-index: 29; will-change: transform, opacity;
+    pointer-events: none; z-index: 1000; will-change: transform, opacity;
     animation: trailFade 0.85s ease-out forwards;
   }
   .trail svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(255,90,150,0.7)); }
@@ -74,7 +76,7 @@
   /* soft glow halo following the cursor */
   .cursor-glow {
     position: fixed; left: 0; top: 0; width: 72px; height: 72px; margin: -36px 0 0 -36px;
-    pointer-events: none; z-index: 28; will-change: transform; transition: transform 0.1s ease-out;
+    pointer-events: none; z-index: 998; will-change: transform; transition: transform 0.1s ease-out;
   }
   .cursor-glow span {
     display: block; width: 100%; height: 100%; border-radius: 50%; mix-blend-mode: screen;
@@ -85,7 +87,7 @@
   /* twinkling sparkles */
   .spark {
     position: fixed; left: 0; top: 0; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
-    pointer-events: none; z-index: 29; animation: sparkFade 0.8s ease-out forwards;
+    pointer-events: none; z-index: 1000; animation: sparkFade 0.8s ease-out forwards;
   }
   .spark svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 4px rgba(255,220,150,0.9)); }
   @keyframes sparkFade {
@@ -96,7 +98,7 @@
   /* click burst */
   .burst {
     position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px;
-    pointer-events: none; z-index: 31; animation: burstOut 0.7s ease-out forwards;
+    pointer-events: none; z-index: 1003; animation: burstOut 0.7s ease-out forwards;
   }
   .burst svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(255,90,150,0.8)); }
   @keyframes burstOut {
@@ -106,13 +108,13 @@
   /* mini-hearts orbiting the cursor */
   .orbit-heart {
     position: fixed; left: 0; top: 0; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px;
-    pointer-events: none; z-index: 30; will-change: transform;
+    pointer-events: none; z-index: 1001; will-change: transform;
   }
   .orbit-heart svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 4px rgba(255,90,150,0.8)); }
   /* click ripple ring */
   .ripple {
     position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
-    border: 2px solid rgba(255,120,170,0.8); pointer-events: none; z-index: 28;
+    border: 2px solid rgba(255,120,170,0.8); pointer-events: none; z-index: 999;
     animation: rippleOut 0.62s ease-out forwards;
   }
   @keyframes rippleOut { 0% { opacity: 0.85; transform: scale(0.3); } 100% { opacity: 0; transform: scale(3.4); } }
@@ -1074,7 +1076,7 @@
       const curHeart = "<svg viewBox='0 0 32 32'><defs><radialGradient id='curGrad' cx='42%' cy='34%' r='68%'><stop offset='0%' stop-color='#fff0f6'/><stop offset='45%' stop-color='#ff7aa6'/><stop offset='100%' stop-color='#ff2d6f'/></radialGradient></defs><path d='M16 28C3.5 18 3.5 7 11 7c3.1 0 5 3 5 3s1.9-3 5-3c7.5 0 7.5 11-5 21z' fill='url(#curGrad)' stroke='#fff' stroke-width='1.3' stroke-linejoin='round'/></svg>";
       const trailHeart = "<svg viewBox='0 0 32 32'><path d='M16 28C3.5 18 3.5 7 11 7c3.1 0 5 3 5 3s1.9-3 5-3c7.5 0 7.5 11-5 21z' fill='#ff6a99'/></svg>";
       const sparkSVG = "<svg viewBox='0 0 24 24'><path d='M12 0l2.2 9.8L24 12l-9.8 2.2L12 24l-2.2-9.8L0 12l9.8-2.2z' fill='#fff3c4'/></svg>";
-      renderer.domElement.style.cursor = 'none';
+      document.documentElement.classList.add('heart-cursor-on');
 
       const glow = document.createElement('div');
       glow.className = 'cursor-glow';
