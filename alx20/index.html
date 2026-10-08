@@ -385,6 +385,20 @@
   .reason .sticker { width: 42px; height: 42px; top: -20px; left: -12px; }
   .lovenote .card .sticker { width: 70px; height: 70px; top: -44px; left: 50%; margin-left: -35px; }
 
+  /* stickers scattered around the heart screen */
+  .float-stickers { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  .float-stickers .sticker { width: 50px; height: 50px; animation: floaty 5.5s ease-in-out infinite; animation-delay: var(--dl, 0s); }
+  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(var(--rot,0deg)); } 50% { transform: translateY(-10px) rotate(calc(var(--rot,0deg) + 6deg)); } }
+  @media (max-width: 520px) { .float-stickers .sticker { width: 38px; height: 38px; } }
+  #intro .wrap > .sticker { width: 58px; height: 58px; z-index: 3; }
+  #intro .wrap > .sticker.a { top: -22px; left: -18px; }
+  #intro .wrap > .sticker.b { bottom: -18px; right: -16px; }
+  .letter .paper > .sticker.br { width: 46px; height: 46px; bottom: -16px; right: -12px; top: auto; left: auto; }
+  .letter .paper > .sticker.ml { width: 40px; height: 40px; top: 46%; left: -18px; }
+  .letter .paper > .sticker.mr { width: 40px; height: 40px; top: 30%; right: -16px; }
+  .sec h3 .sticker { position: relative; display: inline-block; vertical-align: middle; width: 26px; height: 26px; margin: -6px 6px 0; }
+  .stats div { position: relative; }
+  .stats div .sticker { width: 24px; height: 24px; top: -10px; right: -6px; }
   .next { margin-top: 10px; font-size: 15px; }
   .next b { color: #b3164d; }
 </style>
@@ -458,11 +472,57 @@
         <ellipse cx="60" cy="28" rx="9.5" ry="12.5" fill="#ff7aa6" transform="rotate(6 60 28)"/>
         <ellipse cx="78" cy="44" rx="9.5" ry="12" fill="#ff7aa6" transform="rotate(20 78 44)"/>
       </symbol>
+      <!-- shiba pup -->
+      <symbol id="st-shiba" viewBox="0 0 100 100">
+        <path d="M16 50 L20 12 L44 30 Z" fill="#e8913f"/><path d="M84 50 L80 12 L56 30 Z" fill="#e8913f"/>
+        <path d="M23 40 L25 22 L37 31 Z" fill="#fff3e3"/><path d="M77 40 L75 22 L63 31 Z" fill="#fff3e3"/>
+        <ellipse cx="50" cy="58" rx="37" ry="31" fill="#f0a24f"/>
+        <path d="M14 62 C20 90 80 90 86 62 C78 70 64 66 58 58 L50 62 L42 58 C36 66 22 70 14 62 Z" fill="#fff6ea"/>
+        <ellipse cx="36" cy="40" rx="4" ry="2.6" fill="#fff3e3"/><ellipse cx="64" cy="40" rx="4" ry="2.6" fill="#fff3e3"/>
+        <ellipse cx="36" cy="52" rx="4.6" ry="5.6" fill="#2f1d12"/><ellipse cx="64" cy="52" rx="4.6" ry="5.6" fill="#2f1d12"/>
+        <circle cx="37.6" cy="49.8" r="1.7" fill="#fff"/><circle cx="65.6" cy="49.8" r="1.7" fill="#fff"/>
+        <ellipse cx="50" cy="64" rx="6" ry="4.2" fill="#2f1d12"/>
+        <path d="M43 70 q7 6 14 0" stroke="#2f1d12" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="27" cy="66" rx="6" ry="3.6" fill="#ff8fab" opacity=".55"/><ellipse cx="73" cy="66" rx="6" ry="3.6" fill="#ff8fab" opacity=".55"/>
+      </symbol>
+      <!-- black kitty -->
+      <symbol id="st-blackcat" viewBox="0 0 100 100">
+        <path d="M18 48 L22 10 L46 30 Z" fill="#2e2a36"/><path d="M82 48 L78 10 L54 30 Z" fill="#2e2a36"/>
+        <path d="M24 38 L26 20 L38 31 Z" fill="#ff9db8"/><path d="M76 38 L74 20 L62 31 Z" fill="#ff9db8"/>
+        <ellipse cx="50" cy="58" rx="38" ry="32" fill="#36313f"/>
+        <ellipse cx="35" cy="55" rx="7.5" ry="8.5" fill="#d9f27a"/><ellipse cx="65" cy="55" rx="7.5" ry="8.5" fill="#d9f27a"/>
+        <ellipse cx="35" cy="56" rx="3" ry="6.5" fill="#1b1820"/><ellipse cx="65" cy="56" rx="3" ry="6.5" fill="#1b1820"/>
+        <circle cx="37.5" cy="51.5" r="2" fill="#fff"/><circle cx="67.5" cy="51.5" r="2" fill="#fff"/>
+        <path d="M46.5 66 h7 l-3.5 4 z" fill="#ff8fab"/>
+        <path d="M43 72 q3.5 4 7 0 q3.5 4 7 0" stroke="#f3e8f0" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="24" cy="68" rx="6.5" ry="4" fill="#ff8fab" opacity=".55"/><ellipse cx="76" cy="68" rx="6.5" ry="4" fill="#ff8fab" opacity=".55"/>
+      </symbol>
+      <!-- yarn ball -->
+      <symbol id="st-yarn" viewBox="0 0 100 100">
+        <path d="M70 76 C82 86 92 80 90 92" stroke="#ff7aa6" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+        <circle cx="48" cy="50" r="34" fill="#ff8fb4"/>
+        <path d="M20 36 C40 46 60 30 78 40 M16 54 C36 66 62 46 82 58 M24 74 C42 80 60 66 74 74" stroke="#e85a8c" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M34 20 C28 40 34 64 46 82 M58 18 C66 40 64 62 58 82" stroke="#ffc2d6" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </symbol>
+      <!-- fish treat -->
+      <symbol id="st-fish" viewBox="0 0 100 100">
+        <path d="M12 50 C26 26 58 24 74 44 L90 30 L88 70 L74 56 C58 76 26 74 12 50 Z" fill="#8fc3ff"/>
+        <path d="M30 40 q-4 10 0 20 M40 36 q-5 14 0 28" stroke="#5f9be6" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <circle cx="22" cy="46" r="3.4" fill="#22304a"/><circle cx="23" cy="45" r="1.1" fill="#fff"/>
+      </symbol>
+      <!-- puffy heart -->
+      <symbol id="st-heart" viewBox="0 0 100 100">
+        <path d="M50 88 C14 64 8 40 22 26 C34 14 46 22 50 32 C54 22 66 14 78 26 C92 40 86 64 50 88 Z" fill="#ff5c93"/>
+        <path d="M28 34 q4 -8 12 -6" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".75"/>
+        <circle cx="44" cy="30" r="2.6" fill="#fff" opacity=".75"/>
+      </symbol>
     </defs>
   </svg>
 
   <div id="intro">
     <div class="wrap">
+      <span class="sticker wob a" style="--rot:-14deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-cat"/></svg></span>
+      <span class="sticker wob b" style="--rot:12deg;--dl:1.2s;" aria-hidden="true"><svg class="stk"><use href="#st-dog"/></svg></span>
       <div class="card">
         <svg class='hydra' viewBox='0 0 120 104' xmlns='http://www.w3.org/2000/svg'><defs><symbol id='fl' viewBox='-10 -10 20 20'><circle cx='0' cy='-5' r='4.3' fill='currentColor'/><circle cx='5' cy='0' r='4.3' fill='currentColor'/><circle cx='0' cy='5' r='4.3' fill='currentColor'/><circle cx='-5' cy='0' r='4.3' fill='currentColor'/><circle cx='0' cy='0' r='1.8' fill='#fdf3a8'/></symbol></defs><path d='M60 70 C58 84 54 92 46 100' stroke='#3f7d5a' stroke-width='3.4' fill='none' stroke-linecap='round'/><path d='M52 86 C40 82 33 86 30 96 C42 98 50 94 52 86 Z' fill='#3f8f60'/><path d='M63 80 C74 78 82 83 84 93 C72 94 64 89 63 80 Z' fill='#357a50'/><use href='#fl' x='51.6' y='35.6' width='16.8' height='16.8' style='color:#b0a9f0'/><use href='#fl' x='65.4' y='42.1' width='15.6' height='15.6' style='color:#9db8ff'/><use href='#fl' x='52.2' y='48.2' width='16.3' height='16.3' style='color:#a9c4ff'/><use href='#fl' x='40.0' y='43.2' width='14.5' height='14.5' style='color:#a9c4ff'/><use href='#fl' x='38.5' y='29.8' width='16.6' height='16.6' style='color:#8fb0ff'/><use href='#fl' x='53.1' y='25.1' width='13.1' height='13.1' style='color:#b7c9ff'/><use href='#fl' x='65.5' y='30.3' width='14.7' height='14.7' style='color:#9db8ff'/><use href='#fl' x='68.4' y='56.6' width='13.4' height='13.4' style='color:#b7c9ff'/><use href='#fl' x='49.8' y='60.2' width='13.2' height='13.2' style='color:#9db8ff'/><use href='#fl' x='31.0' y='51.2' width='16.8' height='16.8' style='color:#a9c4ff'/><use href='#fl' x='24.4' y='37.4' width='15.3' height='15.3' style='color:#8fb0ff'/><use href='#fl' x='31.1' y='23.5' width='13.2' height='13.2' style='color:#9db8ff'/><use href='#fl' x='47.2' y='15.0' width='13.2' height='13.2' style='color:#b7c9ff'/><use href='#fl' x='65.8' y='16.5' width='14.2' height='14.2' style='color:#7d9bf2'/><use href='#fl' x='78.2' y='27.6' width='15.2' height='15.2' style='color:#7d9bf2'/><use href='#fl' x='79.1' y='43.2' width='15.2' height='15.2' style='color:#6f8fe8'/><use href='#fl' x='56.1' y='70.0' width='13.4' height='13.4' style='color:#7d9bf2'/><use href='#fl' x='23.3' y='59.0' width='14.5' height='14.5' style='color:#b7c9ff'/><use href='#fl' x='12.8' y='31.4' width='15.3' height='15.3' style='color:#a9c4ff'/><use href='#fl' x='32.6' y='8.0' width='15.0' height='15.0' style='color:#b7c9ff'/><use href='#fl' x='66.7' y='5.5' width='16.1' height='16.1' style='color:#9db8ff'/><use href='#fl' x='90.6' y='26.8' width='15.3' height='15.3' style='color:#7f9ff0'/><use href='#fl' x='85.7' y='55.4' width='14.4' height='14.4' style='color:#7f9ff0'/></svg>
         <div class="kicker">A little something</div>
@@ -485,6 +545,7 @@
     </div>
   </div>
   <div class="vignette"></div>
+  <div class="float-stickers" aria-hidden="true"><span class="sticker  " style="--rot:-10deg;--dl:0s;left:4%;top:17%" aria-hidden="true"><svg class="stk"><use href="#st-shiba"/></svg></span><span class="sticker  " style="--rot:12deg;--dl:1.1s;right:5%;top:21%" aria-hidden="true"><svg class="stk"><use href="#st-yarn"/></svg></span><span class="sticker  " style="--rot:8deg;--dl:2.2s;left:3%;top:56%" aria-hidden="true"><svg class="stk"><use href="#st-blackcat"/></svg></span><span class="sticker  " style="--rot:-8deg;--dl:0.6s;right:4%;top:52%" aria-hidden="true"><svg class="stk"><use href="#st-heart"/></svg></span><span class="sticker  " style="--rot:-16deg;--dl:1.7s;left:12%;top:76%" aria-hidden="true"><svg class="stk"><use href="#st-fish"/></svg></span><span class="sticker  " style="--rot:14deg;--dl:2.8s;right:14%;top:73%" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span></div>
   <div class="together" aria-live="off">
     <div class="since">Together since 9 August 2026</div>
     <div class="count"><span class="pair"><span class="sticker wob l" style="--rot:-10deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-cat"/></svg></span><span id="togetherCount">2 months together</span><span class="sticker wob r" style="--rot:10deg;--dl:1.6s" aria-hidden="true"><svg class="stk"><use href="#st-dog"/></svg></span></span></div>
@@ -496,6 +557,9 @@
     <div class="paper">
       <span class="sticker wob top" style="--rot:-4deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-catheart"/></svg></span>
       <span class="sticker  tl" style="--rot:-18deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span>
+      <span class="sticker wob br" style="--rot:10deg;--dl:0.8s;" aria-hidden="true"><svg class="stk"><use href="#st-shiba"/></svg></span>
+      <span class="sticker wob ml" style="--rot:-10deg;--dl:1.5s;" aria-hidden="true"><svg class="stk"><use href="#st-heart"/></svg></span>
+      <span class="sticker wob mr" style="--rot:14deg;--dl:0.3s;" aria-hidden="true"><svg class="stk"><use href="#st-fish"/></svg></span>
       <div class="x" id="letterX" role="button" aria-label="Close">&times;</div>
       <h2>Happy 2 Months,<br>my love</h2>
       <div class="sub">9 Aug &rarr; 9 Oct 2026</div>
@@ -508,24 +572,24 @@
 
       <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
-        <h3>Our photos &middot; tap to open</h3>
+        <h3><span class="sticker  " style="--rot:-8deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-blackcat"/></svg></span>Our photos &middot; tap to open<span class="sticker  " style="--rot:8deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-yarn"/></svg></span></h3>
         <div class="gallery" id="gallery"></div>
       </div>
 
       <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
-        <h3>Us, so far</h3>
+        <h3><span class="sticker  " style="--rot:-8deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-dog"/></svg></span>Us, so far<span class="sticker  " style="--rot:8deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-cat"/></svg></span></h3>
         <div class="stats">
-          <div><b id="stDays">61</b><span>days</span></div>
+          <div><span class="sticker  " style="--rot:14deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span><b id="stDays">61</b><span>days</span></div>
           <div><b id="stHours">1464</b><span>hours</span></div>
-          <div><b id="stMins">87840</b><span>minutes</span></div>
+          <div><span class="sticker  " style="--rot:-10deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-heart"/></svg></span><b id="stMins">87840</b><span>minutes</span></div>
         </div>
         <p class="next" id="nextMonth"></p>
       </div>
 
       <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
-        <h3>Why I love you &middot; tap the card</h3>
+        <h3>Why I love you &middot; tap the card<span class="sticker  " style="--rot:10deg;--dl:0s;" aria-hidden="true"><svg class="stk"><use href="#st-heart"/></svg></span></h3>
         <div class="reason" id="reason" role="button"><span class="sticker" style="--rot:-12deg" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span>Tap me &hearts;</div>
         <div class="reason-n" id="reasonN"></div>
       </div>
@@ -1399,8 +1463,8 @@
       const PHOTOS = [
         { src: 'photos/1.jpg', caption: 'Elevator selfie, pout included', pos: '50% 35%' },
         { src: 'photos/2.jpg', caption: 'Tiramisu gets a photoshoot first', pos: '50% 30%' },
-        { src: 'photos/3.jpg', caption: 'Choosing cake is serious business', pos: '40% 50%' },
-        { src: 'photos/4.jpg', caption: 'Cheek to cheek', pos: '50% 40%' },
+        { src: 'photos/3.jpg', caption: 'Tiramisu is serious business', pos: '40% 50%' },
+        { src: 'photos/4.jpg', caption: 'Holding my favourite face', pos: '50% 40%' },
         { src: 'photos/5.jpg', caption: 'Hotpot dates with you', pos: '50% 45%' }
       ];
       const gallery = document.getElementById('gallery');
