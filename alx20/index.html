@@ -251,25 +251,6 @@
   @keyframes fade { to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .label .hint { animation: none; opacity: 1; } }
 
-  /* live "together" counter at the top */
-  .together {
-    position: fixed; left: 0; right: 0; top: max(22px, env(safe-area-inset-top)); z-index: 5;
-    text-align: center; pointer-events: none; padding: 0 16px;
-    opacity: 0; animation: fade 1.2s ease 0.4s forwards;
-  }
-  .together .since {
-    font-family: system-ui, -apple-system, sans-serif; font-size: 10.5px; letter-spacing: 0.34em;
-    text-transform: uppercase; color: var(--ink-soft);
-  }
-  .together .count {
-    margin-top: 6px; font-family: 'Dancing Script', cursive; font-weight: 700;
-    font-size: clamp(22px, 5.4vw, 30px); color: #ffe9f1; text-shadow: 0 0 20px rgba(255,80,140,0.55);
-  }
-  .together .clock {
-    margin-top: 2px; font-family: system-ui, -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.12em;
-    color: var(--ink-soft); font-variant-numeric: tabular-nums;
-  }
-
   /* letter button (bottom-left, mirrors the music buttons) */
   .letter-btn {
     position: fixed; left: 20px; bottom: 22px; z-index: 25;
@@ -527,12 +508,6 @@
     </div>
   </div>
   <div class="vignette"></div>
-  <div class="together" aria-live="off">
-    <div class="since">Together since 9 August 2026</div>
-    <div class="count"><span id="togetherCount">2 months together</span></div>
-    <div class="clock" id="togetherClock"></div>
-  </div>
-
   <button class="letter-btn" id="letterBtn" aria-label="Open your letter"><span class="env">&#128140;</span>Our 2 months</button>
   <div class="letter" id="letter" role="dialog" aria-label="A letter for you">
     <div class="paper">
@@ -1380,10 +1355,7 @@
         return Math.max(0, m);
       }
       function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, d.getDate()); }
-      const pad = n => String(n).padStart(2, '0');
 
-      const elCount = document.getElementById('togetherCount');
-      const elClock = document.getElementById('togetherClock');
       const elDays = document.getElementById('stDays');
       const elHours = document.getElementById('stHours');
       const elMins = document.getElementById('stMins');
@@ -1393,15 +1365,6 @@
         const now = new Date();
         const ms = Math.max(0, now - START);
         const m = monthsSince(now);
-        const sinceMonth = Math.floor((now - addMonths(START, m)) / DAY);
-        const s = Math.floor(ms / 1000);
-
-        let text;
-        if (m === 0) text = sinceMonth + ' days together';
-        else text = m + ' month' + (m > 1 ? 's' : '') + (sinceMonth ? ' & ' + sinceMonth + ' day' + (sinceMonth > 1 ? 's' : '') : '') + ' together';
-        elCount.textContent = text;
-        elClock.textContent = Math.floor(s / 86400) + 'd ' + pad(Math.floor(s % 86400 / 3600)) + 'h ' +
-          pad(Math.floor(s % 3600 / 60)) + 'm ' + pad(s % 60) + 's';
 
         elDays.textContent = Math.floor(ms / DAY).toLocaleString();
         elHours.textContent = Math.floor(ms / 3600000).toLocaleString();
