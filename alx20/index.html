@@ -335,6 +335,7 @@
     box-shadow: 0 6px 18px rgba(120,20,60,0.18); transform: rotate(var(--tilt, 0deg));
     transition: transform 0.25s ease;
   }
+  .polaroid:last-child:nth-child(odd) { grid-column: 1 / -1; width: 62%; justify-self: center; }
   .polaroid:hover { transform: rotate(0deg) scale(1.03); }
   .polaroid img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; background: #f6dbe4; }
   .polaroid figcaption { margin-top: 6px; font-family: 'Dancing Script', cursive; font-weight: 700; font-size: 17px; line-height: 1.2; color: #8a1f45; text-align: center; }
@@ -1396,12 +1397,11 @@
       // photo gallery — put the pictures in a "photos" folder next to this file.
       // Any photo that's missing is simply skipped.
       const PHOTOS = [
-        { src: 'photos/1.jpg', caption: 'Our first date' },
-        { src: 'photos/2.jpg', caption: 'My favourite smile' },
-        { src: 'photos/3.jpg', caption: 'Us' },
-        { src: 'photos/4.jpg', caption: 'Month one' },
-        { src: 'photos/5.jpg', caption: 'You & me' },
-        { src: 'photos/6.jpg', caption: 'Month two' }
+        { src: 'photos/1.jpg', caption: 'Elevator selfie, pout included', pos: '50% 35%' },
+        { src: 'photos/2.jpg', caption: 'Tiramisu gets a photoshoot first', pos: '50% 30%' },
+        { src: 'photos/3.jpg', caption: 'Choosing cake is serious business', pos: '40% 50%' },
+        { src: 'photos/4.jpg', caption: 'Cheek to cheek', pos: '50% 40%' },
+        { src: 'photos/5.jpg', caption: 'Hotpot dates with you', pos: '50% 45%' }
       ];
       const gallery = document.getElementById('gallery');
       const lightbox = document.getElementById('lightbox');
@@ -1415,6 +1415,7 @@
         fig.hidden = true;
         const img = document.createElement('img');
         img.alt = ph.caption;
+        if (ph.pos) img.style.objectPosition = ph.pos;
         const cap = document.createElement('figcaption'); cap.textContent = ph.caption;
         const sym = ['cat', 'paw', 'dog', 'bone', 'catheart', 'sleepy'][i % 6];
         const stk = document.createElement('span');
