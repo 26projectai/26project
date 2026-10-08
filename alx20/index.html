@@ -345,11 +345,121 @@
   .lightbox.show { opacity: 1; pointer-events: auto; }
   .lightbox img { max-width: 100%; max-height: 78vh; border-radius: 10px; box-shadow: 0 20px 80px rgba(255,40,110,0.35); }
   .lightbox p { margin-top: 14px; font-family: 'Dancing Script', cursive; font-weight: 700; font-size: 24px; color: #ffe9f1; text-align: center; }
+  /* ---- cute stickers (hand-drawn SVG, white die-cut edge) ---- */
+  .stk { display: block; width: 100%; height: 100%; overflow: visible; }
+  .sticker {
+    position: absolute; width: 56px; height: 56px; pointer-events: none; z-index: 2;
+    transform: rotate(var(--rot, 0deg));
+    filter: drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff)
+            drop-shadow(0 4px 5px rgba(90,10,40,0.3));
+  }
+  .sticker.wob { animation: wobble 3.2s ease-in-out infinite; animation-delay: var(--dl, 0s); }
+  .sticker.hop { animation: hop 2.4s ease-in-out infinite; animation-delay: var(--dl, 0s); }
+  @keyframes wobble { 0%,100% { transform: rotate(var(--rot,0deg)); } 50% { transform: rotate(calc(var(--rot,0deg) + 8deg)) scale(1.05); } }
+  @keyframes hop { 0%,60%,100% { transform: translateY(0) rotate(var(--rot,0deg)); } 75% { transform: translateY(-8px) rotate(var(--rot,0deg)); } }
+  @media (prefers-reduced-motion: reduce) { .sticker { animation: none !important; } }
+
+  /* cat + dog flanking the counter */
+  .together .pair { position: relative; display: inline-block; padding: 0 58px; }
+  .together .sticker { width: 46px; height: 46px; top: 50%; margin-top: -26px; }
+  .together .sticker.l { left: 2px; } .together .sticker.r { right: 2px; }
+
+  /* puppy peeking over the letter button */
+  .letter-btn .sticker { width: 40px; height: 40px; top: -30px; right: 8px; }
+
+  /* letter decorations */
+  .letter { padding-top: 64px; }
+  .letter .paper > .sticker.top { width: 84px; height: 84px; top: -52px; left: 50%; margin-left: -42px; }
+  .letter .paper > .sticker.tl { width: 44px; height: 44px; top: 54px; left: -14px; }
+  .letter .sign { position: relative; }
+  .letter .sign .sticker { position: static; display: inline-block; vertical-align: middle; width: 46px; height: 46px; margin-left: 6px; }
+  .paws { display: flex; justify-content: center; gap: 14px; margin: 26px 0 -8px; }
+  .paws svg { width: 18px; height: 18px; opacity: 0.5; }
+  .paws svg:nth-child(odd) { transform: translateY(5px) rotate(-14deg); }
+  .paws svg:nth-child(even) { transform: rotate(14deg); }
+  .letter .sec { border-top: 0; }
+  .polaroid { position: relative; }
+  .polaroid .sticker { width: 34px; height: 34px; top: -12px; right: -10px; }
+  .reason { position: relative; }
+  .reason .sticker { width: 42px; height: 42px; top: -20px; left: -12px; }
+  .lovenote .card .sticker { width: 70px; height: 70px; top: -44px; left: 50%; margin-left: -35px; }
+
   .next { margin-top: 10px; font-size: 15px; }
   .next b { color: #b3164d; }
 </style>
 </head>
 <body>
+  <!-- sticker sheet: hand-drawn cats & dogs, reused with <use href="#..."> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- ginger kitty face -->
+      <symbol id="st-cat" viewBox="0 0 100 100">
+        <path d="M18 46 L22 10 L46 30 Z" fill="#f4a35f"/><path d="M82 46 L78 10 L54 30 Z" fill="#f4a35f"/>
+        <path d="M24 38 L26 19 L39 31 Z" fill="#ffc2cf"/><path d="M76 38 L74 19 L61 31 Z" fill="#ffc2cf"/>
+        <ellipse cx="50" cy="58" rx="38" ry="32" fill="#f8b673"/>
+        <path d="M44 28 q6 6 0 12 M50 27 v12 M56 28 q-6 6 0 12" stroke="#e08a43" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="50" cy="70" rx="17" ry="12" fill="#fff1e2"/>
+        <ellipse cx="36" cy="55" rx="5" ry="6.4" fill="#3a2318"/><ellipse cx="64" cy="55" rx="5" ry="6.4" fill="#3a2318"/>
+        <circle cx="37.8" cy="52.5" r="1.9" fill="#fff"/><circle cx="65.8" cy="52.5" r="1.9" fill="#fff"/>
+        <ellipse cx="25" cy="66" rx="7" ry="4.2" fill="#ff8fab" opacity=".6"/><ellipse cx="75" cy="66" rx="7" ry="4.2" fill="#ff8fab" opacity=".6"/>
+        <path d="M46.5 63 h7 l-3.5 4 z" fill="#ff7d9c"/>
+        <path d="M43 69 q3.5 4 7 0 q3.5 4 7 0" stroke="#3a2318" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M14 61 l12 2 M14 70 l12 -2 M86 61 l-12 2 M86 70 l-12 -2" stroke="#c9763a" stroke-width="1.8" stroke-linecap="round"/>
+      </symbol>
+      <!-- cream puppy with floppy brown ears -->
+      <symbol id="st-dog" viewBox="0 0 100 100">
+        <ellipse cx="50" cy="56" rx="34" ry="32" fill="#fff4e4"/>
+        <path d="M22 26 C8 30 6 58 16 66 C24 64 28 48 30 36 Z" fill="#a8693b"/>
+        <path d="M78 26 C92 30 94 58 84 66 C76 64 72 48 70 36 Z" fill="#a8693b"/>
+        <ellipse cx="62" cy="50" rx="11" ry="10" fill="#e3b787"/>
+        <ellipse cx="38" cy="52" rx="4.8" ry="6" fill="#2f1d12"/><ellipse cx="62" cy="52" rx="4.8" ry="6" fill="#2f1d12"/>
+        <circle cx="39.8" cy="49.6" r="1.8" fill="#fff"/><circle cx="63.8" cy="49.6" r="1.8" fill="#fff"/>
+        <ellipse cx="50" cy="66" rx="7.5" ry="5.2" fill="#2f1d12"/><ellipse cx="48" cy="64.4" rx="2.2" ry="1.3" fill="#fff" opacity=".7"/>
+        <path d="M50 71 v4 M42 74 q8 6 16 0" stroke="#2f1d12" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M46 77 q4 10 8 0 z" fill="#ff7d9c"/>
+        <ellipse cx="28" cy="66" rx="6.5" ry="4" fill="#ff8fab" opacity=".55"/><ellipse cx="72" cy="66" rx="6.5" ry="4" fill="#ff8fab" opacity=".55"/>
+      </symbol>
+      <!-- grey kitty hugging a heart -->
+      <symbol id="st-catheart" viewBox="0 0 100 100">
+        <path d="M22 40 L24 8 L44 26 Z" fill="#9aa3b5"/><path d="M78 40 L76 8 L56 26 Z" fill="#9aa3b5"/>
+        <path d="M27 32 L28 17 L38 26 Z" fill="#ffc2cf"/><path d="M73 32 L72 17 L62 26 Z" fill="#ffc2cf"/>
+        <ellipse cx="50" cy="46" rx="33" ry="26" fill="#b4bccb"/>
+        <path d="M37 42 q4 -4 8 0 M55 42 q4 -4 8 0" stroke="#2c2f3a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <path d="M47.5 49 h5 l-2.5 3 z" fill="#ff7d9c"/>
+        <ellipse cx="30" cy="51" rx="6" ry="3.6" fill="#ff8fab" opacity=".6"/><ellipse cx="70" cy="51" rx="6" ry="3.6" fill="#ff8fab" opacity=".6"/>
+        <path d="M50 96 C22 78 22 58 36 58 C43 58 47 63 50 67 C53 63 57 58 64 58 C78 58 78 78 50 96 Z" fill="#ff4f86"/>
+        <path d="M36 65 q-4 6 0 11" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+        <ellipse cx="29" cy="68" rx="8" ry="6.5" fill="#b4bccb"/><ellipse cx="71" cy="68" rx="8" ry="6.5" fill="#b4bccb"/>
+      </symbol>
+      <!-- sleepy curled-up white cat -->
+      <symbol id="st-sleepy" viewBox="0 0 100 100">
+        <ellipse cx="54" cy="66" rx="40" ry="24" fill="#fffaf5"/>
+        <path d="M90 70 C98 56 86 46 78 54" stroke="#fffaf5" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <path d="M18 54 L20 30 L36 44 Z" fill="#fffaf5"/><path d="M42 46 L48 26 L56 44 Z" fill="#fffaf5"/>
+        <path d="M22 48 L23 36 L31 44 Z" fill="#ffc2cf"/><path d="M46 44 L48.5 33 L52 43 Z" fill="#ffc2cf"/>
+        <ellipse cx="36" cy="60" rx="24" ry="18" fill="#fffaf5"/>
+        <path d="M24 60 q4 3 8 0 M40 60 q4 3 8 0" stroke="#4a3a3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <ellipse cx="24" cy="68" rx="5" ry="3" fill="#ff8fab" opacity=".55"/><ellipse cx="48" cy="68" rx="5" ry="3" fill="#ff8fab" opacity=".55"/>
+        <path d="M34 66 h4 l-2 2.4 z" fill="#ff7d9c"/>
+        <text x="66" y="34" font-family="system-ui,sans-serif" font-weight="800" font-size="16" fill="#8fb0ff">z</text>
+        <text x="78" y="20" font-family="system-ui,sans-serif" font-weight="800" font-size="12" fill="#8fb0ff">z</text>
+      </symbol>
+      <!-- dog bone with a tiny heart -->
+      <symbol id="st-bone" viewBox="0 0 100 100">
+        <path d="M24 34 a11 11 0 1 1 14 -4 L62 54 a11 11 0 1 1 4 14 a11 11 0 1 1 -14 4 L28 48 a11 11 0 1 1 -4 -14 z" fill="#fff1dc" transform="rotate(10 50 50)"/>
+        <path d="M50 58 C42 52 42 46 46 46 C48 46 49.5 47.5 50 49 C50.5 47.5 52 46 54 46 C58 46 58 52 50 58 Z" fill="#ff4f86" transform="rotate(10 50 50)"/>
+      </symbol>
+      <!-- paw print -->
+      <symbol id="st-paw" viewBox="0 0 100 100">
+        <ellipse cx="50" cy="66" rx="22" ry="19" fill="#ff7aa6"/>
+        <ellipse cx="22" cy="44" rx="9.5" ry="12" fill="#ff7aa6" transform="rotate(-20 22 44)"/>
+        <ellipse cx="40" cy="28" rx="9.5" ry="12.5" fill="#ff7aa6" transform="rotate(-6 40 28)"/>
+        <ellipse cx="60" cy="28" rx="9.5" ry="12.5" fill="#ff7aa6" transform="rotate(6 60 28)"/>
+        <ellipse cx="78" cy="44" rx="9.5" ry="12" fill="#ff7aa6" transform="rotate(20 78 44)"/>
+      </symbol>
+    </defs>
+  </svg>
+
   <div id="intro">
     <div class="wrap">
       <div class="card">
@@ -368,6 +478,7 @@
   <div id="scene"></div>
   <div class="lovenote" id="lovenote">
     <div class="card">
+      <span class="sticker wob " style="--rot:0deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-catheart"/></svg></span>
       <div class="x" id="lovenoteX" role="button" aria-label="Close">&times;</div>
       <div class="msg">Stop tapping me!<br>I know you love me.<br>I love you &mdash; just call me instead.</div>
     </div>
@@ -375,13 +486,15 @@
   <div class="vignette"></div>
   <div class="together" aria-live="off">
     <div class="since">Together since 9 August 2026</div>
-    <div class="count" id="togetherCount">2 months together</div>
+    <div class="count"><span class="pair"><span class="sticker wob l" style="--rot:-10deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-cat"/></svg></span><span id="togetherCount">2 months together</span><span class="sticker wob r" style="--rot:10deg;--dl:1.6s" aria-hidden="true"><svg class="stk"><use href="#st-dog"/></svg></span></span></div>
     <div class="clock" id="togetherClock"></div>
   </div>
 
-  <button class="letter-btn" id="letterBtn" aria-label="Open your letter"><span class="env">&#128140;</span>Our 2 months</button>
+  <button class="letter-btn" id="letterBtn" aria-label="Open your letter"><span class="env">&#128140;</span>Our 2 months<span class="sticker hop " style="--rot:8deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-dog"/></svg></span></button>
   <div class="letter" id="letter" role="dialog" aria-label="A letter for you">
     <div class="paper">
+      <span class="sticker wob top" style="--rot:-4deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-catheart"/></svg></span>
+      <span class="sticker  tl" style="--rot:-18deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span>
       <div class="x" id="letterX" role="button" aria-label="Close">&times;</div>
       <h2>Happy 2 Months,<br>my love</h2>
       <div class="sub">9 Aug &rarr; 9 Oct 2026</div>
@@ -390,13 +503,15 @@
         <p>You make me feel calm, wanted and a little bit braver. I love who I am when I'm with you, and I love you even more.</p>
         <p>Thank you for choosing me. Here's to month three, and every month after it.</p>
       </div>
-      <div class="sign">Always yours &hearts;</div>
+      <div class="sign">Always yours &hearts;<span class="sticker  " style="--rot:6deg;--dl:0s" aria-hidden="true"><svg class="stk"><use href="#st-sleepy"/></svg></span></div>
 
+      <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
         <h3>Our photos &middot; tap to open</h3>
         <div class="gallery" id="gallery"></div>
       </div>
 
+      <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
         <h3>Us, so far</h3>
         <div class="stats">
@@ -407,9 +522,10 @@
         <p class="next" id="nextMonth"></p>
       </div>
 
+      <div class="paws" aria-hidden="true"><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg><svg><use href="#st-paw"/></svg></div>
       <div class="sec">
         <h3>Why I love you &middot; tap the card</h3>
-        <div class="reason" id="reason" role="button">Tap me &hearts;</div>
+        <div class="reason" id="reason" role="button"><span class="sticker" style="--rot:-12deg" aria-hidden="true"><svg class="stk"><use href="#st-paw"/></svg></span>Tap me &hearts;</div>
         <div class="reason-n" id="reasonN"></div>
       </div>
     </div>
@@ -1300,7 +1416,12 @@
         const img = document.createElement('img');
         img.alt = ph.caption;
         const cap = document.createElement('figcaption'); cap.textContent = ph.caption;
-        fig.append(img, cap); gallery.appendChild(fig);
+        const sym = ['cat', 'paw', 'dog', 'bone', 'catheart', 'sleepy'][i % 6];
+        const stk = document.createElement('span');
+        stk.className = 'sticker'; stk.setAttribute('aria-hidden', 'true');
+        stk.style.setProperty('--rot', (i % 2 ? -14 : 12) + 'deg');
+        stk.innerHTML = '<svg class="stk"><use href="#st-' + sym + '"/></svg>';
+        fig.append(img, cap, stk); gallery.appendChild(fig);
         const done = ok => { settled++; if (ok) { loaded++; fig.hidden = false; } else fig.remove();
           if (settled === PHOTOS.length && !loaded) gallerySec.hidden = true; };
         img.onload = () => done(true); img.onerror = () => done(false);
@@ -1320,7 +1441,9 @@
         e.stopPropagation();
         if (!deck.length) deck = REASONS.slice().sort(() => Math.random() - 0.5);
         seen = seen % REASONS.length + 1;
-        card.textContent = deck.pop();
+        const pet = seen % 2 ? 'cat' : 'dog';
+        card.innerHTML = '<span class="sticker" style="--rot:-12deg" aria-hidden="true"><svg class="stk"><use href="#st-' + pet + '"/></svg></span>';
+        card.appendChild(document.createTextNode(deck.pop()));
         card.classList.remove('flip'); void card.offsetWidth; card.classList.add('flip');
         counter.textContent = seen + ' of ' + REASONS.length;
       });
