@@ -1190,8 +1190,10 @@ local gui = make("ScreenGui", {
 })
 
 ---------------------------------------------------------------- HUD
+-- Top centre, clear of Roblox's chat window (top left) and leaderboard (top right).
 local coinPanel = make("Frame", {
-	Position = UDim2.fromOffset(12, 12),
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(0.5, -6, 0, 8),
 	Size = UDim2.fromOffset(170, 52),
 	BackgroundColor3 = COLORS.Panel,
 	Parent = gui,
@@ -1212,21 +1214,21 @@ local coinLabel = text({
 })
 
 local stagePanel = make("Frame", {
-	Position = UDim2.fromOffset(12, 72),
-	Size = UDim2.fromOffset(170, 40),
+	Position = UDim2.new(0.5, 6, 0, 8),
+	Size = UDim2.fromOffset(170, 52),
 	BackgroundColor3 = COLORS.Panel,
 	Parent = gui,
 }, { corner(12), stroke(3) })
 local stageLabel = text({
-	Position = UDim2.fromOffset(10, 6),
-	Size = UDim2.new(1, -20, 1, -12),
+	Position = UDim2.fromOffset(10, 8),
+	Size = UDim2.new(1, -20, 1, -16),
 	Text = "Stage 1",
 	Parent = stagePanel,
 })
 
 local shopButton = make("TextButton", {
 	AnchorPoint = Vector2.new(0, 0.5),
-	Position = UDim2.new(0, 12, 0.5, 0),
+	Position = UDim2.new(0, 12, 0.6, 0),
 	Size = UDim2.fromOffset(84, 96),
 	BackgroundColor3 = COLORS.Pink,
 	Text = "",
@@ -1248,8 +1250,8 @@ text({
 ---------------------------------------------------------------- Toasts
 local toastLabel = text({
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, -80),
-	Size = UDim2.new(0.6, 0, 0, 48),
+	Position = UDim2.new(0.5, 0, 0, -120),
+	Size = UDim2.new(0.6, 0, 0, 36),
 	Text = "",
 	ZIndex = 10,
 	Parent = gui,
@@ -1261,12 +1263,12 @@ local function toast(message, color)
 	toastLabel.Text = message
 	toastLabel.TextColor3 = color or COLORS.Text
 	TweenService:Create(toastLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-		Position = UDim2.new(0.5, 0, 0, 24),
+		Position = UDim2.new(0.5, 0, 0, 72),
 	}):Play()
 	task.delay(2.2, function()
 		if token == toastToken then
 			TweenService:Create(toastLabel, TweenInfo.new(0.25), {
-				Position = UDim2.new(0.5, 0, 0, -80),
+				Position = UDim2.new(0.5, 0, 0, -120),
 			}):Play()
 		end
 	end)
