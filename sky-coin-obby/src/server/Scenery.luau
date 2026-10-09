@@ -162,6 +162,20 @@ local function buildSky(x0, x1, baseY)
 		island(center, center.Y, range(12, 18), 1, false)
 		tree(center + Vector3.new(range(-3, 3), 0, range(-3, 3)))
 	end
+	-- Big islands out toward the horizon.
+	for _ = 1, 14 do
+		local center = Vector3.new(range(x0 - 400, x1 + 100), baseY + range(-22, 18), side(110, 380))
+		local diameter = range(40, 85)
+		island(center, center.Y, diameter, 1, false)
+		for _ = 1, math.floor(diameter / 12) do
+			local r, a = range(0, diameter * 0.35), range(0, math.pi * 2)
+			tree(center + Vector3.new(math.cos(a) * r, -0.1, math.sin(a) * r))
+		end
+	end
+	-- Rocks poking out of the lava sea.
+	for _ = 1, 40 do
+		ball(Vector3.new(range(x0 - 500, x1), baseY - 30, side(60, 600)), range(10, 40), Color3.fromRGB(range(70, 100), range(55, 75), range(45, 60)), Enum.Material.Basalt)
+	end
 	-- Giant rainbow in the background.
 	local colors = {
 		Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 160, 50), Color3.fromRGB(255, 235, 70),
@@ -241,6 +255,14 @@ local function buildCandy(x0, x1, baseY)
 	for _ = 1, 22 do
 		ball(Vector3.new(range(x0, x1), baseY + range(-20, 25), side(20, 80)), range(3, 7), pick(CANDY), Enum.Material.SmoothPlastic, 0.15)
 	end
+	-- Gumdrop hills rising out of the strawberry-milk sea.
+	for _ = 1, 30 do
+		ball(Vector3.new(range(x0 - 40, x1 + 40), baseY - 30, side(70, 600)), range(25, 80), pick(CANDY), Enum.Material.SmoothPlastic, 0.1)
+	end
+	-- Giant lollipop forest in the distance.
+	for _ = 1, 16 do
+		lollipop(Vector3.new(range(x0, x1), baseY - 30, side(90, 320)), range(40, 70))
+	end
 end
 
 local function buildSpace(x0, x1, baseY)
@@ -276,6 +298,14 @@ local function buildSpace(x0, x1, baseY)
 	end
 	for _ = 1, 35 do
 		ball(Vector3.new(range(x0, x1), baseY + range(-25, 30), side(20, 90)), range(3, 11), Color3.fromRGB(range(80, 130), range(75, 120), range(95, 140)), Enum.Material.Slate)
+	end
+	-- Far-off planets and a big asteroid belt below the course.
+	for _ = 1, 6 do
+		ball(Vector3.new(range(x0 - 300, x1 + 400), baseY + range(-150, 200), side(350, 700)), range(60, 200),
+			pick({ Color3.fromRGB(255, 150, 120), Color3.fromRGB(140, 180, 255), Color3.fromRGB(220, 160, 255), Color3.fromRGB(150, 255, 210) }))
+	end
+	for _ = 1, 60 do
+		ball(Vector3.new(range(x0 - 100, x1 + 300), baseY - range(40, 120), side(0, 300)), range(6, 22), Color3.fromRGB(range(70, 110), range(65, 100), range(90, 130)), Enum.Material.Slate)
 	end
 end
 

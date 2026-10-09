@@ -14,11 +14,25 @@ local player = Players.LocalPlayer
 local stageValue = player:WaitForChild("leaderstats"):WaitForChild("Stage")
 
 ---------------------------------------------------------------- Zone look + gravity
+-- Atmosphere haze softens the horizon so the world fades out instead of ending abruptly.
 local LOOKS = {
-	["SKY ISLANDS"] = { Tint = Color3.new(1, 1, 1), Saturation = 0.1, Brightness = 2 },
-	["CANDY LAND"] = { Tint = Color3.fromRGB(255, 232, 245), Saturation = 0.25, Brightness = 2 },
-	["OUTER SPACE"] = { Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1 },
+	["SKY ISLANDS"] = {
+		Tint = Color3.new(1, 1, 1), Saturation = 0.1, Brightness = 2,
+		Density = 0.32, Haze = 1.6, Glare = 0.3, Color = Color3.fromRGB(200, 225, 255), Decay = Color3.fromRGB(110, 160, 215),
+	},
+	["CANDY LAND"] = {
+		Tint = Color3.fromRGB(255, 232, 245), Saturation = 0.25, Brightness = 2,
+		Density = 0.36, Haze = 2.2, Glare = 0.4, Color = Color3.fromRGB(255, 215, 238), Decay = Color3.fromRGB(255, 160, 210),
+	},
+	["OUTER SPACE"] = {
+		Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1,
+		Density = 0.12, Haze = 0, Glare = 0, Color = Color3.fromRGB(60, 40, 110), Decay = Color3.fromRGB(20, 10, 50),
+	},
 }
+
+local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+atmosphere.Offset = 0.2
+atmosphere.Parent = Lighting
 
 local correction = Lighting:FindFirstChild("ZoneCorrection") or Instance.new("ColorCorrectionEffect")
 correction.Name = "ZoneCorrection"
@@ -58,6 +72,13 @@ local function applyZone()
 	local info = TweenInfo.new(2, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, { ClockTime = zone.ClockTime, Brightness = look.Brightness }):Play()
 	TweenService:Create(correction, info, { TintColor = look.Tint, Saturation = look.Saturation }):Play()
+	TweenService:Create(atmosphere, info, {
+		Density = look.Density,
+		Haze = look.Haze,
+		Glare = look.Glare,
+		Color = look.Color,
+		Decay = look.Decay,
+	}):Play()
 end
 
 stageValue.Changed:Connect(applyZone)

@@ -985,17 +985,30 @@ for stage = 1, STAGES - 1 do
 	sections[(stage - zoneFirst) % #sections + 1](stage, (stage - 1) * SPACING, d)
 end
 
----------------------------------------------------------------- Kill floors (one per zone)
+---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
+local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon }
+local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
 for zIndex, zone in ipairs(Config.Zones) do
 	if zIndex > #THEMES then
 		break
 	end
 	local nextZone = Config.Zones[zIndex + 1]
-	local xStart = (zone.FirstStage - 1) * SPACING - (zIndex == 1 and 60 or 0)
-	local xEnd = nextZone and (nextZone.FirstStage - 1) * SPACING or (STAGES - 1) * SPACING + 60
-	local floor = killBrick(Vector3.new((xStart + xEnd) / 2, BASE_Y - 30, 0), Vector3.new(xEnd - xStart, 2, 160))
+	local xStart = (zone.FirstStage - 1) * SPACING - (zIndex == 1 and 600 or 0)
+	local xEnd = nextZone and (nextZone.FirstStage - 1) * SPACING or (STAGES - 1) * SPACING + 600
+	local floor = killBrick(Vector3.new((xStart + xEnd) / 2, BASE_Y - 30, 0), Vector3.new(xEnd - xStart, 2, FLOOR_WIDTH))
 	floor.Name = "Floor"
 	floor.Color = THEMES[zIndex].Floor
+	floor.Material = FLOOR_MATERIALS[zIndex] or Enum.Material.SmoothPlastic
+	floor.CastShadow = false
+	if zIndex == 3 then
+		floor.Transparency = 0.45 -- see the asteroid belt below the space void
+	end
+end
+
+-- The template's grey baseplate would show under the course as empty "dead space".
+local baseplate = workspace:FindFirstChild("Baseplate")
+if baseplate and baseplate:IsA("BasePart") then
+	baseplate:Destroy()
 end
 
 ---------------------------------------------------------------- Leaderboard boards beside the start
@@ -1895,6 +1908,20 @@ local function buildSky(x0, x1, baseY)
 		island(center, center.Y, range(12, 18), 1, false)
 		tree(center + Vector3.new(range(-3, 3), 0, range(-3, 3)))
 	end
+	-- Big islands out toward the horizon.
+	for _ = 1, 14 do
+		local center = Vector3.new(range(x0 - 400, x1 + 100), baseY + range(-22, 18), side(110, 380))
+		local diameter = range(40, 85)
+		island(center, center.Y, diameter, 1, false)
+		for _ = 1, math.floor(diameter / 12) do
+			local r, a = range(0, diameter * 0.35), range(0, math.pi * 2)
+			tree(center + Vector3.new(math.cos(a) * r, -0.1, math.sin(a) * r))
+		end
+	end
+	-- Rocks poking out of the lava sea.
+	for _ = 1, 40 do
+		ball(Vector3.new(range(x0 - 500, x1), baseY - 30, side(60, 600)), range(10, 40), Color3.fromRGB(range(70, 100), range(55, 75), range(45, 60)), Enum.Material.Basalt)
+	end
 	-- Giant rainbow in the background.
 	local colors = {
 		Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 160, 50), Color3.fromRGB(255, 235, 70),
@@ -1974,6 +2001,14 @@ local function buildCandy(x0, x1, baseY)
 	for _ = 1, 22 do
 		ball(Vector3.new(range(x0, x1), baseY + range(-20, 25), side(20, 80)), range(3, 7), pick(CANDY), Enum.Material.SmoothPlastic, 0.15)
 	end
+	-- Gumdrop hills rising out of the strawberry-milk sea.
+	for _ = 1, 30 do
+		ball(Vector3.new(range(x0 - 40, x1 + 40), baseY - 30, side(70, 600)), range(25, 80), pick(CANDY), Enum.Material.SmoothPlastic, 0.1)
+	end
+	-- Giant lollipop forest in the distance.
+	for _ = 1, 16 do
+		lollipop(Vector3.new(range(x0, x1), baseY - 30, side(90, 320)), range(40, 70))
+	end
 end
 
 local function buildSpace(x0, x1, baseY)
@@ -2009,6 +2044,14 @@ local function buildSpace(x0, x1, baseY)
 	end
 	for _ = 1, 35 do
 		ball(Vector3.new(range(x0, x1), baseY + range(-25, 30), side(20, 90)), range(3, 11), Color3.fromRGB(range(80, 130), range(75, 120), range(95, 140)), Enum.Material.Slate)
+	end
+	-- Far-off planets and a big asteroid belt below the course.
+	for _ = 1, 6 do
+		ball(Vector3.new(range(x0 - 300, x1 + 400), baseY + range(-150, 200), side(350, 700)), range(60, 200),
+			pick({ Color3.fromRGB(255, 150, 120), Color3.fromRGB(140, 180, 255), Color3.fromRGB(220, 160, 255), Color3.fromRGB(150, 255, 210) }))
+	end
+	for _ = 1, 60 do
+		ball(Vector3.new(range(x0 - 100, x1 + 300), baseY - range(40, 120), side(0, 300)), range(6, 22), Color3.fromRGB(range(70, 110), range(65, 100), range(90, 130)), Enum.Material.Slate)
 	end
 end
 
@@ -3215,11 +3258,25 @@ local player = Players.LocalPlayer
 local stageValue = player:WaitForChild("leaderstats"):WaitForChild("Stage")
 
 ---------------------------------------------------------------- Zone look + gravity
+-- Atmosphere haze softens the horizon so the world fades out instead of ending abruptly.
 local LOOKS = {
-	["SKY ISLANDS"] = { Tint = Color3.new(1, 1, 1), Saturation = 0.1, Brightness = 2 },
-	["CANDY LAND"] = { Tint = Color3.fromRGB(255, 232, 245), Saturation = 0.25, Brightness = 2 },
-	["OUTER SPACE"] = { Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1 },
+	["SKY ISLANDS"] = {
+		Tint = Color3.new(1, 1, 1), Saturation = 0.1, Brightness = 2,
+		Density = 0.32, Haze = 1.6, Glare = 0.3, Color = Color3.fromRGB(200, 225, 255), Decay = Color3.fromRGB(110, 160, 215),
+	},
+	["CANDY LAND"] = {
+		Tint = Color3.fromRGB(255, 232, 245), Saturation = 0.25, Brightness = 2,
+		Density = 0.36, Haze = 2.2, Glare = 0.4, Color = Color3.fromRGB(255, 215, 238), Decay = Color3.fromRGB(255, 160, 210),
+	},
+	["OUTER SPACE"] = {
+		Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1,
+		Density = 0.12, Haze = 0, Glare = 0, Color = Color3.fromRGB(60, 40, 110), Decay = Color3.fromRGB(20, 10, 50),
+	},
 }
+
+local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+atmosphere.Offset = 0.2
+atmosphere.Parent = Lighting
 
 local correction = Lighting:FindFirstChild("ZoneCorrection") or Instance.new("ColorCorrectionEffect")
 correction.Name = "ZoneCorrection"
@@ -3259,6 +3316,13 @@ local function applyZone()
 	local info = TweenInfo.new(2, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, { ClockTime = zone.ClockTime, Brightness = look.Brightness }):Play()
 	TweenService:Create(correction, info, { TintColor = look.Tint, Saturation = look.Saturation }):Play()
+	TweenService:Create(atmosphere, info, {
+		Density = look.Density,
+		Haze = look.Haze,
+		Glare = look.Glare,
+		Color = look.Color,
+		Decay = look.Decay,
+	}):Play()
 end
 
 stageValue.Changed:Connect(applyZone)

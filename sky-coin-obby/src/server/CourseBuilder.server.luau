@@ -340,17 +340,30 @@ for stage = 1, STAGES - 1 do
 	sections[(stage - zoneFirst) % #sections + 1](stage, (stage - 1) * SPACING, d)
 end
 
----------------------------------------------------------------- Kill floors (one per zone)
+---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
+local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon }
+local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
 for zIndex, zone in ipairs(Config.Zones) do
 	if zIndex > #THEMES then
 		break
 	end
 	local nextZone = Config.Zones[zIndex + 1]
-	local xStart = (zone.FirstStage - 1) * SPACING - (zIndex == 1 and 60 or 0)
-	local xEnd = nextZone and (nextZone.FirstStage - 1) * SPACING or (STAGES - 1) * SPACING + 60
-	local floor = killBrick(Vector3.new((xStart + xEnd) / 2, BASE_Y - 30, 0), Vector3.new(xEnd - xStart, 2, 160))
+	local xStart = (zone.FirstStage - 1) * SPACING - (zIndex == 1 and 600 or 0)
+	local xEnd = nextZone and (nextZone.FirstStage - 1) * SPACING or (STAGES - 1) * SPACING + 600
+	local floor = killBrick(Vector3.new((xStart + xEnd) / 2, BASE_Y - 30, 0), Vector3.new(xEnd - xStart, 2, FLOOR_WIDTH))
 	floor.Name = "Floor"
 	floor.Color = THEMES[zIndex].Floor
+	floor.Material = FLOOR_MATERIALS[zIndex] or Enum.Material.SmoothPlastic
+	floor.CastShadow = false
+	if zIndex == 3 then
+		floor.Transparency = 0.45 -- see the asteroid belt below the space void
+	end
+end
+
+-- The template's grey baseplate would show under the course as empty "dead space".
+local baseplate = workspace:FindFirstChild("Baseplate")
+if baseplate and baseplate:IsA("BasePart") then
+	baseplate:Destroy()
 end
 
 ---------------------------------------------------------------- Leaderboard boards beside the start
