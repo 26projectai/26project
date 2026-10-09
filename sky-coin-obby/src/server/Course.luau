@@ -1,6 +1,15 @@
 -- Helpers for finding checkpoints and moving players between stages.
 local Course = {}
 
+-- Latest finishes in this server (newest first), shown on the RECENT FINISHES board.
+Course.RecentRuns = {}
+function Course.AddRecentRun(name, seconds, assisted)
+	table.insert(Course.RecentRuns, 1, { Name = name, Time = seconds, Assisted = assisted, At = os.time() })
+	if #Course.RecentRuns > 10 then
+		table.remove(Course.RecentRuns)
+	end
+end
+
 local checkpoints = workspace:WaitForChild("Checkpoints")
 Course.Checkpoints = checkpoints
 

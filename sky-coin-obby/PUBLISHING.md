@@ -12,7 +12,7 @@ After each update, add a tag at the front, e.g. `[🆕 LAVA WORLD]` or `[🎃 HA
 
 ```
 😈 Greedy Gary stole ALL the Sky Coins! Escape his obby and get them back!
-🏆 40 story stages + a 1000-STAGE OP DIFFICULTY TOWER!
+🏆 100 story stages + a 1000-STAGE OP DIFFICULTY TOWER!
 
 🪝 Grappling hook stages  🚀 Moon jumps in space  🤝 Co-op tether with friends
 🎁 Free Daily Draw (Legendary = x5 jump boots + rainbow name tag!)

@@ -51,6 +51,17 @@ local THEMES = {
 		Checkpoint = Color3.fromRGB(80, 255, 140),
 		Floor = Color3.fromRGB(45, 15, 80),
 	},
+	{ -- Gary's Lair (volcano)
+		Platforms = {
+			Color3.fromRGB(60, 50, 55),
+			Color3.fromRGB(90, 70, 70),
+			Color3.fromRGB(120, 40, 160),
+			Color3.fromRGB(70, 60, 60),
+		},
+		Material = Enum.Material.Basalt,
+		Checkpoint = Color3.fromRGB(255, 160, 40),
+		Floor = Color3.fromRGB(255, 70, 20),
+	},
 }
 
 local function zoneIndex(stage)
@@ -244,7 +255,7 @@ local function opPortal(position, facing)
 	})
 	frame.CanTouch = false
 end
-opPortal(Vector3.new(-18, BASE_Y + 6, 13), Vector3.new(0, 0, -1)) -- in the spawn lobby
+opPortal(Vector3.new(-30, BASE_Y + 6, 30), Vector3.new(0, 0, -1)) -- in the spawn plaza
 
 ---------------------------------------------------------------- Obstacle sections
 -- Pads span x0-6..x0+6, so each section fills x0+6..x0+54.
@@ -427,7 +438,21 @@ local spaceSections = {
 	end,
 }
 
-local sectionsByZone = { skySections, candySections, spaceSections }
+-- Gary's Lair (normal gravity): the hardest mix of every hazard.
+-- candySections: 1 trap, 2 fade, 3 conveyor, 4 jump pad, 5 sliders
+-- spaceSections: 3 double spinners, 6 laser gates (both fine in normal gravity)
+local lairSections = {
+	trapFloor,
+	skySections[3], -- spinning bar
+	candySections[5], -- sliders
+	spaceSections[6], -- laser gates
+	candySections[3], -- conveyor
+	spaceSections[3], -- double spinners
+	skySections[2], -- kill strips
+	candySections[2], -- vanishing platforms
+}
+
+local sectionsByZone = { skySections, candySections, spaceSections, lairSections }
 
 for stage = 1, STAGES - 1 do
 	local zIndex = zoneIndex(stage)
@@ -440,7 +465,7 @@ for stage = 1, STAGES - 1 do
 end
 
 ---------------------------------------------------------------- Gary jumpscares + a silly yeet pad (clip-worthy moments)
-for _, stage in ipairs({ 6, 17, 27, 36 }) do
+for _, stage in ipairs({ 6, 17, 31, 44, 58, 67, 79, 88, 97 }) do
 	if stage < STAGES then
 		local trigger = part({
 			Name = "GaryScare",
@@ -458,7 +483,7 @@ do
 	local yeet = part({
 		Name = "YeetPad",
 		Size = Vector3.new(5, 0.6, 5),
-		Position = Vector3.new(-26, BASE_Y + 0.3, -6),
+		Position = Vector3.new(-26, BASE_Y + 0.3, -30),
 		Color = Color3.fromRGB(255, 80, 200),
 		Material = Enum.Material.Neon,
 		Parent = course,
@@ -468,7 +493,7 @@ do
 end
 
 ---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
-local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon }
+local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon, Enum.Material.CrackedLava }
 local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
 for zIndex, zone in ipairs(Config.Zones) do
 	if zIndex > #THEMES then
@@ -507,10 +532,62 @@ local function board(name, tagName, position, facing, size)
 	CollectionService:AddTag(p, tagName)
 	return p
 end
--- Beside the start.
-board("WinsBoard", "Board_Wins", Vector3.new(0, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
-board("TimeBoard", "Board_Time", Vector3.new(0, BASE_Y + 7, 13), Vector3.new(0, 0, -1))
-board("LiveBoard", "Board_Live", Vector3.new(-16, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+-- Spawn plaza: a big Hall of Fame wall facing the start, plus the speedrun podium.
+-- The lobby island (Scenery) is centred at LOBBY_X with room for everything.
+local LOBBY_X = -44
+local wallX = LOBBY_X - 40
+local toCourse = Vector3.new(1, 0, 0)
+board("HallTime", "Board_Time", Vector3.new(wallX, BASE_Y + 12, -11), toCourse, Vector3.new(20, 20, 1))
+board("HallRecent", "Board_Recent", Vector3.new(wallX, BASE_Y + 12, 11), toCourse, Vector3.new(20, 20, 1))
+board("HallWins", "Board_Wins", Vector3.new(wallX + 2, BASE_Y + 10, -33), Vector3.new(1, 0, 0.35).Unit, Vector3.new(18, 16, 1))
+board("HallLive", "Board_Live", Vector3.new(wallX + 2, BASE_Y + 10, 33), Vector3.new(1, 0, -0.35).Unit, Vector3.new(18, 16, 1))
+do
+	local header = part({
+		Name = "HallHeader",
+		Size = Vector3.new(1, 6, 44),
+		Position = Vector3.new(wallX - 0.5, BASE_Y + 25.5, 0),
+		Color = Color3.fromRGB(25, 25, 45),
+		Parent = boards,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Right
+	gui.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.Text = "🏆 HALL OF FAME 🏆"
+	t.TextColor3 = Color3.fromRGB(255, 215, 60)
+	t.Parent = gui
+	gui.Parent = header
+	-- Backing wall
+	local wall = part({
+		Name = "HallWall",
+		Size = Vector3.new(2, 30, 50),
+		Position = Vector3.new(wallX - 2, BASE_Y + 14.5, 0),
+		Color = Color3.fromRGB(245, 240, 230),
+		Material = Enum.Material.Marble,
+		Parent = boards,
+	})
+	wall.CanCollide = true
+
+	-- Speedrun podium: statues of the 3 fastest players (filled in by Leaderboards.server).
+	local podiumX = wallX + 18
+	for rank, info in ipairs({ { 0, 6, Color3.fromRGB(255, 205, 40) }, { -8, 4, Color3.fromRGB(210, 215, 230) }, { 8, 2.5, Color3.fromRGB(215, 140, 80) } }) do
+		local z, height, color = info[1], info[2], info[3]
+		local pedestal = part({
+			Name = "Podium" .. rank,
+			Size = Vector3.new(7, height, 7),
+			Position = Vector3.new(podiumX, BASE_Y + height / 2, z),
+			Color = color,
+			Material = Enum.Material.Marble,
+			Parent = boards,
+		})
+		tag(pedestal, "Podium", { Rank = rank })
+		label(pedestal, "#" .. rank, color, 40)
+	end
+end
 
 ---------------------------------------------------------------- Central hub (dashboard + NPCs)
 local HUB_STAGE = math.clamp(Config.HubStage or 20, 2, STAGES - 1)

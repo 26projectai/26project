@@ -55,6 +55,9 @@ local function win(player)
 		isNewBest = true
 	end
 	data.Wins += 1
+	if elapsed then
+		Course.AddRecentRun(player.DisplayName, elapsed, assisted)
+	end
 	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "Win", data.Wins)
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
 	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
@@ -100,7 +103,7 @@ local function onTouched(checkpoint, hit)
 	PlayerData.SetStage(player, stage)
 	checkMilestones(player, stage)
 	logStage(player, stage)
-	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace" }
+	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace", [4] = "ReachedLair" }
 	for index, zone in ipairs(Config.Zones) do
 		if zone.FirstStage == stage and zoneBadges[index] then
 			Badges.Award(player, zoneBadges[index])

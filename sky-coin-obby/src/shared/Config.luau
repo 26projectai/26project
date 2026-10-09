@@ -24,14 +24,15 @@ Config.CoinSpinSpeed = 2 -- radians per second
 -- Sample course: builds a 40-stage, 3-zone obby automatically if Workspace has no
 -- "Checkpoints" folder. Set to false once you've built your own course.
 Config.BuildSampleCourse = true
-Config.Stages = 40
-Config.HubStage = 20 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
+Config.Stages = 100
+Config.HubStage = 50 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
 
 -- Zones change the music, sky and (in space) gravity. FirstStage = where the zone starts.
 Config.Zones = {
 	{ Name = "SKY ISLANDS", FirstStage = 1, Music = "Sky", ClockTime = 14, Gravity = 196.2 },
-	{ Name = "CANDY LAND", FirstStage = 11, Music = "Candy", ClockTime = 17.4, Gravity = 196.2 },
-	{ Name = "OUTER SPACE", FirstStage = 21, Music = "Space", ClockTime = 0, Gravity = 80 },
+	{ Name = "CANDY LAND", FirstStage = 26, Music = "Candy", ClockTime = 17.4, Gravity = 196.2 },
+	{ Name = "OUTER SPACE", FirstStage = 51, Music = "Space", ClockTime = 0, Gravity = 80 },
+	{ Name = "GARY'S LAIR", FirstStage = 76, Music = "Phonk", ClockTime = 18.6, Gravity = 196.2 },
 }
 
 -- Daily login rewards: day 1, day 2, ... day 7 (then repeats day 7). Miss a day = back to day 1.
@@ -45,6 +46,7 @@ Config.InviteReward = 50
 Config.Milestones = {
 	{ Stage = 10, Unlock = "SpringBoots", Message = "UNLOCKED: Spring Boots - free Double Jump!" },
 	{ Stage = 20, Unlock = "CometTrail", Message = "UNLOCKED: Comet Trail - equip it in the Shop!" },
+	{ Stage = 76, Unlock = "LairKey", Message = "You found GARY'S LAIR! The final 25 stages..." },
 }
 -- OP Obby milestones (by OP stage).
 Config.OPMilestones = {
@@ -89,7 +91,7 @@ Config.Codes = {
 ---------------------------------------------------------------- Story
 Config.GameTitle = "ESCAPE GREEDY GARY'S OBBY"
 Config.VillainName = "Greedy Gary"
-Config.Intro = "Greedy Gary stole ALL the Sky Coins and locked them in his obby!\nEscape his 40-stage story... then conquer his 1000-stage OP tower."
+Config.Intro = "Greedy Gary stole ALL the Sky Coins and locked them in his obby!\nEscape his 100-stage story... then conquer his 1000-stage OP tower."
 Config.VillainTaunts = {
 	"You'll never escape my obby! Hehehe!",
 	"Those coins are MINE!",

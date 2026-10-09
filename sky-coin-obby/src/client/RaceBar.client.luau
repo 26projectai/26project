@@ -40,7 +40,7 @@ local function totalStages()
 	return math.max(total, 2)
 end
 
-local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255), Color3.fromRGB(255, 100, 30) }
 -- Two sets of colour bands: story worlds, and the OP tower's 20 difficulty tiers.
 local storyBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = track })
 local opBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = track })

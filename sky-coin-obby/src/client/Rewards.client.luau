@@ -413,7 +413,7 @@ make("UIGridLayout", {
 	SortOrder = Enum.SortOrder.LayoutOrder,
 	Parent = stagesContent,
 })
-local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255), Color3.fromRGB(255, 100, 30) }
 local stageButtons = {}
 
 local function zoneIndex(stage)

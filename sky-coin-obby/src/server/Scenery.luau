@@ -309,6 +309,51 @@ local function buildSpace(x0, x1, baseY)
 	end
 end
 
+-- Gary's Lair: volcanoes with glowing craters, lava falls, floating basalt and Gary banners.
+local function volcano(base, height, width)
+	local rock = Color3.fromRGB(55, 45, 50)
+	local layers = 5
+	for i = 0, layers - 1 do
+		local w = width * (1 - i / (layers + 1))
+		pillar(base + Vector3.new(0, (i + 0.5) * height / layers, 0), height / layers, w, rock, Enum.Material.Basalt)
+	end
+	local top = base + Vector3.new(0, height, 0)
+	pillar(top + Vector3.new(0, 0.3, 0), 0.8, width * 0.25, Color3.fromRGB(255, 110, 20), Enum.Material.Neon)
+	-- lava fall down one side
+	deco({
+		Size = Vector3.new(1.2, height * 0.9, width * 0.08),
+		Position = top + Vector3.new(width * 0.22, -height * 0.45, 0),
+		Color = Color3.fromRGB(255, 90, 20),
+		Material = Enum.Material.Neon,
+	})
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 120, 40)
+	light.Range = 40
+	light.Brightness = 3
+	light.Parent = deco({ Size = Vector3.one, Position = top + Vector3.new(0, 3, 0), Transparency = 1 })
+end
+
+local function buildLair(x0, x1, baseY)
+	local density = math.clamp((x1 - x0) / 600, 1, 2)
+	for _ = 1, math.floor(10 * density) do
+		volcano(Vector3.new(range(x0 - 60, x1 + 60), baseY - 31, side(60, 400)), range(50, 140), range(40, 90))
+	end
+	for _ = 1, math.floor(30 * density) do
+		ball(Vector3.new(range(x0, x1), baseY + range(-25, 30), side(22, 90)), range(3, 10), Color3.fromRGB(range(50, 80), range(40, 55), range(45, 60)), Enum.Material.Basalt)
+	end
+	-- Ember sparks hanging in the air
+	for _ = 1, math.floor(60 * density) do
+		ball(Vector3.new(range(x0, x1), baseY + range(-20, 60), side(15, 160)), range(0.4, 1), Color3.fromRGB(255, range(90, 170), 30), Enum.Material.Neon)
+	end
+	-- Gary's banners
+	for _ = 1, math.floor(8 * density) do
+		local p = Vector3.new(range(x0, x1), baseY - 4, side(26, 50))
+		pillar(p + Vector3.new(0, 12, 0), 24, 0.8, Color3.fromRGB(40, 30, 30), Enum.Material.Metal)
+		deco({ Size = Vector3.new(0.3, 9, 6), Position = p + Vector3.new(0, 18, 3.2 * (p.Z > 0 and -1 or 1)), Color = Color3.fromRGB(110, 40, 150), Material = Enum.Material.Fabric })
+		ball(p + Vector3.new(0, 19, 3.4 * (p.Z > 0 and -1 or 1)), 3, Color3.fromRGB(255, 200, 40), Enum.Material.Neon)
+	end
+end
+
 ---------------------------------------------------------------- entry point
 -- Optional hero landmarks: import 3D models (e.g. the Higgsfield GLBs) into
 -- ServerStorage > Landmarks named "Sky", "Candy" and "Space"; they get placed and scaled here.
@@ -437,16 +482,26 @@ function Scenery.Build(opts)
 		end
 	end
 
-	-- Spawn lobby: big island, trees and a title sign.
-	island(Vector3.new(-14, 0, 0), baseY - 0.55, 42, 1, true)
-	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-22, 0, -14), Vector3.new(-6, 0, 18) }) do
+	-- Spawn plaza: a big island with room for the Hall of Fame wall, podium, portal and NPCs.
+	local LOBBY = Vector3.new(-44, 0, 0)
+	island(LOBBY, baseY - 0.55, 100, 1, true)
+	for _, offset in ipairs({
+		Vector3.new(-14, 0, -42), Vector3.new(-14, 0, 42), Vector3.new(-40, 0, -46), Vector3.new(-40, 0, 46),
+		Vector3.new(-64, 0, -40), Vector3.new(-64, 0, 40), Vector3.new(-2, 0, -28), Vector3.new(-2, 0, 28),
+	}) do
 		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
 	end
-	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
+	-- Title sign above the Hall of Fame wall.
+	sign(Vector3.new(-85.5, baseY + 36, 0), Vector3.new(1, 0, 0), Vector3.new(52, 11, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
+
+	-- Everything built so far (lobby, checkpoint islands) survives the plaza cleanup below.
+	for _, p in ipairs(folder:GetChildren()) do
+		p:SetAttribute("Keep", true)
+	end
 
 	-- World scenery.
 	local zones = opts.Zones
-	local builders = { buildSky, buildCandy, buildSpace }
+	local builders = { buildSky, buildCandy, buildSpace, buildLair }
 	for i, zone in ipairs(zones) do
 		local builder = builders[i]
 		if builder then
@@ -462,6 +517,17 @@ function Scenery.Build(opts)
 	end
 	if zones[3] then
 		gate((zones[3].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(80, 230, 255), Color3.fromRGB(190, 90, 255) }, Enum.Material.Neon)
+	end
+	if zones[4] then
+		gate((zones[4].FirstStage - 1) * spacing - 7, baseY - 1, 17, { Color3.fromRGB(255, 90, 20), Color3.fromRGB(40, 30, 30) }, Enum.Material.Neon)
+	end
+
+	-- Keep the spawn plaza clear of world decoration.
+	for _, p in ipairs(folder:GetChildren()) do
+		local offset = p.Position - Vector3.new(LOBBY.X, baseY, 0)
+		if Vector2.new(offset.X, offset.Z).Magnitude < 62 and offset.Y > -40 and offset.Y < 60 and not p:GetAttribute("Keep") then
+			p:Destroy()
+		end
 	end
 
 	-- Clear decoration that would poke through the hub island, then build the hub.
@@ -487,7 +553,7 @@ function Scenery.Build(opts)
 	end
 
 	-- Greedy Gary looms over the lobby, the hub and the finish.
-	gary(Vector3.new(-62, baseY - 6, 0), 2.2, Vector3.new(1, 0, 0))
+	gary(Vector3.new(-128, baseY - 10, 0), 2.8, Vector3.new(1, 0, 0))
 	if opts.HubCenter then
 		gary(opts.HubCenter + Vector3.new(0, 30, -36), 1.6, Vector3.new(0, 0, 1))
 	end

@@ -1193,6 +1193,7 @@ local bannerStroke = banner:FindFirstChildOfClass("UIStroke")
 local ZONE_SUBTITLES = {
 	["CANDY LAND"] = "Watch out - platforms vanish!",
 	["OUTER SPACE"] = "Low gravity - MOON JUMPS!",
+	["GARY'S LAIR"] = "Gary's home turf - the final 25 stages!",
 }
 local function showBanner(zone)
 	local subtitle = ZONE_SUBTITLES[zone.Name]
@@ -1800,6 +1801,10 @@ local LOOKS = {
 		Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1,
 		Density = 0.12, Haze = 0, Glare = 0, Color = Color3.fromRGB(60, 40, 110), Decay = Color3.fromRGB(20, 10, 50),
 	},
+	["GARY'S LAIR"] = {
+		Tint = Color3.fromRGB(255, 220, 205), Saturation = 0.15, Brightness = 1.6,
+		Density = 0.4, Haze = 2.4, Glare = 0.2, Color = Color3.fromRGB(255, 150, 110), Decay = Color3.fromRGB(150, 50, 40),
+	},
 }
 
 local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
@@ -1881,7 +1886,7 @@ local function currentZoneInfo()
 end
 
 -- Custom skyboxes (Assets.Skyboxes) per world, if the ids have been set.
-local SKY_FOR_LOOK = { ["SKY ISLANDS"] = "Sky", ["CANDY LAND"] = "Candy", ["OUTER SPACE"] = "Space" }
+local SKY_FOR_LOOK = { ["SKY ISLANDS"] = "Sky", ["CANDY LAND"] = "Candy", ["OUTER SPACE"] = "Space", ["GARY'S LAIR"] = "Lair" }
 local function applySky(lookName)
 	local ids = Config.Skyboxes[SKY_FOR_LOOK[lookName] or "Sky"]
 	if not ids or not Config.HasAsset(ids.Ft) then
@@ -2005,7 +2010,7 @@ local function totalStages()
 	return math.max(total, 2)
 end
 
-local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255), Color3.fromRGB(255, 100, 30) }
 -- Two sets of colour bands: story worlds, and the OP tower's 20 difficulty tiers.
 local storyBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = track })
 local opBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = track })
@@ -2544,7 +2549,7 @@ make("UIGridLayout", {
 	SortOrder = Enum.SortOrder.LayoutOrder,
 	Parent = stagesContent,
 })
-local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255), Color3.fromRGB(255, 100, 30) }
 local stageButtons = {}
 
 local function zoneIndex(stage)

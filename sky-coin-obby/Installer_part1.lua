@@ -47,6 +47,7 @@ Assets.Badges = {
 	Welcome = 0,
 	ReachedCandy = 0,
 	ReachedSpace = 0,
+	ReachedLair = 0,
 	FirstWin = 0,
 	TenWins = 0,
 	OP100 = 0,
@@ -96,6 +97,7 @@ Assets.Skyboxes = {
 	Sky = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 	Candy = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 	Space = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
+	Lair = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
@@ -144,14 +146,15 @@ Config.CoinSpinSpeed = 2 -- radians per second
 -- Sample course: builds a 40-stage, 3-zone obby automatically if Workspace has no
 -- "Checkpoints" folder. Set to false once you've built your own course.
 Config.BuildSampleCourse = true
-Config.Stages = 40
-Config.HubStage = 20 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
+Config.Stages = 100
+Config.HubStage = 50 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
 
 -- Zones change the music, sky and (in space) gravity. FirstStage = where the zone starts.
 Config.Zones = {
 	{ Name = "SKY ISLANDS", FirstStage = 1, Music = "Sky", ClockTime = 14, Gravity = 196.2 },
-	{ Name = "CANDY LAND", FirstStage = 11, Music = "Candy", ClockTime = 17.4, Gravity = 196.2 },
-	{ Name = "OUTER SPACE", FirstStage = 21, Music = "Space", ClockTime = 0, Gravity = 80 },
+	{ Name = "CANDY LAND", FirstStage = 26, Music = "Candy", ClockTime = 17.4, Gravity = 196.2 },
+	{ Name = "OUTER SPACE", FirstStage = 51, Music = "Space", ClockTime = 0, Gravity = 80 },
+	{ Name = "GARY'S LAIR", FirstStage = 76, Music = "Phonk", ClockTime = 18.6, Gravity = 196.2 },
 }
 
 -- Daily login rewards: day 1, day 2, ... day 7 (then repeats day 7). Miss a day = back to day 1.
@@ -165,6 +168,7 @@ Config.InviteReward = 50
 Config.Milestones = {
 	{ Stage = 10, Unlock = "SpringBoots", Message = "UNLOCKED: Spring Boots - free Double Jump!" },
 	{ Stage = 20, Unlock = "CometTrail", Message = "UNLOCKED: Comet Trail - equip it in the Shop!" },
+	{ Stage = 76, Unlock = "LairKey", Message = "You found GARY'S LAIR! The final 25 stages..." },
 }
 -- OP Obby milestones (by OP stage).
 Config.OPMilestones = {
@@ -209,7 +213,7 @@ Config.Codes = {
 ---------------------------------------------------------------- Story
 Config.GameTitle = "ESCAPE GREEDY GARY'S OBBY"
 Config.VillainName = "Greedy Gary"
-Config.Intro = "Greedy Gary stole ALL the Sky Coins and locked them in his obby!\nEscape his 40-stage story... then conquer his 1000-stage OP tower."
+Config.Intro = "Greedy Gary stole ALL the Sky Coins and locked them in his obby!\nEscape his 100-stage story... then conquer his 1000-stage OP tower."
 Config.VillainTaunts = {
 	"You'll never escape my obby! Hehehe!",
 	"Those coins are MINE!",
@@ -848,9 +852,9 @@ local function safeZones()
 	local checkpoints = workspace:FindFirstChild("Checkpoints")
 	local first = checkpoints and checkpoints:FindFirstChild("1")
 	if first then
-		table.insert(zones, { Center = first.Position + Vector3.new(-14, 0, 0), Radius = 24 })
+		table.insert(zones, { Center = first.Position + Vector3.new(-44, 0, 0), Radius = 50 })
 	end
-	local hub = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 20))
+	local hub = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 50))
 	if hub then
 		table.insert(zones, { Center = hub.Position + Vector3.new(0, 0, -62), Radius = 44 })
 	end
@@ -1036,6 +1040,9 @@ local function win(player)
 		isNewBest = true
 	end
 	data.Wins += 1
+	if elapsed then
+		Course.AddRecentRun(player.DisplayName, elapsed, assisted)
+	end
 	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "Win", data.Wins)
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
 	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
@@ -1081,7 +1088,7 @@ local function onTouched(checkpoint, hit)
 	PlayerData.SetStage(player, stage)
 	checkMilestones(player, stage)
 	logStage(player, stage)
-	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace" }
+	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace", [4] = "ReachedLair" }
 	for index, zone in ipairs(Config.Zones) do
 		if zone.FirstStage == stage and zoneBadges[index] then
 			Badges.Award(player, zoneBadges[index])
@@ -1253,6 +1260,15 @@ add(f_server, "ModuleScript", "Course", [==[
 -- Helpers for finding checkpoints and moving players between stages.
 local Course = {}
 
+-- Latest finishes in this server (newest first), shown on the RECENT FINISHES board.
+Course.RecentRuns = {}
+function Course.AddRecentRun(name, seconds, assisted)
+	table.insert(Course.RecentRuns, 1, { Name = name, Time = seconds, Assisted = assisted, At = os.time() })
+	if #Course.RecentRuns > 10 then
+		table.remove(Course.RecentRuns)
+	end
+end
+
 local checkpoints = workspace:WaitForChild("Checkpoints")
 Course.Checkpoints = checkpoints
 
@@ -1338,6 +1354,17 @@ local THEMES = {
 		Material = Enum.Material.Neon,
 		Checkpoint = Color3.fromRGB(80, 255, 140),
 		Floor = Color3.fromRGB(45, 15, 80),
+	},
+	{ -- Gary's Lair (volcano)
+		Platforms = {
+			Color3.fromRGB(60, 50, 55),
+			Color3.fromRGB(90, 70, 70),
+			Color3.fromRGB(120, 40, 160),
+			Color3.fromRGB(70, 60, 60),
+		},
+		Material = Enum.Material.Basalt,
+		Checkpoint = Color3.fromRGB(255, 160, 40),
+		Floor = Color3.fromRGB(255, 70, 20),
 	},
 }
 
@@ -1532,7 +1559,7 @@ local function opPortal(position, facing)
 	})
 	frame.CanTouch = false
 end
-opPortal(Vector3.new(-18, BASE_Y + 6, 13), Vector3.new(0, 0, -1)) -- in the spawn lobby
+opPortal(Vector3.new(-30, BASE_Y + 6, 30), Vector3.new(0, 0, -1)) -- in the spawn plaza
 
 ---------------------------------------------------------------- Obstacle sections
 -- Pads span x0-6..x0+6, so each section fills x0+6..x0+54.
@@ -1715,7 +1742,21 @@ local spaceSections = {
 	end,
 }
 
-local sectionsByZone = { skySections, candySections, spaceSections }
+-- Gary's Lair (normal gravity): the hardest mix of every hazard.
+-- candySections: 1 trap, 2 fade, 3 conveyor, 4 jump pad, 5 sliders
+-- spaceSections: 3 double spinners, 6 laser gates (both fine in normal gravity)
+local lairSections = {
+	trapFloor,
+	skySections[3], -- spinning bar
+	candySections[5], -- sliders
+	spaceSections[6], -- laser gates
+	candySections[3], -- conveyor
+	spaceSections[3], -- double spinners
+	skySections[2], -- kill strips
+	candySections[2], -- vanishing platforms
+}
+
+local sectionsByZone = { skySections, candySections, spaceSections, lairSections }
 
 for stage = 1, STAGES - 1 do
 	local zIndex = zoneIndex(stage)
@@ -1728,7 +1769,7 @@ for stage = 1, STAGES - 1 do
 end
 
 ---------------------------------------------------------------- Gary jumpscares + a silly yeet pad (clip-worthy moments)
-for _, stage in ipairs({ 6, 17, 27, 36 }) do
+for _, stage in ipairs({ 6, 17, 31, 44, 58, 67, 79, 88, 97 }) do
 	if stage < STAGES then
 		local trigger = part({
 			Name = "GaryScare",
@@ -1746,7 +1787,7 @@ do
 	local yeet = part({
 		Name = "YeetPad",
 		Size = Vector3.new(5, 0.6, 5),
-		Position = Vector3.new(-26, BASE_Y + 0.3, -6),
+		Position = Vector3.new(-26, BASE_Y + 0.3, -30),
 		Color = Color3.fromRGB(255, 80, 200),
 		Material = Enum.Material.Neon,
 		Parent = course,
@@ -1756,7 +1797,7 @@ do
 end
 
 ---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
-local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon }
+local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon, Enum.Material.CrackedLava }
 local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
 for zIndex, zone in ipairs(Config.Zones) do
 	if zIndex > #THEMES then
@@ -1795,10 +1836,62 @@ local function board(name, tagName, position, facing, size)
 	CollectionService:AddTag(p, tagName)
 	return p
 end
--- Beside the start.
-board("WinsBoard", "Board_Wins", Vector3.new(0, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
-board("TimeBoard", "Board_Time", Vector3.new(0, BASE_Y + 7, 13), Vector3.new(0, 0, -1))
-board("LiveBoard", "Board_Live", Vector3.new(-16, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+-- Spawn plaza: a big Hall of Fame wall facing the start, plus the speedrun podium.
+-- The lobby island (Scenery) is centred at LOBBY_X with room for everything.
+local LOBBY_X = -44
+local wallX = LOBBY_X - 40
+local toCourse = Vector3.new(1, 0, 0)
+board("HallTime", "Board_Time", Vector3.new(wallX, BASE_Y + 12, -11), toCourse, Vector3.new(20, 20, 1))
+board("HallRecent", "Board_Recent", Vector3.new(wallX, BASE_Y + 12, 11), toCourse, Vector3.new(20, 20, 1))
+board("HallWins", "Board_Wins", Vector3.new(wallX + 2, BASE_Y + 10, -33), Vector3.new(1, 0, 0.35).Unit, Vector3.new(18, 16, 1))
+board("HallLive", "Board_Live", Vector3.new(wallX + 2, BASE_Y + 10, 33), Vector3.new(1, 0, -0.35).Unit, Vector3.new(18, 16, 1))
+do
+	local header = part({
+		Name = "HallHeader",
+		Size = Vector3.new(1, 6, 44),
+		Position = Vector3.new(wallX - 0.5, BASE_Y + 25.5, 0),
+		Color = Color3.fromRGB(25, 25, 45),
+		Parent = boards,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Right
+	gui.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.Text = "🏆 HALL OF FAME 🏆"
+	t.TextColor3 = Color3.fromRGB(255, 215, 60)
+	t.Parent = gui
+	gui.Parent = header
+	-- Backing wall
+	local wall = part({
+		Name = "HallWall",
+		Size = Vector3.new(2, 30, 50),
+		Position = Vector3.new(wallX - 2, BASE_Y + 14.5, 0),
+		Color = Color3.fromRGB(245, 240, 230),
+		Material = Enum.Material.Marble,
+		Parent = boards,
+	})
+	wall.CanCollide = true
+
+	-- Speedrun podium: statues of the 3 fastest players (filled in by Leaderboards.server).
+	local podiumX = wallX + 18
+	for rank, info in ipairs({ { 0, 6, Color3.fromRGB(255, 205, 40) }, { -8, 4, Color3.fromRGB(210, 215, 230) }, { 8, 2.5, Color3.fromRGB(215, 140, 80) } }) do
+		local z, height, color = info[1], info[2], info[3]
+		local pedestal = part({
+			Name = "Podium" .. rank,
+			Size = Vector3.new(7, height, 7),
+			Position = Vector3.new(podiumX, BASE_Y + height / 2, z),
+			Color = color,
+			Material = Enum.Material.Marble,
+			Parent = boards,
+		})
+		tag(pedestal, "Podium", { Rank = rank })
+		label(pedestal, "#" .. rank, color, 40)
+	end
+end
 
 ---------------------------------------------------------------- Central hub (dashboard + NPCs)
 local HUB_STAGE = math.clamp(Config.HubStage or 20, 2, STAGES - 1)
@@ -2183,6 +2276,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PlayerData"))
+local Course = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Course"))
 
 local REFRESH_SECONDS = 60
 local SHOWN = 10
@@ -2295,6 +2389,51 @@ local winsLists = listsFor("Board_Wins", "MOST WINS", Color3.fromRGB(255, 170, 4
 local timeLists = listsFor("Board_Time", "FASTEST RUN", Color3.fromRGB(70, 160, 255))
 local liveLists = listsFor("Board_Live", "LIVE RACE", Color3.fromRGB(80, 220, 120))
 local opLists = listsFor("Board_OP", "OP TOWER TOP", Color3.fromRGB(255, 0, 90))
+local recentLists = listsFor("Board_Recent", "RECENT FINISHES", Color3.fromRGB(180, 90, 255))
+
+---------------------------------------------------------------- Speedrun podium (top 3 statues)
+local statueOwners = {} -- [rank] = userId currently shown
+local function updatePodium(entries)
+	for _, pedestal in ipairs(CollectionService:GetTagged("Podium")) do
+		local rank = pedestal:GetAttribute("Rank")
+		local entry = entries[rank]
+		local userId = entry and tonumber(entry.key)
+		if userId ~= statueOwners[rank] then
+			statueOwners[rank] = userId
+			local old = pedestal:FindFirstChild("Statue")
+			if old then
+				old:Destroy()
+			end
+			if userId then
+				task.spawn(function()
+					local ok, statue = pcall(Players.CreateHumanoidModelFromUserId, Players, userId)
+					if not ok or not statue or statueOwners[rank] ~= userId then
+						return
+					end
+					statue.Name = "Statue"
+					for _, d in ipairs(statue:GetDescendants()) do
+						if d:IsA("BasePart") then
+							d.Anchored = true
+							d.CanCollide = false
+						elseif d:IsA("Script") or d:IsA("LocalScript") then
+							d:Destroy()
+						end
+					end
+					local humanoid = statue:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid.DisplayName = ("#%d %s - %s"):format(rank, nameFor(userId), formatTime(entry.value / 100))
+						humanoid.NameDisplayDistance = 120
+					end
+					statue:ScaleTo(1.6)
+					local _, size = statue:GetBoundingBox()
+					local top = pedestal.Position + Vector3.new(0, pedestal.Size.Y / 2 + size.Y / 2, 0)
+					statue:PivotTo(CFrame.lookAt(top, top + Vector3.new(1, 0, 0)))
+					statue.Parent = pedestal
+				end)
+			end
+		end
+	end
+end
 
 local function fillAll(lists, entries, formatValue)
 	-- Boards in streamed OP tiers come and go; drop the ones that were destroyed.
@@ -2351,9 +2490,11 @@ local function refreshGlobal()
 	end
 	local okTime, timePage = pcall(timeStore.GetSortedAsync, timeStore, true, SHOWN)
 	if okTime then
-		fillAll(timeLists, timePage:GetCurrentPage(), function(v)
+		local entries = timePage:GetCurrentPage()
+		fillAll(timeLists, entries, function(v)
 			return formatTime(v / 100)
 		end)
+		updatePodium(entries)
 	end
 end
 
@@ -2376,6 +2517,21 @@ local function refreshLive()
 	fillAll(liveLists, entries, function(v)
 		return "Stage " .. v
 	end)
+	-- Recent finishes in this server (assisted runs are marked).
+	for i = #recentLists, 1, -1 do
+		if not recentLists[i]:IsDescendantOf(workspace) then
+			table.remove(recentLists, i)
+		end
+	end
+	for _, list in ipairs(recentLists) do
+		for i = 1, SHOWN do
+			local run = Course.RecentRuns[i]
+			list["Row" .. i].Text = run and ("%s  %s%s"):format(run.Name, formatTime(run.Time), run.Assisted and " (passes)" or "") or ""
+		end
+		if not Course.RecentRuns[1] then
+			list.Row1.Text = "Finish the course to appear here!"
+		end
+	end
 	-- OP boards refresh often too, so newly streamed station boards fill quickly.
 	fillAll(opLists, lastOPEntries, function(v)
 		return "OP " .. v
@@ -2530,9 +2686,9 @@ local function walkAreas()
 	local checkpoints = workspace:FindFirstChild("Checkpoints")
 	local first = checkpoints and checkpoints:FindFirstChild("1")
 	if first then
-		table.insert(areas, { Center = first.Position + Vector3.new(-16, 0, 0), Radius = 12, Count = 2 })
+		table.insert(areas, { Center = first.Position + Vector3.new(-30, 0, 0), Radius = 20, Count = 3 })
 	end
-	local hubStage = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 20))
+	local hubStage = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 50))
 	if hubStage then
 		table.insert(areas, { Center = hubStage.Position + Vector3.new(0, 0, -62), Radius = 18, Count = 2 })
 	end
@@ -4594,6 +4750,51 @@ local function buildSpace(x0, x1, baseY)
 	end
 end
 
+-- Gary's Lair: volcanoes with glowing craters, lava falls, floating basalt and Gary banners.
+local function volcano(base, height, width)
+	local rock = Color3.fromRGB(55, 45, 50)
+	local layers = 5
+	for i = 0, layers - 1 do
+		local w = width * (1 - i / (layers + 1))
+		pillar(base + Vector3.new(0, (i + 0.5) * height / layers, 0), height / layers, w, rock, Enum.Material.Basalt)
+	end
+	local top = base + Vector3.new(0, height, 0)
+	pillar(top + Vector3.new(0, 0.3, 0), 0.8, width * 0.25, Color3.fromRGB(255, 110, 20), Enum.Material.Neon)
+	-- lava fall down one side
+	deco({
+		Size = Vector3.new(1.2, height * 0.9, width * 0.08),
+		Position = top + Vector3.new(width * 0.22, -height * 0.45, 0),
+		Color = Color3.fromRGB(255, 90, 20),
+		Material = Enum.Material.Neon,
+	})
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 120, 40)
+	light.Range = 40
+	light.Brightness = 3
+	light.Parent = deco({ Size = Vector3.one, Position = top + Vector3.new(0, 3, 0), Transparency = 1 })
+end
+
+local function buildLair(x0, x1, baseY)
+	local density = math.clamp((x1 - x0) / 600, 1, 2)
+	for _ = 1, math.floor(10 * density) do
+		volcano(Vector3.new(range(x0 - 60, x1 + 60), baseY - 31, side(60, 400)), range(50, 140), range(40, 90))
+	end
+	for _ = 1, math.floor(30 * density) do
+		ball(Vector3.new(range(x0, x1), baseY + range(-25, 30), side(22, 90)), range(3, 10), Color3.fromRGB(range(50, 80), range(40, 55), range(45, 60)), Enum.Material.Basalt)
+	end
+	-- Ember sparks hanging in the air
+	for _ = 1, math.floor(60 * density) do
+		ball(Vector3.new(range(x0, x1), baseY + range(-20, 60), side(15, 160)), range(0.4, 1), Color3.fromRGB(255, range(90, 170), 30), Enum.Material.Neon)
+	end
+	-- Gary's banners
+	for _ = 1, math.floor(8 * density) do
+		local p = Vector3.new(range(x0, x1), baseY - 4, side(26, 50))
+		pillar(p + Vector3.new(0, 12, 0), 24, 0.8, Color3.fromRGB(40, 30, 30), Enum.Material.Metal)
+		deco({ Size = Vector3.new(0.3, 9, 6), Position = p + Vector3.new(0, 18, 3.2 * (p.Z > 0 and -1 or 1)), Color = Color3.fromRGB(110, 40, 150), Material = Enum.Material.Fabric })
+		ball(p + Vector3.new(0, 19, 3.4 * (p.Z > 0 and -1 or 1)), 3, Color3.fromRGB(255, 200, 40), Enum.Material.Neon)
+	end
+end
+
 ---------------------------------------------------------------- entry point
 -- Optional hero landmarks: import 3D models (e.g. the Higgsfield GLBs) into
 -- ServerStorage > Landmarks named "Sky", "Candy" and "Space"; they get placed and scaled here.
@@ -4722,16 +4923,26 @@ function Scenery.Build(opts)
 		end
 	end
 
-	-- Spawn lobby: big island, trees and a title sign.
-	island(Vector3.new(-14, 0, 0), baseY - 0.55, 42, 1, true)
-	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-22, 0, -14), Vector3.new(-6, 0, 18) }) do
+	-- Spawn plaza: a big island with room for the Hall of Fame wall, podium, portal and NPCs.
+	local LOBBY = Vector3.new(-44, 0, 0)
+	island(LOBBY, baseY - 0.55, 100, 1, true)
+	for _, offset in ipairs({
+		Vector3.new(-14, 0, -42), Vector3.new(-14, 0, 42), Vector3.new(-40, 0, -46), Vector3.new(-40, 0, 46),
+		Vector3.new(-64, 0, -40), Vector3.new(-64, 0, 40), Vector3.new(-2, 0, -28), Vector3.new(-2, 0, 28),
+	}) do
 		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
 	end
-	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
+	-- Title sign above the Hall of Fame wall.
+	sign(Vector3.new(-85.5, baseY + 36, 0), Vector3.new(1, 0, 0), Vector3.new(52, 11, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
+
+	-- Everything built so far (lobby, checkpoint islands) survives the plaza cleanup below.
+	for _, p in ipairs(folder:GetChildren()) do
+		p:SetAttribute("Keep", true)
+	end
 
 	-- World scenery.
 	local zones = opts.Zones
-	local builders = { buildSky, buildCandy, buildSpace }
+	local builders = { buildSky, buildCandy, buildSpace, buildLair }
 	for i, zone in ipairs(zones) do
 		local builder = builders[i]
 		if builder then
@@ -4747,6 +4958,17 @@ function Scenery.Build(opts)
 	end
 	if zones[3] then
 		gate((zones[3].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(80, 230, 255), Color3.fromRGB(190, 90, 255) }, Enum.Material.Neon)
+	end
+	if zones[4] then
+		gate((zones[4].FirstStage - 1) * spacing - 7, baseY - 1, 17, { Color3.fromRGB(255, 90, 20), Color3.fromRGB(40, 30, 30) }, Enum.Material.Neon)
+	end
+
+	-- Keep the spawn plaza clear of world decoration.
+	for _, p in ipairs(folder:GetChildren()) do
+		local offset = p.Position - Vector3.new(LOBBY.X, baseY, 0)
+		if Vector2.new(offset.X, offset.Z).Magnitude < 62 and offset.Y > -40 and offset.Y < 60 and not p:GetAttribute("Keep") then
+			p:Destroy()
+		end
 	end
 
 	-- Clear decoration that would poke through the hub island, then build the hub.
@@ -4772,7 +4994,7 @@ function Scenery.Build(opts)
 	end
 
 	-- Greedy Gary looms over the lobby, the hub and the finish.
-	gary(Vector3.new(-62, baseY - 6, 0), 2.2, Vector3.new(1, 0, 0))
+	gary(Vector3.new(-128, baseY - 10, 0), 2.8, Vector3.new(1, 0, 0))
 	if opts.HubCenter then
 		gary(opts.HubCenter + Vector3.new(0, 30, -36), 1.6, Vector3.new(0, 0, 1))
 	end

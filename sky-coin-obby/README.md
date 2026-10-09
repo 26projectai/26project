@@ -1,6 +1,6 @@
 # Escape Greedy Gary's Obby (Sky Coin Obby)
 
-**Greedy Gary stole all the Sky Coins.** Escape his **40-stage story obby**, then climb his **1000-stage OP
+**Greedy Gary stole all the Sky Coins.** Escape his **100-stage story obby**, then climb his **1000-stage OP
 difficulty-chart tower**. It's built to keep players coming back and bringing friends.
 
 ## Feature checklist
@@ -8,7 +8,7 @@ difficulty-chart tower**. It's built to keep players coming back and bringing fr
 | Requirement | Where it is in the game |
 |---|---|
 | **Core obstacles** | Checkpoints, lava/laser kill bricks, fading platforms, sliders (moving blocks), conveyors, jump pads, spinners, truss climbs, trap doors |
-| **Stage counter UI** | HUD at the top (story `Stage x/40` or `OP x/1000`), plus the live race bar |
+| **Stage counter UI** | HUD at the top (story `Stage x/100` or `OP x/1000`), plus the live race bar |
 | **Fast reset** | **R key / RESET button**, 1.5 second respawn |
 | **DataStores** | Everything saves: stages, OP stage, coins, wins, rebirths, jump power, cosmetics, streaks |
 | **Theme, skybox, lighting** | 3 worlds with **custom skyboxes** (`skybox/`), atmosphere haze, colour grading, ClockTime per world |
@@ -33,7 +33,7 @@ difficulty-chart tower**. It's built to keep players coming back and bringing fr
 | **Boost Stations** | Every **15 stages** (story and OP): x2 coin orb + mini live dashboard |
 
 **Gameplay**
-- **40 stages across 3 worlds**, each with its own music, sky, haze and scenery:
+- **100 stages across 4 worlds**, each with its own music, sky, haze and scenery:
   - **Sky Islands** (1–10): lava sea, tree islands, rainbow.
   - **Candy Land** (11–20): vanishing platforms, jump pads, sliders, gumdrop hills, lollipop forest.
   - **Outer Space** (21–40, the biggest world): **low gravity moon jumps**, laser gates, long leaps, planets, asteroid belt.

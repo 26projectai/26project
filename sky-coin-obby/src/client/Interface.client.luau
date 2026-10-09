@@ -690,6 +690,7 @@ local bannerStroke = banner:FindFirstChildOfClass("UIStroke")
 local ZONE_SUBTITLES = {
 	["CANDY LAND"] = "Watch out - platforms vanish!",
 	["OUTER SPACE"] = "Low gravity - MOON JUMPS!",
+	["GARY'S LAIR"] = "Gary's home turf - the final 25 stages!",
 }
 local function showBanner(zone)
 	local subtitle = ZONE_SUBTITLES[zone.Name]

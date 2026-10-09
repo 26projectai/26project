@@ -23,6 +23,7 @@ Assets.Badges = {
 	Welcome = 0,
 	ReachedCandy = 0,
 	ReachedSpace = 0,
+	ReachedLair = 0,
 	FirstWin = 0,
 	TenWins = 0,
 	OP100 = 0,
@@ -72,6 +73,7 @@ Assets.Skyboxes = {
 	Sky = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 	Candy = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 	Space = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
+	Lair = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.

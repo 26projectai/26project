@@ -10,6 +10,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PlayerData"))
+local Course = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Course"))
 
 local REFRESH_SECONDS = 60
 local SHOWN = 10
@@ -122,6 +123,51 @@ local winsLists = listsFor("Board_Wins", "MOST WINS", Color3.fromRGB(255, 170, 4
 local timeLists = listsFor("Board_Time", "FASTEST RUN", Color3.fromRGB(70, 160, 255))
 local liveLists = listsFor("Board_Live", "LIVE RACE", Color3.fromRGB(80, 220, 120))
 local opLists = listsFor("Board_OP", "OP TOWER TOP", Color3.fromRGB(255, 0, 90))
+local recentLists = listsFor("Board_Recent", "RECENT FINISHES", Color3.fromRGB(180, 90, 255))
+
+---------------------------------------------------------------- Speedrun podium (top 3 statues)
+local statueOwners = {} -- [rank] = userId currently shown
+local function updatePodium(entries)
+	for _, pedestal in ipairs(CollectionService:GetTagged("Podium")) do
+		local rank = pedestal:GetAttribute("Rank")
+		local entry = entries[rank]
+		local userId = entry and tonumber(entry.key)
+		if userId ~= statueOwners[rank] then
+			statueOwners[rank] = userId
+			local old = pedestal:FindFirstChild("Statue")
+			if old then
+				old:Destroy()
+			end
+			if userId then
+				task.spawn(function()
+					local ok, statue = pcall(Players.CreateHumanoidModelFromUserId, Players, userId)
+					if not ok or not statue or statueOwners[rank] ~= userId then
+						return
+					end
+					statue.Name = "Statue"
+					for _, d in ipairs(statue:GetDescendants()) do
+						if d:IsA("BasePart") then
+							d.Anchored = true
+							d.CanCollide = false
+						elseif d:IsA("Script") or d:IsA("LocalScript") then
+							d:Destroy()
+						end
+					end
+					local humanoid = statue:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid.DisplayName = ("#%d %s - %s"):format(rank, nameFor(userId), formatTime(entry.value / 100))
+						humanoid.NameDisplayDistance = 120
+					end
+					statue:ScaleTo(1.6)
+					local _, size = statue:GetBoundingBox()
+					local top = pedestal.Position + Vector3.new(0, pedestal.Size.Y / 2 + size.Y / 2, 0)
+					statue:PivotTo(CFrame.lookAt(top, top + Vector3.new(1, 0, 0)))
+					statue.Parent = pedestal
+				end)
+			end
+		end
+	end
+end
 
 local function fillAll(lists, entries, formatValue)
 	-- Boards in streamed OP tiers come and go; drop the ones that were destroyed.
@@ -178,9 +224,11 @@ local function refreshGlobal()
 	end
 	local okTime, timePage = pcall(timeStore.GetSortedAsync, timeStore, true, SHOWN)
 	if okTime then
-		fillAll(timeLists, timePage:GetCurrentPage(), function(v)
+		local entries = timePage:GetCurrentPage()
+		fillAll(timeLists, entries, function(v)
 			return formatTime(v / 100)
 		end)
+		updatePodium(entries)
 	end
 end
 
@@ -203,6 +251,21 @@ local function refreshLive()
 	fillAll(liveLists, entries, function(v)
 		return "Stage " .. v
 	end)
+	-- Recent finishes in this server (assisted runs are marked).
+	for i = #recentLists, 1, -1 do
+		if not recentLists[i]:IsDescendantOf(workspace) then
+			table.remove(recentLists, i)
+		end
+	end
+	for _, list in ipairs(recentLists) do
+		for i = 1, SHOWN do
+			local run = Course.RecentRuns[i]
+			list["Row" .. i].Text = run and ("%s  %s%s"):format(run.Name, formatTime(run.Time), run.Assisted and " (passes)" or "") or ""
+		end
+		if not Course.RecentRuns[1] then
+			list.Row1.Text = "Finish the course to appear here!"
+		end
+	end
 	-- OP boards refresh often too, so newly streamed station boards fill quickly.
 	fillAll(opLists, lastOPEntries, function(v)
 		return "OP " .. v
