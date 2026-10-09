@@ -1,161 +1,119 @@
 # Sky Coin Obby
 
-A Roblox obby with:
+A 30-stage Roblox obby built to keep players coming back and bringing friends.
 
-- **Checkpoints**: progress saves, and you respawn on your last stage
-- **Coins**: spinning collectibles, plus bonus coins for each new stage
-- **Cosmetic shop**: 3 trails and 3 auras, bought with coins and saved forever
-- **Sample course**: a 10-stage course builds itself so you can play right away
-- **Artwork** from Higgsfield: game icon, thumbnail, UI icons and shop icons (see [`art/`](art/README.md))
+**Gameplay**
+- **3 worlds** with their own music, sky colours and obstacles:
+  - **Sky Islands** (stages 1–10): shrinking platforms, kill strips, spinners, narrow beams.
+  - **Candy Land** (stages 11–20): vanishing platforms, a backwards conveyor, jump pads, sliding blocks.
+  - **Outer Space** (stages 21–30): **low gravity moon jumps**, asteroid hops, double spinners, a jump pad launch across a huge gap.
+- **Checkpoints** that save, and you respawn on your last one.
+- **Coins** with a rising-pitch combo sound, a "+N" pop-up, and coins that come back after 45 seconds.
 
-```
-src/
-  shared/   -> ReplicatedStorage > Shared            (ModuleScripts)
-    Config          settings: prices, coin values, image ids
-    ShopCatalog     the shop items
-    Remotes         client/server communication
-  server/   -> ServerScriptService > Server
-    PlayerData      ModuleScript: saving/loading coins, stage, cosmetics
-    Checkpoints     Script
-    Coins           Script
-    Obstacles       Script: kill bricks + spinners
-    Shop            Script: buy/equip + applies trails/auras
-    CourseBuilder   Script: builds the sample course (optional)
-  client/   -> StarterPlayer > StarterPlayerScripts > Client
-    Interface       LocalScript: coin/stage HUD, shop window, pop-ups
-    Coins           LocalScript: coin spin + hide-after-collect
-```
+**Progress and rewards**
+- **Wins loop:** finish the course for +1 win and 100 coins, then restart for another run. Each win permanently adds +25% coins, up to ×5.
+- **Speedrun timer** on screen, with your personal best.
+- **Global leaderboards** beside the start: *Most Wins* and *Fastest Run*, across all servers.
+- **Cosmetic shop:** 8 trails and auras, plus a VIP-only Diamond Trail.
+
+**Coming back and bringing friends**
+- **Daily login rewards:** a 7-day streak, from 25 up to 250 coins.
+- **Friend invites:** when a friend joins through your invite, you **both get +50 coins**.
+
+**Robux**
+- **2x Coins** game pass and **VIP** game pass (1.5× coins, VIP trail, `[VIP]` chat tag).
+- **Skip Stage** developer product.
+
+**Extras**
+- **Badges:** Welcome, Reached Candy Land, Reached Space, First Win, 10 Wins.
+- **Original music and sound effects:** 3 chiptune tracks and 8 effects, all generated from scratch, so they're copyright-free.
+- **Artwork** from Higgsfield for every icon, game pass and thumbnail (see [`art/`](art/README.md)).
+
+How to get players is covered in **[LAUNCH_PLAYBOOK.md](LAUNCH_PLAYBOOK.md)**.
 
 ---
 
-## Step 1: Create and publish the place
+## Part A: Install or update the game (one paste)
 
-1. Open **Roblox Studio**, click **New**, then **Baseplate**.
-2. Go to **File → Publish to Roblox**, create a new experience, and name it *Sky Coin Obby*.
-3. Go to **Home → Game Settings → Security**, turn on **Enable Studio Access to API Services**,
-   and click **Save**. Without this, progress won't save while you test in Studio.
-4. Open **View → Explorer** and **View → Properties** if they aren't open already.
+1. Open your place in Roblox Studio.
+2. Open the installer and copy all of it with **Cmd+A**, then **Cmd+C**:
+   https://raw.githubusercontent.com/26projectai/26project/claude/epic-ride-aazicr/sky-coin-obby/Installer.lua
+3. In Studio, click the **command bar** at the bottom. If it's hidden, use **Script tab → Command**.
+   Press **Cmd+A**, then **Delete**, then **Cmd+V**, and click **▶ Run**.
+4. **Output** should say *installed!* or *updated!*. Press **▶ Play**.
 
-## Step 2: Add the scripts
+The installer **keeps your `Assets` script** (the one with your Roblox IDs), so you can safely re-run it for future updates.
 
-Pick **one** of these.
+> Paste it into the **command bar**, never into a Script. A Script can't create other scripts.
 
-### Option A: Copy and paste (no extra tools)
+## Part B: Add the music and sound effects
 
-The names have to match **exactly**, including capital letters, because the scripts find each other by name.
+1. Download the 11 `.mp3` files from the [`audio/`](audio) folder. Click a file, then the download button.
+2. In Studio, open **Window → Asset Manager**, then **Audio → Bulk Import**, and select all 11 files.
+3. Right-click each one, choose **Copy Asset ID**, and paste it into **ReplicatedStorage → Shared → Assets**.
+   The file names are written next to each line, for example:
+   ```lua
+   Coin = "rbxassetid://1234567890", -- audio/sfx_coin.mp3
+   ```
+4. Press Play. The music changes when you reach Candy Land and Space, and there's a **MUSIC** button to mute it.
 
-**ReplicatedStorage**
-1. Hover **ReplicatedStorage** in Explorer, click **+**, and add a **Folder**. Rename it `Shared`.
-2. Inside `Shared`, add 3 **ModuleScripts** named `Config`, `ShopCatalog` and `Remotes`.
-3. Open each one, delete the default code, and paste in the matching file from `src/shared/`.
+## Part C: Add the artwork
 
-**ServerScriptService**
-1. Add a **Folder** and name it `Server`.
-2. Inside `Server`, add a **ModuleScript** named `PlayerData` and paste in `src/server/PlayerData.luau`.
-3. Inside `Server`, add 5 **Scripts** (regular Scripts, not LocalScripts) named `Checkpoints`, `Coins`,
-   `Obstacles`, `Shop` and `CourseBuilder`. Paste in the matching `*.server.luau` files.
+1. Download the images from [`art/README.md`](art/README.md).
+2. **Game icon and thumbnail:** go to **File → Experience Settings → Basic Info**, upload `game-icon.png` and `thumbnail.png`, and click **Save**.
+3. **Asset Manager → Images → Bulk Import**: select the `ui-*.png` and `item-*.png` files.
+4. Copy each ID into `Assets`, under `Images` and `ItemIcons`. Each line says which file it's for.
 
-**StarterPlayer → StarterPlayerScripts**
-1. Add a **Folder** and name it `Client`.
-2. Inside `Client`, add 2 **LocalScripts** named `Interface` and `Coins`. Paste in the matching
-   `*.client.luau` files.
+## Part D: Robux items and badges (optional, but this is how the game earns)
 
-Your Explorer should look like this:
+Go to the [Creator Hub](https://create.roblox.com) → **Creations** → your experience → **Monetization**.
 
-```
-ReplicatedStorage
-  Shared
-    Config        (ModuleScript)
-    Remotes       (ModuleScript)
-    ShopCatalog   (ModuleScript)
-ServerScriptService
-  Server
-    PlayerData    (ModuleScript)
-    Checkpoints   (Script)
-    Coins         (Script)
-    CourseBuilder (Script)
-    Obstacles     (Script)
-    Shop          (Script)
-StarterPlayer
-  StarterPlayerScripts
-    Client
-      Coins       (LocalScript)
-      Interface   (LocalScript)
-```
+| Create | Suggested price | Icon | Paste the ID into |
+|---|---|---|---|
+| Pass: **2x Coins** | 99 R$ | `pass-2x-coins.png` | `Assets.GamePasses.DoubleCoins` |
+| Pass: **VIP** | 199 R$ | `pass-vip.png` | `Assets.GamePasses.VIP` |
+| Developer Product: **Skip Stage** | 15 R$ | `product-skip-stage.png` | `Assets.Products.SkipStage` |
 
-### Option B: Rojo (keeps the code synced with this repo)
+The buttons appear in-game automatically once an ID is set. **Badges** (under **Engagement → Badges**)
+go into `Assets.Badges` the same way.
 
-1. Install the [Rojo](https://rojo.space) VS Code extension or CLI, and the Rojo Studio plugin.
-2. In this folder, run `rojo serve`.
-3. In Studio, open the **Rojo** plugin and click **Connect**. Everything above appears automatically,
-   and edits to the files show up in Studio live.
+## Part E: Turn on saving and go public
 
-## Step 3: Play-test
+1. **File → Experience Settings → Security** → turn on **Enable Studio Access to API Services**.
+2. **File → Publish to Roblox**.
+3. **Experience Settings → Permissions** → **Public**.
 
-1. Click **Play** (F5).
-2. You'll spawn on the green **STAGE 1** pad, high in the sky. The course runs along the +X direction
-   and finishes on a gold **FINISH!** pad at stage 10.
-3. Check that:
-   - Touching gold coins makes them burst, and the coin counter at the top left goes up.
-   - Each new green pad shows a "Checkpoint!" pop-up and gives +5 coins.
-   - Red bricks, the spinning bar and the orange lava kill you, and you respawn on your last pad.
-   - The pink **SHOP** button on the left opens the shop. Buy the Rainbow Trail (25 coins) and run around.
-   - When you stop and Play again, your coins, stage and cosmetics are still there.
-4. To test with more than one player, use **Test → Clients and Servers → 2 Players → Start**.
+---
 
-> Note: there's probably a default `SpawnLocation` in the middle of the baseplate. Delete it.
-> Stage 1 is a spawn already, and the scripts teleport everyone to their saved checkpoint anyway.
-
-## Step 4: Add the Higgsfield artwork
-
-Until you do this, the UI uses simple drawn placeholders, so everything already works without it.
-
-1. Download the PNGs listed in [`art/README.md`](art/README.md).
-2. **Game icon and thumbnail**: go to **Home → Game Settings → Basic Info**. Upload
-   `game-icon.png` as the **Game Icon** and `thumbnail.png` under **Thumbnails**, then click **Save**.
-   (You can also do this on the [Creator Hub](https://create.roblox.com) under your experience's settings.)
-3. **UI and shop icons**: go to **View → Asset Manager → Images**, click **Bulk Import**, and select
-   the 8 `ui-*.png` and `item-*.png` files. Wait for moderation to finish (usually under a minute).
-4. Right-click each image, choose **Copy Asset ID**, and paste the ID into the scripts as
-   `"rbxassetid://<the number>"`:
-   - `ui-coin.png` → `Config.Images.Coin`
-   - `ui-shop-button.png` → `Config.Images.ShopButton`
-   - each `item-*.png` → the `Icon = ...` line of the matching item in `ShopCatalog`
-5. Press **Play**. The HUD and shop now show the real art.
-
-## Step 5: Build your own course (optional)
+## Build your own stages
 
 The scripts work with any course that follows these rules:
 
-| Thing | How to make it |
+| Thing | How |
 |---|---|
-| **Checkpoints** | Parts inside a Folder in Workspace called `Checkpoints`, named `1`, `2`, `3`, ... in order. Make `1` a SpawnLocation. |
-| **Coins** | Any parts inside a Folder in Workspace called `Coins`. Set them **Anchored**. Optionally add a Number attribute called `Value` (for example, a 10-coin coin). |
-| **Kill bricks** | Parts inside a Folder in Workspace called `KillParts`, **or** any part with the tag `KillPart` (Properties → Tags). |
-| **Spinners** | Any part with the tag `Spinner`. Optionally add a Number attribute `SpinSpeed` in degrees per second (default 90). Add the `KillPart` tag as well if it should kill. |
+| Checkpoints | Parts in a `Workspace.Checkpoints` folder, named `1`, `2`, `3`, ... The last one is the finish. |
+| Coins | Parts in a `Workspace.Coins` folder. Optional Number attribute `Value`. |
+| Kill bricks | Parts in a `Workspace.KillParts` folder, or tagged `KillPart`. |
+| Spinner | Tag `Spinner`. Attribute `SpinSpeed` in degrees per second. |
+| Slider | Tag `Slider`. Attributes `Distance`, `Speed` and `Phase`. |
+| Vanishing platform | Tag `Fade`. Attributes `FadeTime` and `ReturnTime`. |
+| Conveyor | Tag `Conveyor`. Attribute `ConveyorSpeed`; it pushes toward the part's front face. |
+| Jump pad | Tag `JumpPad`. Attribute `Power`. |
+| Zones | Edit `Config.Zones` to set where each world starts, and its music, time of day and gravity. |
 
-Easiest workflow: play once, then copy the generated `Checkpoints`, `Coins`, `KillParts` and
-`SampleCourse` folders out of Workspace while the game runs (select them in Explorer, **Ctrl+C**, stop the game,
-then **Ctrl+V** onto Workspace). Edit them however you like. Because a `Checkpoints` folder now
-exists, the builder skips itself. You can also delete `CourseBuilder`, or set
-`Config.BuildSampleCourse = false`.
+Tags and attributes are at the bottom of the **Properties** panel. Once a `Checkpoints` folder exists,
+the sample course builder skips itself.
 
-## Tuning
+## Tuning (`Config` script)
 
-Everything is in `Config` and `ShopCatalog`:
+- **Rewards:** `CheckpointReward`, `WinReward`, `DailyRewards`, `InviteReward`, `CoinRespawnSeconds`.
+- **Wins bonus:** `WinMultiplierStep` and `MaxWinMultiplier`.
+- **Volume:** `MusicVolume` and `SfxVolume`.
+- **Resets:** change `DataStoreName` to reset everyone's progress, or `LeaderboardVersion` to reset the leaderboards.
 
-- `CoinRespawnSeconds`: how long until a collected coin comes back for that player.
-- `CheckpointReward`: bonus coins for each new stage.
-- `AllowStageSkipping`: allow touching stage 5 straight from stage 2.
-- `Sounds`: paste sound IDs from the Creator Store (Toolbox → Audio) for coin, checkpoint and purchase sounds.
-- Shop prices, names and colors: edit `ShopCatalog`. To add an item, copy an existing entry and give it a new `Id`.
-- To reset everyone's saved data, change `DataStoreName` (for example, to `SkyCoinObby_v2`).
+## Developer notes
 
-## How it's protected against cheaters
-
-All coins, stages and purchases are decided **on the server**:
-
-- Coins check that the player is actually near the coin.
-- Checkpoints must be reached in order.
-- Purchases check the price against the saved coin balance.
-- Saving never overwrites data that failed to load.
+- `src/` is the source code, and it uses a [Rojo](https://rojo.space) layout (`default.project.json`).
+- `python3 build_installer.py` rebuilds `Installer.lua` from `src/`.
+- `python3 tools/make_audio.py` regenerates the music and sound effects. It needs numpy and ffmpeg.
+- Coins, stages, wins, purchases and rewards are all decided on the server, so exploiters can't award them to themselves.

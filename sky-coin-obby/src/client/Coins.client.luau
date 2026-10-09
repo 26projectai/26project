@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
 
 local coinsFolder = workspace:WaitForChild("Coins")
 local baseCFrames = {} -- [coin] = original CFrame
@@ -70,22 +71,17 @@ local function burst(position)
 	end)
 end
 
-local function playSound(id)
-	if id and not id:match("://0$") then
-		local sound = Instance.new("Sound")
-		sound.SoundId = id
-		sound.Parent = workspace.CurrentCamera
-		sound.PlayOnRemove = true
-		sound:Destroy()
-	end
-end
+-- Grabbing coins quickly in a row raises the pitch, like a combo.
+local combo, lastCoin = 0, 0
 
 Remotes.CoinCollected.OnClientEvent:Connect(function(coin, respawnSeconds)
 	if not coin or not coin.Parent then
 		return
 	end
 	burst(coin.Position)
-	playSound(Config.Sounds.Coin)
+	combo = os.clock() - lastCoin < 1.5 and math.min(combo + 1, 8) or 0
+	lastCoin = os.clock()
+	Sfx.Play("Coin", 1 + combo * 0.06)
 	setVisible(coin, false)
 	task.delay(respawnSeconds, function()
 		if coin.Parent then

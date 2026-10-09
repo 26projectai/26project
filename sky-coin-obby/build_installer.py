@@ -25,6 +25,10 @@ out = [
     "\ts.Source = source",
     "\ts.Parent = parent",
     "end",
+    "-- Keep the Assets module (your Roblox ids) from a previous install.",
+    'local oldShared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")',
+    'local oldAssets = oldShared and oldShared:FindFirstChild("Assets")',
+    "local keptAssets = oldAssets and oldAssets.Source",
     'local spawn = workspace:FindFirstChild("SpawnLocation")',
     "if spawn then spawn:Destroy() end",
 ]
@@ -40,8 +44,11 @@ for sub, service, name in TARGETS:
             cls, n = "LocalScript", fn[: -len(".client.luau")]
         else:
             cls, n = "ModuleScript", fn[: -len(".luau")]
-        out.append(f'add({var}, "{cls}", "{n}", [==[\n{src}]==])')
-out.append('print("Sky Coin Obby installed! Press Play to test.")')
+        if n == "Assets":
+            out.append(f'add({var}, "{cls}", "{n}", keptAssets or [==[\n{src}]==])')
+        else:
+            out.append(f'add({var}, "{cls}", "{n}", [==[\n{src}]==])')
+out.append('print(keptAssets and "Sky Coin Obby updated! (your Assets ids were kept) Press Play to test." or "Sky Coin Obby installed! Press Play to test.")')
 
 with open(os.path.join(os.path.dirname(ROOT), "Installer.lua"), "w") as f:
     f.write("\n".join(out) + "\n")

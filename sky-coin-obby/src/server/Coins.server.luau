@@ -34,8 +34,8 @@ local function onTouched(coin, hit)
 	end
 
 	mine[coin] = true
-	PlayerData.AddCoins(player, coin:GetAttribute("Value") or Config.CoinValue)
-	Remotes.CoinCollected:FireClient(player, coin, Config.CoinRespawnSeconds)
+	local amount = PlayerData.AddCoins(player, coin:GetAttribute("Value") or Config.CoinValue, true)
+	Remotes.CoinCollected:FireClient(player, coin, Config.CoinRespawnSeconds, amount)
 
 	task.delay(Config.CoinRespawnSeconds, function()
 		if collected[player] then

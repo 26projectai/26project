@@ -1,0 +1,67 @@
+-- YOUR ROBLOX IDS GO HERE. The installer keeps this file when you update the game,
+-- so anything you paste here is safe.
+--   Images / sounds / music:  "rbxassetid://1234567890"  ("rbxassetid://0" = not set yet)
+--   Passes / products / badges: plain numbers (0 = not set yet)
+local Assets = {}
+
+-- Robux items. Create them on the Creator Hub, then paste the ids here (0 = hidden).
+Assets.GamePasses = {
+	DoubleCoins = 0, -- 2x coins forever
+	VIP = 0, -- 1.5x coins, VIP trail, [VIP] chat tag
+}
+Assets.Products = {
+	SkipStage = 0, -- skip the current stage
+}
+
+-- Badges (optional). Create them on the Creator Hub and paste the ids (0 = off).
+Assets.Badges = {
+	Welcome = 0,
+	ReachedCandy = 0,
+	ReachedSpace = 0,
+	FirstWin = 0,
+	TenWins = 0,
+}
+
+-- Upload the PNGs in /art to Roblox and paste the asset ids here
+-- (format: "rbxassetid://1234567890"). "rbxassetid://0" = use the built-in fallback look.
+Assets.Images = {
+	Coin = "rbxassetid://0", -- art/ui-coin.png
+	ShopButton = "rbxassetid://0", -- art/ui-shop-button.png
+	Daily = "rbxassetid://0", -- art/ui-daily.png
+	Invite = "rbxassetid://0", -- art/ui-invite.png
+	Skip = "rbxassetid://0", -- art/ui-skip.png
+	Trophy = "rbxassetid://0", -- art/ui-trophy.png
+	Music = "rbxassetid://0", -- art/ui-music.png
+}
+
+-- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
+Assets.Sounds = {
+	Coin = "rbxassetid://0", -- audio/sfx_coin.mp3
+	Checkpoint = "rbxassetid://0", -- audio/sfx_checkpoint.mp3
+	Purchase = "rbxassetid://0", -- audio/sfx_purchase.mp3
+	Death = "rbxassetid://0", -- audio/sfx_death.mp3
+	Win = "rbxassetid://0", -- audio/sfx_win.mp3
+	JumpPad = "rbxassetid://0", -- audio/sfx_jumppad.mp3
+	Click = "rbxassetid://0", -- audio/sfx_click.mp3
+	Daily = "rbxassetid://0", -- audio/sfx_daily.mp3
+}
+Assets.Music = {
+	Sky = "rbxassetid://0", -- audio/music_sky.mp3
+	Candy = "rbxassetid://0", -- audio/music_candy.mp3
+	Space = "rbxassetid://0", -- audio/music_space.mp3
+}
+
+-- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
+Assets.ItemIcons = {
+	RainbowTrail = "rbxassetid://0", -- art/item-rainbow-trail.png
+	FireTrail = "rbxassetid://0", -- art/item-fire-trail.png
+	GalaxyTrail = "rbxassetid://0", -- art/item-galaxy-trail.png
+	SparkleAura = "rbxassetid://0", -- art/item-sparkle-aura.png
+	FireAura = "rbxassetid://0", -- art/item-fire-aura.png
+	GoldenGlow = "rbxassetid://0", -- art/item-golden-glow.png
+	BubbleAura = "rbxassetid://0", -- art/item-bubble-aura.png
+	LightningTrail = "rbxassetid://0", -- art/item-lightning-trail.png
+	VIPTrail = "rbxassetid://0", -- art/item-vip-trail.png
+}
+
+return Assets

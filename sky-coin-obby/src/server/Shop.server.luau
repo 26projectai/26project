@@ -54,6 +54,23 @@ local function addAura(character, root, item)
 		emitter.SpreadAngle = Vector2.new(180, 180)
 		emitter.Size = NumberSequence.new(0.45, 0)
 		emitter.Parent = root
+	elseif item.Kind == "Bubbles" then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter:SetAttribute("Cosmetic", true)
+		emitter.Color = item.Color
+		emitter.LightEmission = 0.3
+		emitter.Transparency = NumberSequence.new(0.3, 1)
+		emitter.Rate = 8
+		emitter.Lifetime = NumberRange.new(1.5, 2.5)
+		emitter.Speed = NumberRange.new(1, 2)
+		emitter.Acceleration = Vector3.new(0, 3, 0)
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.2),
+			NumberSequenceKeypoint.new(0.3, 0.8),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		emitter.Parent = root
 	elseif item.Kind == "Fire" then
 		local fire = Instance.new("Fire")
 		fire:SetAttribute("Cosmetic", true)
@@ -81,14 +98,14 @@ end
 local function applyCosmetics(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local data = PlayerData.Get(player)
+	local data, session = PlayerData.Get(player), PlayerData.Session(player)
 	if not root or not data then
 		return
 	end
 	clearCosmetics(character)
 	for _, itemId in pairs(data.Equipped) do
 		local item = Catalog.Get(itemId)
-		if item and data.Owned[itemId] then
+		if item and (data.Owned[itemId] or (item.RequiresVIP and session.Passes.VIP)) then
 			if item.Slot == "Trail" then
 				addTrail(root, item)
 			elseif item.Slot == "Aura" then
@@ -120,11 +137,19 @@ Remotes.ShopAction.OnServerInvoke = function(player, action, itemId)
 	end
 
 	local message
+	local isVIP = PlayerData.Session(player).Passes.VIP
+	if item.RequiresVIP and not isVIP then
+		return false, "This item is for VIP pass owners"
+	end
+	if item.RequiresVIP and action ~= "Unequip" then
+		data.Owned[itemId] = true -- VIP items are free
+	end
+
 	if action == "Buy" then
-		if data.Owned[itemId] then
+		if data.Owned[itemId] and not item.RequiresVIP then
 			return false, "You already own this"
 		end
-		if not PlayerData.SpendCoins(player, item.Price) then
+		if item.Price > 0 and not PlayerData.SpendCoins(player, item.Price) then
 			return false, ("You need %d more coins"):format(item.Price - data.Coins)
 		end
 		data.Owned[itemId] = true

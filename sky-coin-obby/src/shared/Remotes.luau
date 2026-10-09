@@ -30,9 +30,12 @@ local function get(name, className)
 end
 
 return {
-	DataUpdated = get("DataUpdated", "RemoteEvent"), -- server -> client: coins/stage/owned/equipped
+	DataUpdated = get("DataUpdated", "RemoteEvent"), -- server -> client: full data snapshot
 	RequestData = get("RequestData", "RemoteFunction"), -- client -> server: initial snapshot
-	CoinCollected = get("CoinCollected", "RemoteEvent"), -- server -> client: hide a coin locally
-	CheckpointReached = get("CheckpointReached", "RemoteEvent"), -- server -> client: celebration
+	CoinCollected = get("CoinCollected", "RemoteEvent"), -- server -> client: (coin, respawnSeconds, amount)
+	CheckpointReached = get("CheckpointReached", "RemoteEvent"), -- server -> client: (stage, reward)
+	Won = get("Won", "RemoteEvent"), -- server -> client: (time or nil, isNewBest, reward, wins)
+	Notify = get("Notify", "RemoteEvent"), -- server -> client: (message, kind)
 	ShopAction = get("ShopAction", "RemoteFunction"), -- client -> server: Buy / Equip / Unequip
+	ClaimDaily = get("ClaimDaily", "RemoteFunction"), -- client -> server: claim daily reward
 }

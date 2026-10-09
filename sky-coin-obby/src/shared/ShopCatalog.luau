@@ -1,6 +1,7 @@
 -- Everything sold in the cosmetic shop.
 -- Slot: "Trail" or "Aura" (a player can equip one of each).
--- Icon: paste the uploaded asset id for the matching PNG in /art.
+-- RequiresVIP: only VIP game pass owners can get it.
+-- Icons come from Assets.ItemIcons.
 local ShopCatalog = {}
 
 ShopCatalog.Items = {
@@ -9,7 +10,6 @@ ShopCatalog.Items = {
 		Name = "Rainbow Trail",
 		Slot = "Trail",
 		Price = 25,
-		Icon = "rbxassetid://0", -- art/item-rainbow-trail.png
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)),
 			ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 160, 40)),
@@ -24,7 +24,6 @@ ShopCatalog.Items = {
 		Name = "Fire Trail",
 		Slot = "Trail",
 		Price = 75,
-		Icon = "rbxassetid://0", -- art/item-fire-trail.png
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 120)),
 			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 120, 20)),
@@ -36,7 +35,6 @@ ShopCatalog.Items = {
 		Name = "Galaxy Trail",
 		Slot = "Trail",
 		Price = 150,
-		Icon = "rbxassetid://0", -- art/item-galaxy-trail.png
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 230, 255)),
 			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(140, 60, 255)),
@@ -49,7 +47,6 @@ ShopCatalog.Items = {
 		Slot = "Aura",
 		Kind = "Sparkles",
 		Price = 100,
-		Icon = "rbxassetid://0", -- art/item-sparkle-aura.png
 		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 210, 60)),
 	},
 	{
@@ -58,7 +55,6 @@ ShopCatalog.Items = {
 		Slot = "Aura",
 		Kind = "Fire",
 		Price = 200,
-		Icon = "rbxassetid://0", -- art/item-fire-aura.png
 		Color = Color3.fromRGB(255, 140, 30),
 		SecondaryColor = Color3.fromRGB(60, 120, 255),
 	},
@@ -68,13 +64,50 @@ ShopCatalog.Items = {
 		Slot = "Aura",
 		Kind = "Glow",
 		Price = 400,
-		Icon = "rbxassetid://0", -- art/item-golden-glow.png
 		Color = Color3.fromRGB(255, 200, 40),
+	},
+	{
+		Id = "BubbleAura",
+		Name = "Bubble Aura",
+		Slot = "Aura",
+		Kind = "Bubbles",
+		Price = 250,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 220, 255)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 230)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 255, 210)),
+		}),
+	},
+	{
+		Id = "LightningTrail",
+		Name = "Lightning Trail",
+		Slot = "Trail",
+		Price = 300,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 240, 90)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 220, 255)),
+		}),
+	},
+	{
+		Id = "VIPTrail",
+		Name = "VIP Diamond Trail",
+		Slot = "Trail",
+		Price = 0,
+		RequiresVIP = true, -- free for VIP game pass owners
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(170, 230, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 215, 90)),
+		}),
 	},
 }
 
+local Assets = require(script.Parent:WaitForChild("Assets"))
+
 local byId = {}
 for _, item in ipairs(ShopCatalog.Items) do
+	item.Icon = (Assets.ItemIcons or {})[item.Id] or "rbxassetid://0"
 	byId[item.Id] = item
 end
 
