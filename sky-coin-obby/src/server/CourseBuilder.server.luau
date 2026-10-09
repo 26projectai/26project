@@ -367,6 +367,15 @@ end
 board("WinsBoard", -13, Vector3.new(0, 0, 1))
 board("TimeBoard", 13, Vector3.new(0, 0, -1))
 
+---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
+require(script.Parent:WaitForChild("Scenery")).Build({
+	Stages = STAGES,
+	Spacing = SPACING,
+	BaseY = BASE_Y,
+	Zones = Config.Zones,
+	ZoneIndex = zoneIndex,
+})
+
 course.Parent = workspace
 killParts.Parent = workspace
 coins.Parent = workspace

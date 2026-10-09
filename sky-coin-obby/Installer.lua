@@ -1012,6 +1012,15 @@ end
 board("WinsBoard", -13, Vector3.new(0, 0, 1))
 board("TimeBoard", 13, Vector3.new(0, 0, -1))
 
+---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
+require(script.Parent:WaitForChild("Scenery")).Build({
+	Stages = STAGES,
+	Spacing = SPACING,
+	BaseY = BASE_Y,
+	Zones = Config.Zones,
+	ZoneIndex = zoneIndex,
+})
+
 course.Parent = workspace
 killParts.Parent = workspace
 coins.Parent = workspace
@@ -1720,6 +1729,355 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 for _, player in ipairs(Players:GetPlayers()) do
 	onPlayerAdded(player)
 end
+]==])
+add(f_server, "ModuleScript", "Scenery", [==[
+-- Decorates the sample course: floating islands under checkpoints, flags, a spawn lobby,
+-- and per-world scenery (Sky: clouds, tree islands, rainbow; Candy: lollipops, candy canes,
+-- cupcakes, gumdrops; Space: planets, stars, asteroids), plus world gates and a finish trophy.
+-- Decoration is non-collidable and kept away from the jump paths, so it never affects gameplay.
+local Scenery = {}
+
+local rng = Random.new(2026)
+local folder
+
+local function deco(props, className)
+	local p = Instance.new(className or "Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanTouch = false
+	p.CanQuery = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for key, value in pairs(props) do
+		p[key] = value
+	end
+	p.Parent = folder
+	return p
+end
+
+local function ball(position, diameter, color, material, transparency)
+	return deco({
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.one * diameter,
+		Position = position,
+		Color = color,
+		Material = material or Enum.Material.SmoothPlastic,
+		Transparency = transparency or 0,
+	})
+end
+
+-- Roblox cylinders run along their X axis; this stands one upright.
+local UPRIGHT = CFrame.Angles(0, 0, math.rad(90))
+
+local function pillar(position, height, diameter, color, material)
+	return deco({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(height, diameter, diameter),
+		CFrame = CFrame.new(position) * UPRIGHT,
+		Color = color,
+		Material = material or Enum.Material.SmoothPlastic,
+	})
+end
+
+local function range(a, b)
+	return rng:NextNumber(a, b)
+end
+
+local function side(minZ, maxZ)
+	return (rng:NextNumber() < 0.5 and -1 or 1) * range(minZ, maxZ)
+end
+
+local function pick(list)
+	return list[rng:NextInteger(1, #list)]
+end
+
+---------------------------------------------------------------- shared pieces
+local ISLANDS = {
+	{ Top = Color3.fromRGB(100, 200, 90), TopMaterial = Enum.Material.Grass, Rock = Color3.fromRGB(125, 95, 70) },
+	{ Top = Color3.fromRGB(255, 180, 215), TopMaterial = Enum.Material.SmoothPlastic, Rock = Color3.fromRGB(110, 65, 45) },
+	{ Top = Color3.fromRGB(120, 115, 150), TopMaterial = Enum.Material.Slate, Rock = Color3.fromRGB(70, 65, 95) },
+}
+local FLAG_COLORS = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 120, 200), Color3.fromRGB(80, 255, 200) }
+
+-- A floating island whose (walkable) top sits just under `topY`.
+local function island(center, topY, diameter, zIndex, walkable)
+	local look = ISLANDS[zIndex] or ISLANDS[1]
+	local top = pillar(Vector3.new(center.X, topY - 1.05, center.Z), 2, diameter, look.Top, look.TopMaterial)
+	top.CanCollide = walkable == true
+	top.CastShadow = true
+	local y = topY - 2
+	for i, scale in ipairs({ 0.85, 0.6, 0.3 }) do
+		local h = 3 + i
+		pillar(Vector3.new(center.X, y - h / 2, center.Z), h, diameter * scale, look.Rock, Enum.Material.Rock)
+		y -= h
+	end
+end
+
+local function tree(base)
+	pillar(base + Vector3.new(0, 3, 0), 6, 1.2, Color3.fromRGB(110, 75, 45), Enum.Material.Wood)
+	for _ = 1, 3 do
+		ball(base + Vector3.new(range(-1.5, 1.5), range(6, 8), range(-1.5, 1.5)), range(4.5, 6.5), Color3.fromRGB(80, range(170, 210), 80), Enum.Material.Grass)
+	end
+end
+
+local function cloud(center, colors)
+	for _ = 1, rng:NextInteger(3, 5) do
+		ball(center + Vector3.new(range(-9, 9), range(-2, 3), range(-5, 5)), range(8, 16), pick(colors), Enum.Material.SmoothPlastic, 0.05)
+	end
+end
+
+local function flag(position, color, neon)
+	pillar(position + Vector3.new(0, 4, 0), 8, 0.4, Color3.fromRGB(240, 240, 240))
+	deco({
+		Size = Vector3.new(3, 2, 0.2),
+		Position = position + Vector3.new(1.6, 7, 0),
+		Color = color,
+		Material = neon and Enum.Material.Neon or Enum.Material.Fabric,
+	})
+end
+
+-- Half-ring arch over the path at x, in the Y/Z plane.
+local function gate(x, baseY, radius, colors, material)
+	local segments = 22
+	for i = 0, segments - 1 do
+		local a0 = math.pi * i / segments
+		local a1 = math.pi * (i + 1) / segments
+		local p0 = Vector3.new(x, baseY + math.sin(a0) * radius, math.cos(a0) * radius)
+		local p1 = Vector3.new(x, baseY + math.sin(a1) * radius, math.cos(a1) * radius)
+		deco({
+			Size = Vector3.new(2.2, 2.2, (p1 - p0).Magnitude + 0.3),
+			CFrame = CFrame.lookAt((p0 + p1) / 2, p1),
+			Color = colors[i % #colors + 1],
+			Material = material,
+		})
+	end
+end
+
+local function sign(position, facing, size, title, subtitle, color)
+	local board = deco({
+		Size = size,
+		CFrame = CFrame.lookAt(position, position + facing),
+		Color = Color3.fromRGB(30, 30, 55),
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	gui.LightInfluence = 0
+	local function line(text, y, h, textColor)
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.fromScale(0.04, y)
+		label.Size = UDim2.fromScale(0.92, h)
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.Text = text
+		label.TextColor3 = textColor
+		label.Parent = gui
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 4
+		stroke.Parent = label
+	end
+	line(title, 0.08, 0.55, color)
+	line(subtitle, 0.66, 0.26, Color3.new(1, 1, 1))
+	gui.Parent = board
+end
+
+---------------------------------------------------------------- per-world scenery
+local function buildSky(x0, x1, baseY)
+	for _ = 1, 45 do
+		cloud(Vector3.new(range(x0 - 80, x1), range(baseY - 25, baseY + 35), side(28, 140)), { Color3.new(1, 1, 1), Color3.fromRGB(235, 245, 255) })
+	end
+	for _ = 1, 12 do
+		local center = Vector3.new(range(x0, x1), baseY + range(-15, 8), side(24, 70))
+		island(center, center.Y, range(12, 18), 1, false)
+		tree(center + Vector3.new(range(-3, 3), 0, range(-3, 3)))
+	end
+	-- Giant rainbow in the background.
+	local colors = {
+		Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 160, 50), Color3.fromRGB(255, 235, 70),
+		Color3.fromRGB(80, 220, 100), Color3.fromRGB(70, 160, 255), Color3.fromRGB(110, 90, 255),
+		Color3.fromRGB(190, 90, 255),
+	}
+	local center = Vector3.new((x0 + x1) / 2, baseY - 30, -90)
+	for band, color in ipairs(colors) do
+		local radius = 90 - band * 3
+		local segments = 26
+		for i = 0, segments - 1 do
+			local a = math.pi * (i + 0.5) / segments
+			local length = math.pi * radius / segments + 0.4
+			deco({
+				Size = Vector3.new(length, 3, 1),
+				CFrame = CFrame.new(center + Vector3.new(math.cos(a) * radius, math.sin(a) * radius, 0)) * CFrame.Angles(0, 0, a + math.pi / 2),
+				Color = color,
+				Material = Enum.Material.Neon,
+				Transparency = 0.25,
+			})
+		end
+	end
+end
+
+local CANDY = {
+	Color3.fromRGB(255, 110, 180), Color3.fromRGB(170, 120, 255), Color3.fromRGB(255, 220, 90),
+	Color3.fromRGB(110, 230, 190), Color3.fromRGB(255, 150, 90), Color3.fromRGB(110, 190, 255),
+}
+
+local function lollipop(base, height)
+	pillar(base + Vector3.new(0, height / 2, 0), height, 0.8, Color3.new(1, 1, 1))
+	local top = base + Vector3.new(0, height + 4, 0)
+	local face = CFrame.Angles(0, math.rad(90), 0) -- disc faces the path
+	local diameter = range(8, 12)
+	deco({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.2, diameter, diameter), CFrame = CFrame.new(top) * face, Color = pick(CANDY) })
+	local toward = Vector3.new(0, 0, base.Z > 0 and -0.4 or 0.4)
+	deco({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.2, diameter * 0.62, diameter * 0.62), CFrame = CFrame.new(top + toward) * face, Color = pick(CANDY) })
+	ball(top + toward * 2, diameter * 0.25, Color3.new(1, 1, 1))
+end
+
+local function candyCane(base)
+	local red, white = Color3.fromRGB(235, 40, 50), Color3.new(1, 1, 1)
+	for i = 0, 7 do
+		pillar(base + Vector3.new(0, i * 2 + 1, 0), 2, 1.6, i % 2 == 0 and red or white)
+	end
+	local hookCenter = base + Vector3.new(2.4, 16, 0)
+	for i = 0, 5 do
+		local a = math.pi * i / 5
+		ball(hookCenter + Vector3.new(-math.cos(a) * 2.4, math.sin(a) * 2.4, 0), 1.8, i % 2 == 0 and red or white)
+	end
+end
+
+local function cupcake(base)
+	pillar(base + Vector3.new(0, 2.5, 0), 5, 8, pick(CANDY))
+	ball(base + Vector3.new(0, 6, 0), 9, Color3.fromRGB(255, 225, 240))
+	ball(base + Vector3.new(0, 10.6, 0), 2.2, Color3.fromRGB(220, 30, 50))
+end
+
+local function buildCandy(x0, x1, baseY)
+	for _ = 1, 25 do
+		cloud(Vector3.new(range(x0, x1), range(baseY - 25, baseY + 35), side(30, 140)), {
+			Color3.fromRGB(255, 190, 225), Color3.fromRGB(190, 220, 255), Color3.fromRGB(255, 235, 245),
+		})
+	end
+	for _ = 1, 14 do
+		lollipop(Vector3.new(range(x0, x1), baseY - range(18, 26), side(22, 55)), range(14, 22))
+	end
+	for _ = 1, 10 do
+		local center = Vector3.new(range(x0, x1), baseY + range(-14, 4), side(26, 60))
+		island(center, center.Y, 12, 2, false)
+		if rng:NextNumber() < 0.5 then
+			candyCane(center)
+		else
+			cupcake(center)
+		end
+	end
+	for _ = 1, 22 do
+		ball(Vector3.new(range(x0, x1), baseY + range(-20, 25), side(20, 80)), range(3, 7), pick(CANDY), Enum.Material.SmoothPlastic, 0.15)
+	end
+end
+
+local function buildSpace(x0, x1, baseY)
+	for _ = 1, 220 do
+		local star = ball(
+			Vector3.new(range(x0 - 120, x1 + 160), range(baseY - 60, baseY + 160), side(30, 260)),
+			range(0.5, 1.6),
+			pick({ Color3.new(1, 1, 1), Color3.fromRGB(255, 240, 180), Color3.fromRGB(180, 220, 255) }),
+			Enum.Material.Neon
+		)
+		star.Shape = Enum.PartType.Ball
+	end
+	local planets = {
+		{ Color = Color3.fromRGB(255, 120, 80), Size = 90, Ring = false },
+		{ Color = Color3.fromRGB(120, 200, 255), Size = 60, Ring = true },
+		{ Color = Color3.fromRGB(200, 120, 255), Size = 130, Ring = false },
+		{ Color = Color3.fromRGB(120, 255, 170), Size = 45, Ring = true },
+		{ Color = Color3.fromRGB(255, 220, 120), Size = 70, Ring = false },
+	}
+	for i, planet in ipairs(planets) do
+		local position = Vector3.new(x0 + (x1 - x0) * (i - 0.5) / #planets + range(-40, 40), baseY + range(-10, 90), (i % 2 == 0 and 1 or -1) * range(170, 280))
+		ball(position, planet.Size, planet.Color)
+		if planet.Ring then
+			deco({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(0.6, planet.Size * 2.1, planet.Size * 2.1),
+				CFrame = CFrame.new(position) * CFrame.Angles(math.rad(range(-25, 25)), 0, math.rad(70)),
+				Color = Color3.fromRGB(240, 230, 255),
+				Material = Enum.Material.Neon,
+				Transparency = 0.55,
+			})
+		end
+	end
+	for _ = 1, 35 do
+		ball(Vector3.new(range(x0, x1), baseY + range(-25, 30), side(20, 90)), range(3, 11), Color3.fromRGB(range(80, 130), range(75, 120), range(95, 140)), Enum.Material.Slate)
+	end
+end
+
+---------------------------------------------------------------- entry point
+-- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage) }
+function Scenery.Build(opts)
+	folder = Instance.new("Folder")
+	folder.Name = "Scenery"
+
+	local spacing, baseY = opts.Spacing, opts.BaseY
+	local padTop = baseY + 0.5
+
+	-- Islands + flags under every checkpoint.
+	for stage = 1, opts.Stages do
+		local x = (stage - 1) * spacing
+		local zIndex = opts.ZoneIndex(stage)
+		local isFinal = stage == opts.Stages
+		if stage ~= 1 then
+			island(Vector3.new(x, 0, 0), baseY - 0.55, isFinal and 20 or 15, zIndex, true)
+		end
+		if not isFinal then
+			flag(Vector3.new(x + 4.5, padTop, 4.5), FLAG_COLORS[zIndex] or FLAG_COLORS[1], zIndex == 3)
+		end
+	end
+
+	-- Spawn lobby: big island, trees and a title sign.
+	island(Vector3.new(-14, 0, 0), baseY - 0.55, 42, 1, true)
+	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-12, 0, 17), Vector3.new(-22, 0, -14), Vector3.new(-22, 0, 14) }) do
+		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
+	end
+	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", "30 STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
+
+	-- World scenery.
+	local zones = opts.Zones
+	local builders = { buildSky, buildCandy, buildSpace }
+	for i, zone in ipairs(zones) do
+		local builder = builders[i]
+		if builder then
+			local x0 = (zone.FirstStage - 1) * spacing
+			local x1 = zones[i + 1] and (zones[i + 1].FirstStage - 1) * spacing or (opts.Stages - 1) * spacing
+			builder(x0, x1, baseY)
+		end
+	end
+
+	-- Gates at the start of each new world.
+	if zones[2] then
+		gate((zones[2].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(255, 110, 180), Color3.new(1, 1, 1) }, Enum.Material.SmoothPlastic)
+	end
+	if zones[3] then
+		gate((zones[3].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(80, 230, 255), Color3.fromRGB(190, 90, 255) }, Enum.Material.Neon)
+	end
+
+	-- Finish: golden arch and a giant trophy.
+	local finishX = (opts.Stages - 1) * spacing
+	gate(finishX - 9, baseY - 1, 18, { Color3.fromRGB(255, 205, 40), Color3.fromRGB(255, 240, 150) }, Enum.Material.Neon)
+	local gold = Color3.fromRGB(255, 200, 40)
+	local trophyBase = Vector3.new(finishX + 16, padTop, 0)
+	pillar(trophyBase + Vector3.new(0, 1.5, 0), 3, 9, Color3.fromRGB(60, 45, 30), Enum.Material.Wood)
+	pillar(trophyBase + Vector3.new(0, 6, 0), 6, 2, gold, Enum.Material.Metal)
+	ball(trophyBase + Vector3.new(0, 13, 0), 11, gold, Enum.Material.Metal)
+	for _, z in ipairs({ -6.5, 6.5 }) do
+		ball(trophyBase + Vector3.new(0, 14, z), 3.5, gold, Enum.Material.Metal)
+	end
+	ball(trophyBase + Vector3.new(0, 20, 0), 3, Color3.new(1, 1, 1), Enum.Material.Neon)
+
+	folder.Parent = workspace
+end
+
+return Scenery
 ]==])
 add(f_server, "Script", "Shop", [==[
 -- Cosmetic shop: handles Buy / Equip / Unequip and puts trails + auras on characters.
