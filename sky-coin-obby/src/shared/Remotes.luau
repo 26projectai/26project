@@ -50,5 +50,7 @@ return {
 	Rebirth = get("Rebirth", "RemoteFunction"), -- client -> server: prestige reset
 	SkipWithCoins = get("SkipWithCoins", "RemoteFunction"), -- client -> server: coin skip after many fails
 	Slap = get("Slap", "RemoteEvent"), -- client -> server: slap hand hit (target player)
+	GoLobby = get("GoLobby", "RemoteFunction"), -- client -> server: teleport to the spawn plaza
+	BackToStage = get("BackToStage", "RemoteFunction"), -- client -> server: return to your checkpoint
 	Fx = get("Fx", "RemoteEvent"), -- server -> client: (effectName, ...) jumpscare / shake / confetti
 }

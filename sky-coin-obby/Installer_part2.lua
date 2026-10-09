@@ -1769,6 +1769,62 @@ player.CharacterAdded:Connect(hideOwnPrompt)
 if player.Character then
 	task.spawn(hideOwnPrompt, player.Character)
 end
+
+---------------------------------------------------------------- Lobby teleport (button / L key) + back to stage
+local lobbyButton = button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 110, 1, -62),
+	Size = UDim2.fromOffset(110, 40),
+	BackgroundColor3 = COLORS.Blue,
+	Text = "🏠 LOBBY (L)",
+	ZIndex = 5,
+	Parent = gui,
+})
+local backButton = button({
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 230, 1, -62),
+	Size = UDim2.fromOffset(190, 40),
+	BackgroundColor3 = COLORS.Green,
+	Text = "↩ BACK TO STAGE",
+	Visible = false,
+	ZIndex = 5,
+	Parent = gui,
+})
+
+local busyTeleport = false
+local function teleport(remote)
+	if busyTeleport then
+		return
+	end
+	busyTeleport = true
+	local ok = remote:InvokeServer()
+	if ok then
+		screenFlash(Color3.fromRGB(160, 200, 255))
+		Sfx.Play("Checkpoint", 1.2)
+	end
+	busyTeleport = false
+end
+
+lobbyButton.Activated:Connect(function()
+	teleport(Remotes.GoLobby)
+end)
+backButton.Activated:Connect(function()
+	teleport(Remotes.BackToStage)
+end)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.L then
+		teleport(player:GetAttribute("InLobby") and Remotes.BackToStage or Remotes.GoLobby)
+	end
+end)
+
+local function refreshLobbyButtons()
+	local inLobby = player:GetAttribute("InLobby") == true
+	backButton.Visible = inLobby
+	lobbyButton.Text = inLobby and "🏠 IN LOBBY" or "🏠 LOBBY (L)"
+	lobbyButton.BackgroundColor3 = inLobby and COLORS.Grey or COLORS.Blue
+end
+player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButtons)
+refreshLobbyButtons()
 ]==])
 add(f_client, "LocalScript", "Movement", [==[
 -- Jump pads, plus each zone's sky colours and gravity (space = moon jumps).

@@ -212,6 +212,71 @@ for _, trigger in ipairs(CollectionService:GetTagged("Jumpscare")) do
 end
 CollectionService:GetInstanceAddedSignal("Jumpscare"):Connect(hookScare)
 
+---------------------------------------------------------------- Lobby teleport + world portals
+local function lobbyCFrame()
+	local first = Course.GetCheckpoint(1)
+	local spot = (first and first.Position or Vector3.new(0, 60, 0)) + Vector3.new(-26, 4, math.random(-6, 6))
+	return CFrame.lookAt(spot, spot + Vector3.new(1, 0, 0))
+end
+
+Remotes.GoLobby.OnServerInvoke = function(player)
+	local data = PlayerData.Get(player)
+	local character = player.Character
+	if not data or not character then
+		return false, "Try again"
+	end
+	-- The lobby is in the story area, so leave the OP tower (OP progress is saved).
+	if data.Mode == "OP" then
+		data.Mode = "Main"
+	end
+	PlayerData.Session(player).RunStart = nil -- leaving the course ends a timed run
+	PlayerData.Sync(player)
+	character:PivotTo(lobbyCFrame())
+	player:SetAttribute("InLobby", true)
+	return true, "Welcome back to the lobby!"
+end
+
+Remotes.BackToStage.OnServerInvoke = function(player)
+	local data = PlayerData.Get(player)
+	if not data or not player.Character then
+		return false, "Try again"
+	end
+	Course.PlaceOnStage(player.Character, data.Stage)
+	player:SetAttribute("InLobby", nil)
+	return true, ("Back to stage %d!"):format(data.Stage)
+end
+
+-- World portals in the plaza: jump to the start of any world you've reached.
+local portalCooldown = {}
+local function hookWorldPortal(portal)
+	if not portal:IsA("BasePart") then
+		return
+	end
+	portal.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		local data = player and PlayerData.Get(player)
+		if not data or (portalCooldown[player] and os.clock() - portalCooldown[player] < 2) then
+			return
+		end
+		portalCooldown[player] = os.clock()
+		local stage = portal:GetAttribute("Stage") or 1
+		if (data.MaxStage or 1) < stage then
+			Remotes.Notify:FireClient(player, ("Reach stage %d first to unlock this world!"):format(stage), "bad")
+			return
+		end
+		data.Mode = "Main"
+		PlayerData.Session(player).RunStart = nil
+		PlayerData.SetStage(player, stage)
+		Course.PlaceOnStage(player.Character, stage)
+		player:SetAttribute("InLobby", nil)
+		Remotes.Notify:FireClient(player, ("Teleported to %s!"):format(portal:GetAttribute("World") or "the world"), "good")
+	end)
+end
+for _, portal in ipairs(CollectionService:GetTagged("WorldPortal")) do
+	hookWorldPortal(portal)
+end
+CollectionService:GetInstanceAddedSignal("WorldPortal"):Connect(hookWorldPortal)
+
 ---------------------------------------------------------------- Player lifecycle
 local function onPlayerAdded(player)
 	task.spawn(watchStage, player)
@@ -223,6 +288,7 @@ local function onPlayerAdded(player)
 		end
 	end)
 	player.CharacterAdded:Connect(function(character)
+		player:SetAttribute("InLobby", nil) -- respawns happen at your checkpoint
 		local humanoid = character:WaitForChild("Humanoid", 10)
 		if humanoid then
 			humanoid.Died:Connect(function()
@@ -236,5 +302,5 @@ for _, player in ipairs(Players:GetPlayers()) do
 	onPlayerAdded(player)
 end
 Players.PlayerRemoving:Connect(function(player)
-	lastReset[player], deaths[player], chestClaims[player], scared[player] = nil, nil, nil, nil
+	lastReset[player], deaths[player], chestClaims[player], scared[player], portalCooldown[player] = nil, nil, nil, nil, nil
 end)

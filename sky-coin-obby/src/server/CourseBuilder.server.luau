@@ -257,6 +257,44 @@ local function opPortal(position, facing)
 end
 opPortal(Vector3.new(-30, BASE_Y + 6, 30), Vector3.new(0, 0, -1)) -- in the spawn plaza
 
+-- World portals: one per world, in a row across the plaza (facing the spawn).
+do
+	local worldColors = {
+		Color3.fromRGB(80, 170, 255),
+		Color3.fromRGB(255, 120, 200),
+		Color3.fromRGB(150, 90, 255),
+		Color3.fromRGB(255, 100, 30),
+	}
+	local count = #Config.Zones
+	for i, zone in ipairs(Config.Zones) do
+		local z = (i - (count + 1) / 2) * 13
+		local position = Vector3.new(-48, BASE_Y + 4.5, z)
+		local ring = part({
+			Name = "WorldPortal",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.6, 8, 8),
+			CFrame = CFrame.new(position),
+			Color = worldColors[i] or Color3.new(1, 1, 1),
+			Material = Enum.Material.ForceField,
+			CanCollide = false,
+			Parent = course,
+		})
+		tag(ring, "WorldPortal", { Stage = zone.FirstStage, World = zone.Name })
+		label(ring, ("%s\nStage %d"):format(zone.Name, zone.FirstStage), Color3.new(1, 1, 1), 70)
+		local frame = part({
+			Name = "WorldPortalFrame",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.5, 9.2, 9.2),
+			CFrame = CFrame.new(position - Vector3.new(0.3, 0, 0)),
+			Color = worldColors[i] or Color3.new(1, 1, 1),
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Parent = course,
+		})
+		frame.CanTouch = false
+	end
+end
+
 ---------------------------------------------------------------- Obstacle sections
 -- Pads span x0-6..x0+6, so each section fills x0+6..x0+54.
 -- d = 0..1 difficulty within the zone.
