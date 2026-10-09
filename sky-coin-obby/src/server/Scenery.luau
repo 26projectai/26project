@@ -358,6 +358,64 @@ local function buildHub(center, diameter, baseY)
 	end
 end
 
+-- Greedy Gary, the villain: a giant goblin with a top hat, monocle and a sack of stolen coins.
+-- His speech bubble (tag "GaryTaunt") is updated by Villain.server.
+local function gary(position, scale, facing)
+	local cf = CFrame.lookAt(position, position + facing)
+	local function at(x, y, z)
+		return (cf * CFrame.new(x * scale, y * scale, -z * scale)).Position
+	end
+	local green = Color3.fromRGB(110, 190, 70)
+	local suit = Color3.fromRGB(110, 40, 150)
+	pillar(at(0, 4, 0), 8 * scale, 7 * scale, suit) -- body
+	ball(at(0, 10.5, 0), 8 * scale, green) -- head
+	for _, side in ipairs({ -1, 1 }) do
+		ball(at(side * 4.6, 11.5, 0), 2.6 * scale, green) -- ears
+		ball(at(side * 1.6, 11.6, 3.4), 2 * scale, Color3.new(1, 1, 1)) -- eyes
+		ball(at(side * 1.6, 11.6, 4.2), 0.9 * scale, Color3.new(0, 0, 0))
+		ball(at(side * 4.2, 3.5, 1.5), 2.4 * scale, green) -- hands
+	end
+	deco({ -- monocle
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3 * scale, 2.6 * scale, 2.6 * scale),
+		CFrame = CFrame.new(at(1.6, 11.6, 4.5)) * cf.Rotation * CFrame.Angles(0, math.rad(90), 0),
+		Color = Color3.fromRGB(255, 200, 40),
+		Material = Enum.Material.Metal,
+		Transparency = 0.3,
+	})
+	deco({ Size = Vector3.new(4.2, 0.7, 0.4) * scale, CFrame = CFrame.new(at(0, 9, 3.9)) * cf.Rotation, Color = Color3.fromRGB(40, 10, 10) }) -- grin
+	pillar(at(0, 14.6, 0), 0.6 * scale, 8 * scale, Color3.fromRGB(20, 20, 25)) -- hat brim
+	pillar(at(0, 17, 0), 4.5 * scale, 5 * scale, Color3.fromRGB(20, 20, 25)) -- hat
+	pillar(at(0, 15.6, 0), 0.8 * scale, 5.1 * scale, Color3.fromRGB(200, 30, 60)) -- hat band
+	ball(at(5.5, 4, -1), 6 * scale, Color3.fromRGB(150, 110, 60)) -- coin sack
+	for i = 1, 5 do
+		ball(at(5.5 + math.cos(i) * 1.5, 7 + i * 0.2, -1 + math.sin(i) * 1.5), 1.2 * scale, Color3.fromRGB(255, 205, 40), Enum.Material.Neon)
+	end
+	local anchor = deco({ Size = Vector3.one, Position = at(0, 21, 0), Transparency = 1 })
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "GaryTaunt"
+	gui.Size = UDim2.fromOffset(360, 90)
+	gui.MaxDistance = 400
+	gui.LightInfluence = 0
+	local bubble = Instance.new("TextLabel")
+	bubble.Size = UDim2.fromScale(1, 1)
+	bubble.BackgroundColor3 = Color3.new(1, 1, 1)
+	bubble.Font = Enum.Font.FredokaOne
+	bubble.TextScaled = true
+	bubble.TextColor3 = Color3.fromRGB(110, 40, 150)
+	bubble.Text = "GREEDY GARY: You'll never escape!"
+	bubble.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 16)
+	corner.Parent = bubble
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.PaddingRight = UDim.new(0, 10)
+	padding.Parent = bubble
+	gui.Parent = anchor
+	game:GetService("CollectionService"):AddTag(gui, "GaryTaunt")
+end
+
 -- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage), HubCenter, HubDiameter }
 function Scenery.Build(opts)
 	folder = Instance.new("Folder")
@@ -381,10 +439,10 @@ function Scenery.Build(opts)
 
 	-- Spawn lobby: big island, trees and a title sign.
 	island(Vector3.new(-14, 0, 0), baseY - 0.55, 42, 1, true)
-	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-12, 0, 17), Vector3.new(-22, 0, -14), Vector3.new(-22, 0, 14) }) do
+	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-22, 0, -14), Vector3.new(-6, 0, 18) }) do
 		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
 	end
-	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", opts.Stages .. " STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
+	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
 
 	-- World scenery.
 	local zones = opts.Zones
@@ -427,6 +485,13 @@ function Scenery.Build(opts)
 	if zones[3] then
 		placeLandmark("Space", Vector3.new(((zones[3].FirstStage - 1) + 8) * spacing, baseY + 40, -170), 160, 0)
 	end
+
+	-- Greedy Gary looms over the lobby, the hub and the finish.
+	gary(Vector3.new(-62, baseY - 6, 0), 2.2, Vector3.new(1, 0, 0))
+	if opts.HubCenter then
+		gary(opts.HubCenter + Vector3.new(0, 30, -36), 1.6, Vector3.new(0, 0, 1))
+	end
+	gary(Vector3.new((opts.Stages - 1) * spacing + 40, baseY - 4, -10), 1.8, Vector3.new(-1, 0, 0.3).Unit)
 
 	-- Finish: golden arch and a giant trophy.
 	local finishX = (opts.Stages - 1) * spacing

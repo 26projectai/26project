@@ -60,6 +60,10 @@ local function win(player)
 	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
 
 	Badges.Award(player, "FirstWin")
+	if not data.Owned.ChampionHalo then
+		data.Owned.ChampionHalo = true
+		Remotes.Notify:FireClient(player, "UNLOCKED: Champion Halo - equip it in the Shop! You escaped Gary!", "gold")
+	end
 	if data.Wins >= 10 then
 		Badges.Award(player, "TenWins")
 	end
@@ -86,7 +90,7 @@ local function onTouched(checkpoint, hit)
 	end
 
 	local data = PlayerData.Get(player)
-	if not data or stage <= data.Stage then
+	if not data or data.Mode == "OP" or stage <= data.Stage then
 		return
 	end
 	if not Config.AllowStageSkipping and stage ~= data.Stage + 1 then
@@ -131,8 +135,8 @@ Course.Checkpoints.ChildAdded:Connect(hook)
 local function onCharacterAdded(player, character)
 	local data = PlayerData.WaitFor(player)
 	local root = character:WaitForChild("HumanoidRootPart", 10)
-	if not data or not root then
-		return
+	if not data or not root or data.Mode == "OP" then
+		return -- OP Obby spawning is handled by OPObby.server
 	end
 	-- CharacterAdded fires before the character is placed in the world;
 	-- wait for Roblox's own spawn positioning, or it overrides our teleport.

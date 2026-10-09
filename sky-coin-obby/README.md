@@ -1,6 +1,36 @@
-# Sky Coin Obby
+# Escape Greedy Gary's Obby (Sky Coin Obby)
 
-A 40-stage Roblox obby built to keep players coming back and bringing friends.
+**Greedy Gary stole all the Sky Coins.** Escape his **40-stage story obby**, then climb his **1000-stage OP
+difficulty-chart tower**. It's built to keep players coming back and bringing friends.
+
+## Feature checklist
+
+| Requirement | Where it is in the game |
+|---|---|
+| **Core obstacles** | Checkpoints, lava/laser kill bricks, fading platforms, sliders (moving blocks), conveyors, jump pads, spinners, truss climbs, trap doors |
+| **Stage counter UI** | HUD at the top (story `Stage x/40` or `OP x/1000`), plus the live race bar |
+| **Fast reset** | **R key / RESET button**, 1.5 second respawn |
+| **DataStores** | Everything saves: stages, OP stage, coins, wins, rebirths, jump power, cosmetics, streaks |
+| **Theme, skybox, lighting** | 3 worlds with **custom skyboxes** (`skybox/`), atmosphere haze, colour grading, ClockTime per world |
+| **Audio** | Checkpoint/coin/win/death sound effects, a **calm** looping track, a **phonk** track, and per-world music (MUSIC button = radio) |
+| **Badges for worlds** | Candy Land, Space, first win, 10 wins, OP 100/500/1000 |
+| **Unlockable cosmetics** | **Champion Halo** (finish the story), **OP Halo** (OP 100), **Rebirth Trail**, **Comet Trail** (stage 20) |
+| **Developer Products / passes** | Skip Stage (product), plus Speed Coil, Gravity Coil, Rocket, Double/Triple Jump, 2x Coins and VIP (passes) |
+| **Icon, thumbnails, title, tags** | `art/README.md` and [PUBLISHING.md](PUBLISHING.md) |
+| **Unique movement** | **Grappling Hook** for everyone (grapple-gap stages), rocket launcher, moon gravity, jump pads |
+| **Escape narrative** | Villain **Greedy Gary**: giant models with live taunts, a 3-second intro, jumpscares |
+| **Co-op** | **Team-up tether** (x1.5 coins together) and the **Teamwork Vault** (needs 2 players on the plates) |
+| **Audio themes** | Calm (ASMR-style) and Phonk radio stations |
+| **Tower / difficulty chart** | **1000-stage OP tower**: 20 tiers from EFFORTLESS to OP, each higher than the last |
+| **First 60 seconds** | Welcome badge + **50 coins on spawn**, coins within the first few seconds of the course, no tutorial |
+| **Rebirth / prestige** | REWARDS → Rebirth: permanent x2, x3… coins, Rebirth Trail, `[Rebirth N]` chat title |
+| **"+1" idle stat** | **Jump Power +1 every second** (toggle in the HUD). The Jump Power Tower in the hub needs it |
+| **Social hooks** | Invite = **3x coins for both players** (verified with Roblox referrals), co-op, Slap Hand in the lobby and hub |
+| **Daily engagement** | Login streak (escalating), free **Daily Draw** (Common/Rare/Legendary, odds shown) |
+| **Juice** | Landing screen-shake, checkpoint bursts + flash, confetti, coin combo pitch, pop-ups |
+| **Forgiving failure** | After 3 and 6 deaths: +10% / +20% speed and jump on that stage; after 8, a cheap **coin skip** |
+| **Clip-worthy traps** | Trap-door floors, Gary jumpscares, the "DO NOT TOUCH" yeet pad |
+| **Boost Stations** | Every **15 stages** (story and OP): x2 coin orb + mini live dashboard |
 
 **Gameplay**
 - **40 stages across 3 worlds**, each with its own music, sky, haze and scenery:
@@ -65,6 +95,11 @@ The installer **keeps your `Assets` script** (the one with your Roblox IDs), so 
    Coin = "rbxassetid://1234567890", -- audio/sfx_coin.mp3
    ```
 4. Press Play. The music changes when you reach Candy Land and Space, and there's a **MUSIC** button to mute it.
+
+### New audio and skyboxes (this update)
+- Upload `audio/music_calm.mp3` and `audio/music_phonk.mp3`, then put their IDs in `Assets.Music.Calm` / `Assets.Music.Phonk`.
+- Upload the 18 images in `skybox/` (`Sky_Bk.png` … `Space_Up.png`), then put their IDs in `Assets.Skyboxes`.
+  Each world has 6 faces: Bk, Dn, Ft, Lf, Rt, Up.
 
 ## Part C: Add the artwork
 

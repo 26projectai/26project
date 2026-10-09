@@ -1,9 +1,11 @@
 -- Game-pass abilities on the player's own device:
 --   Double/Triple Jump (MaxJumps attribute, toggle with the player's "MultiJumpOff" attribute),
 --   Rocket Launcher (click to launch), Speed Coil and Gravity Coil (hold to use).
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -96,7 +98,6 @@ if player.Character then
 end
 
 ---------------------------------------------------------------- Rainbow name tags (Legendary draw)
-local CollectionService = game:GetService("CollectionService")
 RunService.RenderStepped:Connect(function()
 	local rotation = (os.clock() * 120) % 360
 	for _, gradient in ipairs(CollectionService:GetTagged("RainbowGradient")) do
@@ -106,6 +107,8 @@ RunService.RenderStepped:Connect(function()
 end)
 
 ---------------------------------------------------------------- Tools
+local GRAPPLE_RANGE = 110
+local GRAPPLE_SPEED = 75
 local ROCKET_SPEED = 115
 local ROCKET_COOLDOWN = 1.2
 local SPEED_COIL_WALKSPEED = 26
@@ -133,6 +136,80 @@ local function hookTool(tool)
 			puff(root, Color3.fromRGB(255, 150, 40), 30)
 			Sfx.Play("JumpPad", 0.6)
 			Remotes.AssistUsed:FireServer()
+		end)
+	elseif tool.Name == "Grappling Hook" then
+		local mouse = player:GetMouse()
+		local grappling = false
+		tool.Activated:Connect(function()
+			local _, humanoid, root = parts()
+			if grappling or not root or not humanoid or humanoid.Health <= 0 then
+				return
+			end
+			-- Only glowing grapple points work, so the obby can't be skipped with the hook.
+			local target = mouse.Target
+			if not (target and CollectionService:HasTag(target, "GrapplePoint")) then
+				pcall(StarterGui.SetCore, StarterGui, "SendNotification", {
+					Title = "Grappling Hook",
+					Text = "Aim at a glowing cyan grapple point!",
+					Duration = 2,
+				})
+				return
+			end
+			local point = target.Position
+			if (point - root.Position).Magnitude > GRAPPLE_RANGE then
+				return
+			end
+			grappling = true
+			Sfx.Play("JumpPad", 1.6)
+			-- Rope visual
+			local handle = tool:FindFirstChild("Handle")
+			local a0 = Instance.new("Attachment")
+			a0.Parent = handle or root
+			local a1 = Instance.new("Attachment")
+			a1.WorldPosition = point
+			a1.Parent = workspace.Terrain
+			local beam = Instance.new("Beam")
+			beam.Attachment0, beam.Attachment1 = a0, a1
+			beam.Width0, beam.Width1 = 0.25, 0.25
+			beam.Color = ColorSequence.new(Color3.fromRGB(80, 255, 255))
+			beam.LightEmission = 1
+			beam.FaceCamera = true
+			beam.Parent = a1
+			humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+			local started = os.clock()
+			while os.clock() - started < 1.1 do
+				local offset = point - root.Position
+				if offset.Magnitude < 5 then
+					break
+				end
+				root.AssemblyLinearVelocity = offset.Unit * GRAPPLE_SPEED + Vector3.new(0, 6, 0)
+				RunService.Heartbeat:Wait()
+			end
+			a0:Destroy()
+			a1:Destroy()
+			grappling = false
+			Remotes.AssistUsed:FireServer()
+		end)
+	elseif tool.Name == "Slap Hand" then
+		tool.Activated:Connect(function()
+			local _, _, root = parts()
+			if not root then
+				return
+			end
+			local nearest, best = nil, 9
+			for _, other in ipairs(Players:GetPlayers()) do
+				local otherRoot = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+				if otherRoot then
+					local distance = (otherRoot.Position - root.Position).Magnitude
+					if distance < best then
+						nearest, best = other, distance
+					end
+				end
+			end
+			Sfx.Play("Click", 0.7)
+			if nearest then
+				Remotes.Slap:FireServer(nearest)
+			end
 		end)
 	elseif tool.Name == "Speed Coil" then
 		local normalSpeed

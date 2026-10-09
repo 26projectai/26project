@@ -62,7 +62,21 @@ local TOOLS = {
 		Color = Color3.fromRGB(160, 80, 255),
 		Material = Enum.Material.Neon,
 	}),
+	-- Free for everyone:
+	GrappleHook = makeTool("Grappling Hook", "Click a glowing grapple point to swing!", {
+		Size = Vector3.new(0.6, 0.6, 2.4),
+		Color = Color3.fromRGB(70, 70, 80),
+		Material = Enum.Material.Metal,
+	}, {
+		{ Size = Vector3.new(0.9, 0.9, 0.5), Offset = CFrame.new(0, 0, -1.3), Color = Color3.fromRGB(80, 255, 255), Material = Enum.Material.Neon },
+	}),
+	SlapHand = makeTool("Slap Hand", "Slap your friends in the lobby and hub!", {
+		Size = Vector3.new(1.6, 0.4, 2),
+		Color = Color3.fromRGB(255, 200, 160),
+		Material = Enum.Material.SmoothPlastic,
+	}),
 }
+local FREE_TOOLS = { "GrappleHook", "SlapHand" }
 
 local function giveTool(player, key)
 	local template = TOOLS[key]
@@ -92,6 +106,9 @@ function Abilities.Grant(player)
 			giveTool(player, key)
 		end
 	end
+	for _, key in ipairs(FREE_TOOLS) do
+		giveTool(player, key)
+	end
 	-- Spring Boots (stage 10 milestone) give a free double jump.
 	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or (passes.DoubleJump or unlocks.SpringBoots) and 2 or 1)
 	-- Daily Draw jump boots.
@@ -106,6 +123,63 @@ Remotes.AssistUsed.OnServerEvent:Connect(function(player)
 		session.RunAssisted = true
 		PlayerData.Sync(player)
 	end
+end)
+
+---------------------------------------------------------------- Slap Hand (lobby + hub only, so nobody gets slapped off the course)
+local Players = game:GetService("Players")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local function safeZones()
+	local zones = {}
+	local checkpoints = workspace:FindFirstChild("Checkpoints")
+	local first = checkpoints and checkpoints:FindFirstChild("1")
+	if first then
+		table.insert(zones, { Center = first.Position + Vector3.new(-14, 0, 0), Radius = 24 })
+	end
+	local hub = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 20))
+	if hub then
+		table.insert(zones, { Center = hub.Position + Vector3.new(0, 0, -62), Radius = 44 })
+	end
+	return zones
+end
+
+local function inSafeZone(position)
+	for _, zone in ipairs(safeZones()) do
+		local offset = position - zone.Center
+		if Vector2.new(offset.X, offset.Z).Magnitude < zone.Radius and math.abs(offset.Y) < 30 then
+			return true
+		end
+	end
+	return false
+end
+
+local lastSlap = {}
+Remotes.Slap.OnServerEvent:Connect(function(player, target)
+	if typeof(target) ~= "Instance" or not target:IsA("Player") or target == player then
+		return
+	end
+	if lastSlap[player] and os.clock() - lastSlap[player] < 0.8 then
+		return
+	end
+	local a = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local b = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+	local tool = player.Character and player.Character:FindFirstChild("Slap Hand")
+	if not a or not b or not tool or (a.Position - b.Position).Magnitude > 9 then
+		return
+	end
+	if not inSafeZone(a.Position) or not inSafeZone(b.Position) then
+		Remotes.Notify:FireClient(player, "Slapping only works in the lobby and hub!", "bad")
+		return
+	end
+	lastSlap[player] = os.clock()
+	local direction = (b.Position - a.Position) * Vector3.new(1, 0, 1)
+	direction = direction.Magnitude > 0 and direction.Unit or Vector3.new(0, 0, 1)
+	-- The target's own device moves their character, so it applies the knockback.
+	Remotes.Fx:FireClient(target, "Slapped", direction)
+	Remotes.Fx:FireClient(player, "SlapHit")
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lastSlap[player] = nil
 end)
 
 return Abilities

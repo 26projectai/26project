@@ -40,5 +40,14 @@ file name shown, then follow **Part C** in the main README to upload them to Rob
 | `concept-landmark-candy.png` | Concept art for the Candy castle 3D model | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142320_420f1438-8fbe-4262-ae6a-93ea48f11380.png) |
 | `concept-landmark-space.png` | Concept art for the Space station 3D model | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142321_3ec93878-cc14-4039-b093-c328af15b352.png) |
 | `concept-luxury-npc.png` | Concept art for the luxury NPCs | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142319_5334435d-efdf-48d6-bc6e-8f1d56590768.png) |
+| `game-icon-gary.png` | **NEW game icon** (upload in Experience Settings) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144108_6084c964-de8b-46d8-a335-225c893f295a.png) |
+| `thumbnail-gary.png` | **NEW thumbnail 1**: Escape Greedy Gary | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144109_8f937f4e-8525-42c4-a8d5-2339ef4213bb.png) |
+| `thumbnail-op-tower.png` | **NEW thumbnail 2**: 1000-stage OP tower + co-op | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144108_be9ffa88-6529-4fb7-8a5c-784da9ccccd4.png) |
+| `gary.png` | Gary jumpscare → `Assets.Images.Gary` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144109_4ac17602-0fce-4120-a3ee-74a61a4eb3a9.png) |
+| `badge-op-1000.png` | Badge icon: OP 100 / 500 / 1000 | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144109_0f86d9d7-4dfb-4390-9093-0a6fcb14a48b.png) |
+| `ui-halo.png` | Halo shop icons → `Assets.ItemIcons.ChampionHalo` / `OPHalo` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_144109_df4af1db-7dc4-43da-ae19-de49c9ef614f.png) |
+| `landmark-sky.glb` | **3D model**: Sky castle → ServerStorage/Landmarks/`Sky` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143140_f9c37c72-a446-4bd0-b628-e20b088b626b.glb) |
+| `landmark-candy.glb` | **3D model**: Candy castle → ServerStorage/Landmarks/`Candy` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143143_a7d0e28e-747c-4879-abdf-6f1ccad06c16.glb) |
+| `landmark-space.glb` | **3D model**: Space station → ServerStorage/Landmarks/`Space` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143146_eca144f2-2b4a-4060-a2be-ba818ed55d3f.glb) |
 
 All of these are also in your Higgsfield account under your generation history.

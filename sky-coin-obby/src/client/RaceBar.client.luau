@@ -41,6 +41,9 @@ local function totalStages()
 end
 
 local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+-- Two sets of colour bands: story worlds, and the OP tower's 20 difficulty tiers.
+local storyBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = track })
+local opBands = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = track })
 task.defer(function()
 	local total = totalStages()
 	for i, zone in ipairs(Config.Zones) do
@@ -53,7 +56,18 @@ task.defer(function()
 			BackgroundColor3 = ZONE_COLORS[i] or COLORS.Blue,
 			BackgroundTransparency = 0.3,
 			BorderSizePixel = 0,
-			Parent = track,
+			Parent = storyBands,
+		})
+	end
+	local tiers = #Config.OP.Tiers
+	for i, tier in ipairs(Config.OP.Tiers) do
+		make("Frame", {
+			Position = UDim2.fromScale((i - 1) / tiers, 0),
+			Size = UDim2.fromScale(1 / tiers, 1),
+			BackgroundColor3 = tier[2],
+			BackgroundTransparency = 0.2,
+			BorderSizePixel = 0,
+			Parent = opBands,
 		})
 	end
 end)
@@ -99,9 +113,9 @@ local boostLabel = UI.text({
 	TextColor3 = COLORS.Gold,
 	Parent = gui,
 })
-local boostUntil = 0
+local boosts = {}
 Remotes.DataUpdated.OnClientEvent:Connect(function(data)
-	boostUntil = data.BoostUntil or 0
+	boosts = data
 end)
 
 ---------------------------------------------------------------- Update loop
@@ -110,20 +124,39 @@ RunService.RenderStepped:Connect(function(dt)
 	local viewport = workspace.CurrentCamera.ViewportSize
 	scale.Scale = math.clamp(viewport.X / 560, 0.6, 1)
 
-	local left = boostUntil - workspace:GetServerTimeNow()
-	boostLabel.Text = left > 0 and ("%dx COIN BOOST  %s"):format(Config.NPCBoostMultiplier, UI.formatDuration(left)) or ""
+	local now = workspace:GetServerTimeNow()
+	local parts = {}
+	local function addBoost(untilTime, label)
+		local left = (untilTime or 0) - now
+		if left > 0 then
+			table.insert(parts, ("%s %s"):format(label, UI.formatDuration(left)))
+		end
+	end
+	addBoost(boosts.InviteBoostUntil, ("FRIEND x%d"):format(Config.InviteBoostMultiplier))
+	addBoost(boosts.BoostUntil, ("NPC x%d"):format(Config.NPCBoostMultiplier))
+	addBoost(boosts.StationBoostUntil, ("STATION x%d"):format(Config.StationBoostMultiplier))
+	if boosts.Tethered then
+		table.insert(parts, ("TEAM x%s"):format(tostring(Config.TetherMultiplier)))
+	end
+	boostLabel.Text = table.concat(parts, "  |  ")
+	boostLabel.Size = UDim2.fromOffset(#parts > 1 and 520 or 260, 26)
 
 	accumulator += dt
 	if accumulator < 0.25 then
 		return
 	end
 	accumulator = 0
-	local total = totalStages()
+	-- Show the race for whichever mode you're in (story course or OP tower).
+	local myMode = player:GetAttribute("Mode") or "Main"
+	local inOP = myMode == "OP"
+	storyBands.Visible, opBands.Visible = not inOP, inOP
+	local total = inOP and Config.OP.Stages or totalStages()
 	for _, other in ipairs(Players:GetPlayers()) do
 		local stats = other:FindFirstChild("leaderstats")
-		local stage = stats and stats:FindFirstChild("Stage")
+		local stage = stats and stats:FindFirstChild(inOP and "OP" or "Stage")
 		if stage then
 			local marker = markerFor(other)
+			marker.Visible = (other:GetAttribute("Mode") or "Main") == myMode
 			local target = UDim2.fromScale(math.clamp((stage.Value - 1) / (total - 1), 0, 1), 0.5)
 			marker.Position = marker.Position:Lerp(target, 0.5)
 		end

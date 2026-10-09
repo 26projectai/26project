@@ -12,6 +12,7 @@ local Server = ServerScriptService:WaitForChild("Server")
 local PlayerData = require(Server:WaitForChild("PlayerData"))
 local Course = require(Server:WaitForChild("Course"))
 local Abilities = require(Server:WaitForChild("Abilities"))
+local OPCourse = require(Server:WaitForChild("OPCourse"))
 
 local passNameById = {}
 for name, id in pairs(Config.GamePasses) do
@@ -61,6 +62,17 @@ productHandlers[Config.Products.SkipStage] = function(player)
 	local data = PlayerData.Get(player)
 	if not data then
 		return false
+	end
+	if data.Mode == "OP" then
+		if data.OPStage >= Config.OP.Stages - 1 then
+			PlayerData.AddCoins(player, Config.WinReward, false)
+			Remotes.Notify:FireClient(player, ("The last stage can't be skipped - here's +%d coins!"):format(Config.WinReward), "good")
+			return true
+		end
+		PlayerData.SetOPStage(player, data.OPStage + 1)
+		OPCourse.PlaceOnStage(player.Character, data.OPStage)
+		Remotes.Notify:FireClient(player, ("Skipped to OP stage %d!"):format(data.OPStage), "good")
+		return true
 	end
 	local final = Course.FinalStage()
 	if data.Stage >= final - 1 then

@@ -39,7 +39,6 @@ correction.Name = "ZoneCorrection"
 correction.Parent = Lighting
 
 local defaultJump = {}
-local currentZone
 
 -- Daily Draw jump boots multiply jump height (JumpBoost attribute, set by the server).
 -- Players can switch them off (BootsOff attribute) for ranked runs.
@@ -48,6 +47,19 @@ local function jumpBoost()
 		return 1
 	end
 	return player:GetAttribute("JumpBoost") or 1
+end
+
+-- Extra jump height from the idle Jump Power stat (only while the player switched it on).
+local function powerBonus()
+	if not player:GetAttribute("PowerOn") then
+		return 0
+	end
+	return (player:GetAttribute("JumpPower") or 0) * Config.JumpPowerHeight
+end
+
+-- Forgiving failure: small speed/jump assist after repeated deaths on a stage (server sets "Assist").
+local function assistFactor()
+	return 1 + 0.1 * (player:GetAttribute("Assist") or 0)
 end
 
 local function applyMovement(zone)
@@ -62,30 +74,65 @@ local function applyMovement(zone)
 			UseJumpPower = humanoid.UseJumpPower,
 			JumpPower = humanoid.JumpPower,
 			JumpHeight = humanoid.JumpHeight,
+			WalkSpeed = humanoid.WalkSpeed,
 		}
 	end
 	local defaults = defaultJump[humanoid]
-	local boost = jumpBoost()
-	if zone.Gravity < 150 then
-		-- Fixed jump power + low gravity = big floaty moon jumps.
-		-- Jump height grows with velocity squared, so scale velocity by sqrt(boost).
-		humanoid.UseJumpPower = true
-		humanoid.JumpPower = 50 * math.sqrt(boost)
-	else
-		humanoid.UseJumpPower = defaults.UseJumpPower
-		humanoid.JumpPower = defaults.JumpPower * math.sqrt(boost)
-		humanoid.JumpHeight = defaults.JumpHeight * boost
+	local boost = jumpBoost() * assistFactor()
+	-- Base height: moon jumps in low gravity (fixed 50 jump power), normal height otherwise.
+	local baseHeight = zone.Gravity < 150 and (50 * 50) / (2 * zone.Gravity) or defaults.JumpHeight
+	local height = baseHeight * boost + powerBonus()
+	humanoid.UseJumpPower = true
+	humanoid.JumpPower = math.sqrt(2 * zone.Gravity * height)
+	humanoid.JumpHeight = height
+	-- Don't fight a Speed Coil (it sets its own WalkSpeed while held).
+	if not (character and character:FindFirstChild("Speed Coil")) then
+		humanoid.WalkSpeed = defaults.WalkSpeed * assistFactor()
 	end
 end
 
-local function applyZone()
+-- In the OP tower the look cycles by tier (gravity stays normal so the difficulty is fair).
+local OP_LOOKS = { "SKY ISLANDS", "CANDY LAND", "OUTER SPACE" }
+local opLook = { Name = "OP", Gravity = 196.2 }
+
+local function currentZoneInfo()
+	if player:GetAttribute("Mode") == "OP" then
+		local opStat = player.leaderstats:FindFirstChild("OP")
+		local tier = math.floor(((opStat and opStat.Value or 1) - 1) / Config.OP.TierSize)
+		local lookName = OP_LOOKS[tier % #OP_LOOKS + 1]
+		opLook.LookName = lookName
+		opLook.ClockTime = ({ 14, 17.4, 0 })[tier % #OP_LOOKS + 1]
+		return opLook, lookName
+	end
 	local zone = Config.ZoneForStage(stageValue.Value)
-	applyMovement(zone)
-	if zone == currentZone then
+	return zone, zone.Name
+end
+
+-- Custom skyboxes (Assets.Skyboxes) per world, if the ids have been set.
+local SKY_FOR_LOOK = { ["SKY ISLANDS"] = "Sky", ["CANDY LAND"] = "Candy", ["OUTER SPACE"] = "Space" }
+local function applySky(lookName)
+	local ids = Config.Skyboxes[SKY_FOR_LOOK[lookName] or "Sky"]
+	if not ids or not Config.HasAsset(ids.Ft) then
 		return
 	end
-	currentZone = zone
-	local look = LOOKS[zone.Name] or LOOKS["SKY ISLANDS"]
+	local sky = Lighting:FindFirstChild("WorldSky") or Instance.new("Sky")
+	sky.Name = "WorldSky"
+	sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt = ids.Bk, ids.Dn, ids.Ft
+	sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = ids.Lf, ids.Rt, ids.Up
+	sky.CelestialBodiesShown = lookName ~= "OUTER SPACE"
+	sky.Parent = Lighting
+end
+
+local lastLook
+local function applyZone()
+	local zone, lookName = currentZoneInfo()
+	applyMovement(zone)
+	if lookName == lastLook then
+		return
+	end
+	lastLook = lookName
+	applySky(lookName)
+	local look = LOOKS[lookName] or LOOKS["SKY ISLANDS"]
 	local info = TweenInfo.new(2, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, { ClockTime = zone.ClockTime, Brightness = look.Brightness }):Play()
 	TweenService:Create(correction, info, { TintColor = look.Tint, Saturation = look.Saturation }):Play()
@@ -99,8 +146,10 @@ local function applyZone()
 end
 
 stageValue.Changed:Connect(applyZone)
-player:GetAttributeChangedSignal("JumpBoost"):Connect(applyZone)
-player:GetAttributeChangedSignal("BootsOff"):Connect(applyZone)
+player.leaderstats:WaitForChild("OP").Changed:Connect(applyZone)
+for _, attribute in ipairs({ "JumpBoost", "BootsOff", "PowerOn", "JumpPower", "Assist", "Mode" }) do
+	player:GetAttributeChangedSignal(attribute):Connect(applyZone)
+end
 player.CharacterAdded:Connect(function(character)
 	character:WaitForChild("Humanoid")
 	applyZone()
@@ -124,8 +173,15 @@ local function hookPad(pad)
 		end
 		cooldown = os.clock() + 0.4
 		local v = root.AssemblyLinearVelocity
-		root.AssemblyLinearVelocity = Vector3.new(v.X, pad:GetAttribute("Power") or 80, v.Z)
-		Sfx.Play("JumpPad")
+		if pad:GetAttribute("Yeet") then
+			-- Straight up (so you land back where you started) - pure clip material.
+			root.AssemblyLinearVelocity = Vector3.new(0, pad:GetAttribute("Power") or 250, 0)
+			Sfx.Play("JumpPad", 0.5)
+			player:SetAttribute("Yeeted", (player:GetAttribute("Yeeted") or 0) + 1)
+		else
+			root.AssemblyLinearVelocity = Vector3.new(v.X, pad:GetAttribute("Power") or 80, v.Z)
+			Sfx.Play("JumpPad")
+		end
 	end)
 end
 

@@ -52,3 +52,14 @@ out.append('print(keptAssets and "Sky Coin Obby updated! (your Assets ids were k
 
 with open(os.path.join(os.path.dirname(ROOT), "Installer.lua"), "w") as f:
     f.write("\n".join(out) + "\n")
+
+# Two smaller halves for when one big paste is too much for the command bar:
+# part 1 = helpers + Shared + Server, part 2 = helpers + Client.
+header_end = next(i for i, line in enumerate(out) if line.startswith("local f_shared"))
+client_start = next(i for i, line in enumerate(out) if line.startswith("local f_client"))
+header = out[:header_end]
+part1 = out[:client_start] + ['print("Part 1 of 2 installed - now run part 2!")']
+part2 = [line for line in header if "SpawnLocation" not in line and "spawn:Destroy" not in line] + out[client_start:]
+for name, lines in (("Installer_part1.lua", part1), ("Installer_part2.lua", part2)):
+    with open(os.path.join(os.path.dirname(ROOT), name), "w") as f:
+        f.write("\n".join(lines) + "\n")

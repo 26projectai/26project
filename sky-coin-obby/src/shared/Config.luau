@@ -46,6 +46,12 @@ Config.Milestones = {
 	{ Stage = 10, Unlock = "SpringBoots", Message = "UNLOCKED: Spring Boots - free Double Jump!" },
 	{ Stage = 20, Unlock = "CometTrail", Message = "UNLOCKED: Comet Trail - equip it in the Shop!" },
 }
+-- OP Obby milestones (by OP stage).
+Config.OPMilestones = {
+	{ Stage = 100, Unlock = "OPHalo", Message = "UNLOCKED: OP Halo - equip it in the Shop!", Badge = "OP100" },
+	{ Stage = 500, Unlock = "OP500", Message = "Halfway up Gary's tower! Respect.", Badge = "OP500" },
+	{ Stage = 1000, Unlock = "OP1000", Message = "YOU BEAT THE 1000-STAGE OP OBBY!!!", Badge = "OP1000" },
+}
 
 -- Luxury NPCs: touching one gives a coin boost.
 Config.NPCBoostMultiplier = 2
@@ -80,6 +86,77 @@ Config.Codes = {
 	MOONJUMP = 75,
 }
 
+---------------------------------------------------------------- Story
+Config.GameTitle = "ESCAPE GREEDY GARY'S OBBY"
+Config.VillainName = "Greedy Gary"
+Config.Intro = "Greedy Gary stole ALL the Sky Coins and locked them in his obby!\nEscape his 40-stage story... then conquer his 1000-stage OP tower."
+Config.VillainTaunts = {
+	"You'll never escape my obby! Hehehe!",
+	"Those coins are MINE!",
+	"Lava is my favourite colour.",
+	"Wait... how are you so good at this?!",
+	"My OP tower has 1000 stages. Good luck!",
+	"Stop collecting my coins!!",
+}
+
+---------------------------------------------------------------- OP Obby (1000-stage difficulty chart tower)
+Config.OP = {
+	Stages = 1000,
+	TierSize = 50, -- stages per tier (20 tiers)
+	Spacing = 40, -- studs between checkpoints
+	Origin = Vector3.new(0, 80, 3200), -- far away from the story course
+	TierHeight = 180, -- each tier sits higher than the last (it's a tower)
+	StageRise = 2, -- studs each stage climbs within a tier
+	CheckpointReward = 3,
+	FinishReward = 5000,
+	-- Difficulty chart names + colours, one per tier.
+	Tiers = {
+		{ "EFFORTLESS", Color3.fromRGB(0, 206, 0) }, { "EASY", Color3.fromRGB(118, 244, 71) },
+		{ "MEDIUM", Color3.fromRGB(255, 255, 0) }, { "HARD", Color3.fromRGB(254, 124, 0) },
+		{ "DIFFICULT", Color3.fromRGB(255, 12, 4) }, { "CHALLENGING", Color3.fromRGB(193, 0, 0) },
+		{ "INTENSE", Color3.fromRGB(25, 40, 50) }, { "REMORSELESS", Color3.fromRGB(201, 1, 201) },
+		{ "INSANE", Color3.fromRGB(0, 55, 255) }, { "EXTREME", Color3.fromRGB(3, 137, 255) },
+		{ "TERRIFYING", Color3.fromRGB(0, 255, 255) }, { "CATASTROPHIC", Color3.fromRGB(255, 255, 255) },
+		{ "HORRIFIC", Color3.fromRGB(150, 145, 255) }, { "UNREAL", Color3.fromRGB(75, 0, 200) },
+		{ "NIL", Color3.fromRGB(101, 102, 109) }, { "IMPOSSIBLE", Color3.fromRGB(255, 70, 160) },
+		{ "ABSURD", Color3.fromRGB(255, 160, 40) }, { "LEGENDARY", Color3.fromRGB(255, 205, 40) },
+		{ "MYTHIC", Color3.fromRGB(170, 255, 200) }, { "OP", Color3.fromRGB(255, 0, 90) },
+	},
+}
+
+-- Every N stages (story + OP) there's a Boost Station: mini dashboard + x2 coin orb.
+Config.StationInterval = 15
+Config.StationBoostMultiplier = 2
+Config.StationBoostSeconds = 90
+
+-- First-time players get this the moment they spawn (plus the Welcome badge).
+Config.WelcomeCoins = 50
+
+-- Invite a friend: when they join through your invite, you BOTH get x3 coins for this long.
+Config.InviteBoostMultiplier = 3
+Config.InviteBoostMinutes = 30
+
+-- Co-op: tethered teammates earn bonus coins.
+Config.TetherMultiplier = 1.5
+Config.TetherLength = 16
+Config.VaultReward = 75 -- Teamwork Vault coins (needs 2 players on the plates)
+Config.VaultCooldownMinutes = 10
+
+-- Fast reset (R key / RESET button) and respawn time.
+Config.RespawnTime = 1.5
+
+-- Forgiving failure: after 8 deaths on one stage, players may skip it for coins.
+Config.CoinSkipCost = 50
+
+-- Rebirth (prestige): reset coins + wins + story stage for a permanent multiplier.
+Config.RebirthWinsNeeded = 1
+Config.RebirthCost = 1000 -- multiplied by (rebirths + 1)
+Config.RebirthMultiplierStep = 1 -- x2 after 1 rebirth, x3 after 2, ...
+
+-- Idle "+1 Jump Power every second" (toggle in the HUD; makes runs unranked while on).
+Config.MaxJumpPower = 1000
+Config.JumpPowerHeight = 0.05 -- extra studs of jump height per point
+
 -- Optional Roblox group: members can claim a one-time bonus (0 = off).
 Config.GroupId = 0
 Config.GroupReward = 200
@@ -93,6 +170,7 @@ Config.Badges = Assets.Badges or {}
 Config.Images = Assets.Images or {}
 Config.Sounds = Assets.Sounds or {}
 Config.Music = Assets.Music or {}
+Config.Skyboxes = Assets.Skyboxes or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35

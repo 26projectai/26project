@@ -95,6 +95,36 @@ local function addAura(character, root, item)
 	end
 end
 
+-- A glowing ring floating above the head.
+local function addHalo(character, item)
+	local head = character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local halo = Instance.new("Part")
+	halo:SetAttribute("Cosmetic", true)
+	halo.Name = "Halo"
+	halo.Shape = Enum.PartType.Cylinder
+	halo.Size = Vector3.new(0.2, 2.4, 2.4)
+	halo.Color = item.Color
+	halo.Material = Enum.Material.Neon
+	halo.Transparency = 0.15
+	halo.CanCollide = false
+	halo.CanQuery = false
+	halo.CanTouch = false
+	halo.Massless = true
+	halo.CFrame = head.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = head
+	weld.Part1 = halo
+	weld.Parent = halo
+	local light = Instance.new("PointLight")
+	light.Color = item.Color
+	light.Range = 8
+	light.Parent = halo
+	halo.Parent = character
+end
+
 local function applyCosmetics(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -110,6 +140,8 @@ local function applyCosmetics(player)
 				addTrail(root, item)
 			elseif item.Slot == "Aura" then
 				addAura(character, root, item)
+			elseif item.Slot == "Halo" then
+				addHalo(character, item)
 			end
 		end
 	end

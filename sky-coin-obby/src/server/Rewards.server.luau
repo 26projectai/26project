@@ -67,38 +67,109 @@ Remotes.ClaimGroup.OnServerInvoke = function(player)
 	return true, ("Thanks for joining the group! +%d coins"):format(Config.GroupReward)
 end
 
----------------------------------------------------------------- Friend invites
--- When someone joins through a friend's invite link, and that friend is in this server,
--- both get Config.InviteReward coins (once per friend pair).
+---------------------------------------------------------------- Friend invites (x3 coins)
+-- Detection uses Roblox's referral data: when a friend joins through your invite
+-- (the INVITE button / invite menu / referral link), their join data names you as the referrer.
+-- Both of you then get x3 coins for Config.InviteBoostMinutes, plus Config.InviteReward coins.
+-- If you'd already left, the reward waits for you in a DataStore and is given when you return.
+local DataStoreService = game:GetService("DataStoreService")
+local okPending, pendingStore = pcall(DataStoreService.GetDataStore, DataStoreService, "PendingReferrals_v1")
+if not okPending then
+	pendingStore = nil
+end
+
+local function giveInviteBoost(player, message)
+	local session = PlayerData.Session(player)
+	if not session then
+		return
+	end
+	session.InviteBoostUntil = math.max(session.InviteBoostUntil or 0, workspace:GetServerTimeNow()) + Config.InviteBoostMinutes * 60
+	PlayerData.AddCoins(player, Config.InviteReward, false)
+	Remotes.Notify:FireClient(player, message, "gold")
+	Remotes.Fx:FireClient(player, "Confetti")
+end
+
 local function rewardReferral(newPlayer)
 	local ok, joinData = pcall(newPlayer.GetJoinData, newPlayer)
 	local referrerId = ok and joinData and joinData.ReferredByPlayerId
 	if not referrerId or referrerId == 0 or referrerId == newPlayer.UserId then
 		return
 	end
-	local referrer = Players:GetPlayerByUserId(referrerId)
 	local newData = PlayerData.WaitFor(newPlayer)
-	local referrerData = referrer and PlayerData.WaitFor(referrer)
-	if not newData or not referrerData then
+	if not newData then
 		return
 	end
-	local key = tostring(newPlayer.UserId)
-	if referrerData.RewardedReferrals[key] then
-		return
-	end
-	referrerData.RewardedReferrals[key] = true
-	PlayerData.AddCoins(referrer, Config.InviteReward, false)
-	Remotes.Notify:FireClient(referrer, ("%s joined from your invite! +%d coins"):format(newPlayer.DisplayName, Config.InviteReward), "good")
+
+	-- The friend who joined gets the boost once.
 	if not newData.JoinedViaInvite then
 		newData.JoinedViaInvite = true
-		PlayerData.AddCoins(newPlayer, Config.InviteReward, false)
-		Remotes.Notify:FireClient(newPlayer, ("Thanks for joining %s! +%d coins"):format(referrer.DisplayName, Config.InviteReward), "good")
+		giveInviteBoost(newPlayer, ("You joined from a friend's invite: x%d COINS for %d minutes!"):format(Config.InviteBoostMultiplier, Config.InviteBoostMinutes))
+	end
+
+	-- The inviter: rewarded now if they're here, otherwise saved for later (once per friend).
+	local referrer = Players:GetPlayerByUserId(referrerId)
+	local referrerData = referrer and PlayerData.WaitFor(referrer)
+	local key = tostring(newPlayer.UserId)
+	if referrerData then
+		if not referrerData.RewardedReferrals[key] then
+			referrerData.RewardedReferrals[key] = true
+			giveInviteBoost(referrer, ("%s joined from your invite! x%d COINS for %d minutes!"):format(newPlayer.DisplayName, Config.InviteBoostMultiplier, Config.InviteBoostMinutes))
+		end
+	elseif pendingStore then
+		pcall(pendingStore.UpdateAsync, pendingStore, "Ref_" .. referrerId, function(list)
+			list = list or {}
+			if not table.find(list, key) and #list < 50 then
+				table.insert(list, key)
+			end
+			return list
+		end)
+	end
+end
+
+-- Rewards for invites that joined while you were offline.
+local function claimPending(player)
+	if not pendingStore then
+		return
+	end
+	local data = PlayerData.WaitFor(player)
+	if not data then
+		return
+	end
+	local claimed = {}
+	pcall(pendingStore.UpdateAsync, pendingStore, "Ref_" .. player.UserId, function(list)
+		for _, key in ipairs(list or {}) do
+			if not data.RewardedReferrals[key] then
+				data.RewardedReferrals[key] = true
+				table.insert(claimed, key)
+			end
+		end
+		return {}
+	end)
+	if #claimed > 0 then
+		giveInviteBoost(player, ("%d friend(s) joined from your invites while you were away! x%d COINS for %d minutes!"):format(#claimed, Config.InviteBoostMultiplier, Config.InviteBoostMinutes))
+	end
+end
+
+---------------------------------------------------------------- First 60 seconds: instant reward
+-- New players get a welcome badge + coins right away (no tutorial, no reading).
+local function welcome(player)
+	Badges.Award(player, "Welcome")
+	local data = PlayerData.WaitFor(player)
+	if data and not data.WelcomeGiven then
+		data.WelcomeGiven = true
+		task.wait(3)
+		if player.Parent then
+			PlayerData.AddCoins(player, Config.WelcomeCoins or 50, false)
+			Remotes.Notify:FireClient(player, ("WELCOME GIFT: +%d coins! Grab more coins ahead!"):format(Config.WelcomeCoins or 50), "gold")
+			Remotes.Fx:FireClient(player, "Confetti")
+		end
 	end
 end
 
 local function onPlayerAdded(player)
-	Badges.Award(player, "Welcome")
+	task.spawn(welcome, player)
 	task.spawn(rewardReferral, player)
+	task.spawn(claimPending, player)
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)

@@ -39,9 +39,22 @@ local function trackFor(name)
 	return tracks[name]
 end
 
+-- Radio modes (MUSIC button): World (zone music; phonk in the OP tower), Calm, Phonk, Off.
+local function wantedTrackName()
+	local radio = player:GetAttribute("Radio") or "World"
+	if radio == "Off" or player:GetAttribute("MusicMuted") then
+		return nil
+	elseif radio == "Calm" or radio == "Phonk" then
+		return radio
+	elseif player:GetAttribute("Mode") == "OP" then
+		return Config.HasAsset(Config.Music.Phonk) and "Phonk" or "Space"
+	end
+	return Config.ZoneForStage(stageValue.Value).Music
+end
+
 local function updateMusic()
-	local muted = player:GetAttribute("MusicMuted")
-	local wanted = not muted and trackFor(Config.ZoneForStage(stageValue.Value).Music) or nil
+	local name = wantedTrackName()
+	local wanted = name and trackFor(name) or nil
 	if wanted == current then
 		return
 	end
@@ -68,7 +81,9 @@ local function updateMusic()
 end
 
 stageValue.Changed:Connect(updateMusic)
-player:GetAttributeChangedSignal("MusicMuted"):Connect(updateMusic)
+for _, attribute in ipairs({ "MusicMuted", "Radio", "Mode" }) do
+	player:GetAttributeChangedSignal(attribute):Connect(updateMusic)
+end
 updateMusic()
 
 ---------------------------------------------------------------- Sound effects

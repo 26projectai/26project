@@ -224,8 +224,37 @@ local groupButton = button({
 	Parent = groupSection,
 })
 
+-- Rebirth
+local rebirthSection = section(rewardsContent, 5, 96)
+text({
+	Position = UDim2.fromOffset(14, 10),
+	Size = UDim2.new(1, -28, 0, 28),
+	Text = "REBIRTH",
+	TextColor3 = Color3.fromRGB(255, 80, 120),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = rebirthSection,
+})
+local rebirthStatus = text({
+	Position = UDim2.fromOffset(14, 44),
+	Size = UDim2.new(1, -170, 0, 40),
+	Text = "",
+	TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = rebirthSection,
+})
+local rebirthButton = button({
+	Position = UDim2.new(1, -150, 0, 42),
+	Size = UDim2.fromOffset(136, 40),
+	BackgroundColor3 = Color3.fromRGB(255, 80, 120),
+	Text = "REBIRTH",
+	ZIndex = 6,
+	Parent = rebirthSection,
+})
+
 local feedback = text({
-	LayoutOrder = 5,
+	LayoutOrder = 6,
 	Size = UDim2.new(1, -8, 0, 28),
 	Text = "",
 	ZIndex = 6,
@@ -294,6 +323,11 @@ local function refresh()
 		loginButton.BackgroundColor3 = COLORS.Grey
 	end
 	groupSection.Visible = Config.GroupId ~= 0 and not state.GroupRewardClaimed
+
+	local rebirths = state.Rebirths or 0
+	local nextMult = 1 + (rebirths + 1) * Config.RebirthMultiplierStep
+	rebirthStatus.Text = ("Rebirths: %d. Next: permanent x%s coins + trail + chat title. Costs %d coins + %d win, resets coins/wins/stage.")
+		:format(rebirths, tostring(nextMult), state.RebirthCost or Config.RebirthCost, Config.RebirthWinsNeeded)
 end
 
 drawButton.Activated:Connect(function()
@@ -357,6 +391,14 @@ codeButton.Activated:Connect(function()
 	end
 end)
 
+rebirthButton.Activated:Connect(function()
+	local ok, message = Remotes.Rebirth:InvokeServer()
+	say(message, ok)
+	if ok then
+		Sfx.Play("Win")
+	end
+end)
+
 groupButton.Activated:Connect(function()
 	local ok, message = Remotes.ClaimGroup:InvokeServer()
 	say(message, ok)
@@ -382,6 +424,33 @@ local function zoneIndex(stage)
 		end
 	end
 	return index
+end
+
+local opTierButtons = {}
+local function rebuildOPTiers()
+	local reached = math.floor(((state.OPStage or 1) - 1) / Config.OP.TierSize) + 1
+	for tier, info in ipairs(Config.OP.Tiers) do
+		local b = opTierButtons[tier]
+		if not b then
+			b = button({
+				LayoutOrder = 1000 + tier,
+				Text = "OP " .. tier,
+				ZIndex = 6,
+				Parent = stagesContent,
+			})
+			b.Activated:Connect(function()
+				local ok, message = Remotes.TeleportOPTier:InvokeServer(tier)
+				if ok then
+					stagesWindow.Visible = false
+				end
+				Sfx.Play(ok and "Checkpoint" or "Click")
+				say(message, ok)
+			end)
+			opTierButtons[tier] = b
+		end
+		b.BackgroundColor3 = tier <= reached and info[2] or COLORS.Grey
+		b.TextColor3 = (tier <= reached and info[2].R + info[2].G + info[2].B > 2.2) and Color3.new(0, 0, 0) or COLORS.Text
+	end
 end
 
 local function rebuildStages()
@@ -432,6 +501,7 @@ player:GetAttributeChangedSignal("StageSelectOpen"):Connect(function()
 	stagesWindow.Visible = not stagesWindow.Visible
 	rewardsWindow.Visible = false
 	rebuildStages()
+	rebuildOPTiers()
 end)
 for _, attribute in ipairs({ "MaxJumps", "JumpBoost" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(refresh)

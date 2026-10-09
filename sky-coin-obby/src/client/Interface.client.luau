@@ -115,7 +115,7 @@ local gui = make("ScreenGui", {
 local hud = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 0, 8),
-	Size = UDim2.fromOffset(470, 52),
+	Size = UDim2.fromOffset(628, 52),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -168,6 +168,29 @@ stageClick.Activated:Connect(function()
 	player:SetAttribute("StageSelectOpen", not player:GetAttribute("StageSelectOpen"))
 end)
 local _, winsLabel = hudPanel(3, 150, Config.Images.Trophy, COLORS.Orange, "W", COLORS.Gold)
+-- Jump Power: grows +1 every second; click to switch it on/off (on = unranked runs).
+local powerPanel, powerLabel = hudPanel(4, 150, nil, nil, nil, Color3.fromRGB(120, 230, 255))
+local powerClick = make("TextButton", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 3,
+	Parent = powerPanel,
+})
+local function refreshPower()
+	local on = player:GetAttribute("PowerOn")
+	powerLabel.Text = ("⚡%d %s"):format(player:GetAttribute("JumpPower") or 0, on and "ON" or "OFF")
+	powerPanel.BackgroundColor3 = on and Color3.fromRGB(30, 80, 110) or COLORS.Panel
+end
+powerClick.Activated:Connect(function()
+	player:SetAttribute("PowerOn", not player:GetAttribute("PowerOn"))
+	if player:GetAttribute("PowerOn") then
+		Remotes.AssistUsed:FireServer()
+	end
+	refreshPower()
+end)
+player:GetAttributeChangedSignal("JumpPower"):Connect(refreshPower)
+refreshPower()
 
 local timerLabel = text({
 	AnchorPoint = Vector2.new(0.5, 0),
@@ -268,7 +291,7 @@ end
 local shopButton = sideButton(1, "SHOP", COLORS.Pink, Config.Images.ShopButton, "$")
 local passesButton = sideButton(2, "PASSES", COLORS.Gold, Config.Images.Passes, "R$")
 local dailyButton = sideButton(3, "REWARDS", COLORS.Purple, Config.Images.Rewards or Config.Images.Daily, "!")
-local inviteButton = sideButton(4, "INVITE", COLORS.Green, Config.Images.Invite, "+")
+local inviteButton = sideButton(4, "INVITE=3x", COLORS.Green, Config.Images.Invite, "+")
 local skipButton = sideButton(5, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
 local musicButton = sideButton(6, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
 skipButton.Visible = Config.Products.SkipStage ~= 0
@@ -638,10 +661,19 @@ skipButton.Activated:Connect(function()
 	MarketplaceService:PromptProductPurchase(player, Config.Products.SkipStage)
 end)
 
+-- Radio: World music -> Calm -> Phonk -> Off (Audio.client plays whatever is picked).
+local RADIO = { "World", "Calm", "Phonk", "Off" }
 musicButton.Activated:Connect(function()
-	local muted = not player:GetAttribute("MusicMuted")
-	player:SetAttribute("MusicMuted", muted)
-	musicButton.BackgroundColor3 = muted and COLORS.Grey or COLORS.Blue
+	local current = player:GetAttribute("Radio") or "World"
+	local nextMode = RADIO[(table.find(RADIO, current) or 1) % #RADIO + 1]
+	player:SetAttribute("Radio", nextMode)
+	player:SetAttribute("MusicMuted", nextMode == "Off")
+	musicButton.BackgroundColor3 = nextMode == "Off" and COLORS.Grey or COLORS.Blue
+	for _, d in ipairs(musicButton:GetDescendants()) do
+		if d:IsA("TextLabel") and d.Text ~= "♪" and d.Size.Y.Offset == 20 then
+			d.Text = nextMode:upper()
+		end
+	end
 end)
 
 ---------------------------------------------------------------- Zone banner
@@ -781,7 +813,11 @@ local function refresh()
 	end
 	lastCoins = state.Coins
 
-	stageLabel.Text = totalStages > 0 and ("Stage %d/%d"):format(state.Stage, totalStages) or ("Stage " .. state.Stage)
+	if state.Mode == "OP" then
+		stageLabel.Text = ("OP %d/%d"):format(state.OPStage or 1, Config.OP.Stages)
+	else
+		stageLabel.Text = totalStages > 0 and ("Stage %d/%d"):format(state.Stage, totalStages) or ("Stage " .. state.Stage)
+	end
 	winsLabel.Text = ("%d  x%s"):format(state.Wins, tostring(math.floor(state.Multiplier * 100 + 0.5) / 100))
 	dailyDot.Visible = state.DailyReady == true or (state.NextDrawIn or 1) <= 0
 	skipButton.Visible = Config.Products.SkipStage ~= 0 and state.Stage < totalStages - 1
@@ -832,8 +868,11 @@ Remotes.DataUpdated.OnClientEvent:Connect(function(data)
 	refresh()
 end)
 
-Remotes.CheckpointReached.OnClientEvent:Connect(function(stage, reward)
-	if reward and reward > 0 then
+Remotes.CheckpointReached.OnClientEvent:Connect(function(stage, reward, mode)
+	if mode == "OP" then
+		local tier = Config.OP.Tiers[math.floor((stage - 1) / Config.OP.TierSize) + 1]
+		toast(("OP STAGE %d  [%s]  (+%d coins)"):format(stage, tier and tier[1] or "", reward or 0), "good")
+	elseif reward and reward > 0 then
 		toast(("Checkpoint! Stage %d  (+%d coins)"):format(stage, reward), "good")
 	else
 		toast(("Checkpoint! Stage %d"):format(stage), "good")
@@ -849,8 +888,15 @@ TextChatService.OnIncomingMessage = function(message)
 	local properties = Instance.new("TextChatMessageProperties")
 	local source = message.TextSource
 	local sender = source and Players:GetPlayerByUserId(source.UserId)
+	local prefix = message.PrefixText
+	if sender and (sender:GetAttribute("Rebirths") or 0) > 0 then
+		prefix = ('<font color="#FF5078">[Rebirth %d]</font> '):format(sender:GetAttribute("Rebirths")) .. prefix
+	end
 	if sender and sender:GetAttribute("VIP") then
-		properties.PrefixText = '<font color="#FFD23F">[VIP]</font> ' .. message.PrefixText
+		prefix = '<font color="#FFD23F">[VIP]</font> ' .. prefix
+	end
+	if prefix ~= message.PrefixText then
+		properties.PrefixText = prefix
 	end
 	return properties
 end

@@ -14,13 +14,14 @@ local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChi
 local REFRESH_SECONDS = 60
 local SHOWN = 10
 
-local okStores, winsStore, timeStore = pcall(function()
+local okStores, winsStore, timeStore, opStore = pcall(function()
 	return DataStoreService:GetOrderedDataStore("Wins_" .. Config.LeaderboardVersion),
-		DataStoreService:GetOrderedDataStore("BestTime_" .. Config.LeaderboardVersion)
+		DataStoreService:GetOrderedDataStore("BestTime_" .. Config.LeaderboardVersion),
+		DataStoreService:GetOrderedDataStore("OPStage_" .. Config.LeaderboardVersion)
 end)
 if not okStores then
 	warn("[Leaderboards] Unavailable:", winsStore)
-	winsStore, timeStore = nil, nil
+	winsStore, timeStore, opStore = nil, nil, nil
 end
 
 local names = {}
@@ -120,8 +121,15 @@ workspace:WaitForChild("Checkpoints", 30)
 local winsLists = listsFor("Board_Wins", "MOST WINS", Color3.fromRGB(255, 170, 40))
 local timeLists = listsFor("Board_Time", "FASTEST RUN", Color3.fromRGB(70, 160, 255))
 local liveLists = listsFor("Board_Live", "LIVE RACE", Color3.fromRGB(80, 220, 120))
+local opLists = listsFor("Board_OP", "OP TOWER TOP", Color3.fromRGB(255, 0, 90))
 
 local function fillAll(lists, entries, formatValue)
+	-- Boards in streamed OP tiers come and go; drop the ones that were destroyed.
+	for i = #lists, 1, -1 do
+		if not lists[i]:IsDescendantOf(workspace) then
+			table.remove(lists, i)
+		end
+	end
 	for _, list in ipairs(lists) do
 		fill(list, entries, formatValue)
 	end
@@ -133,10 +141,12 @@ local function setNotice(lists, text)
 	end
 end
 
+local lastOPEntries = {}
 local function refreshGlobal()
 	if not winsStore then
 		setNotice(winsLists, "Works once the game is published")
 		setNotice(timeLists, "Works once the game is published")
+		setNotice(opLists, "Works once the game is published")
 		return
 	end
 	-- Upload everyone in this server first.
@@ -150,6 +160,9 @@ local function refreshGlobal()
 			if data.BestTime > 0 then
 				pcall(timeStore.SetAsync, timeStore, key, math.floor(data.BestTime * 100)) -- hundredths
 			end
+			if data.OPStage > 1 then
+				pcall(opStore.SetAsync, opStore, key, data.OPStage)
+			end
 		end
 	end
 
@@ -158,6 +171,10 @@ local function refreshGlobal()
 		fillAll(winsLists, winsPage:GetCurrentPage(), function(v)
 			return v .. " wins"
 		end)
+	end
+	local okOP, opPage = pcall(opStore.GetSortedAsync, opStore, false, SHOWN)
+	if okOP then
+		lastOPEntries = opPage:GetCurrentPage()
 	end
 	local okTime, timePage = pcall(timeStore.GetSortedAsync, timeStore, true, SHOWN)
 	if okTime then
@@ -185,6 +202,10 @@ local function refreshLive()
 	end)
 	fillAll(liveLists, entries, function(v)
 		return "Stage " .. v
+	end)
+	-- OP boards refresh often too, so newly streamed station boards fill quickly.
+	fillAll(opLists, lastOPEntries, function(v)
+		return "OP " .. v
 	end)
 end
 

@@ -25,6 +25,9 @@ Assets.Badges = {
 	ReachedSpace = 0,
 	FirstWin = 0,
 	TenWins = 0,
+	OP100 = 0,
+	OP500 = 0,
+	OP1000 = 0,
 }
 
 -- Upload the PNGs in /art to Roblox and paste the asset ids here
@@ -42,6 +45,7 @@ Assets.Images = {
 	DrawCommon = "rbxassetid://0", -- art/draw-common.png
 	DrawRare = "rbxassetid://0", -- art/draw-rare.png
 	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
+	Gary = "rbxassetid://0", -- art/gary.png (jumpscare)
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -59,6 +63,15 @@ Assets.Music = {
 	Sky = "rbxassetid://0", -- audio/music_sky.mp3
 	Candy = "rbxassetid://0", -- audio/music_candy.mp3
 	Space = "rbxassetid://0", -- audio/music_space.mp3
+	Calm = "rbxassetid://0", -- audio/music_calm.mp3
+	Phonk = "rbxassetid://0", -- audio/music_phonk.mp3
+}
+
+-- Custom skyboxes (skybox/<world>_<face>.png). Upload the 18 images and paste the ids.
+Assets.Skyboxes = {
+	Sky = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
+	Candy = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
+	Space = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
@@ -73,6 +86,9 @@ Assets.ItemIcons = {
 	LightningTrail = "rbxassetid://0", -- art/item-lightning-trail.png
 	VIPTrail = "rbxassetid://0", -- art/item-vip-trail.png
 	CometTrail = "rbxassetid://0",
+	RebirthTrail = "rbxassetid://0",
+	ChampionHalo = "rbxassetid://0", -- art/ui-halo.png
+	OPHalo = "rbxassetid://0", -- art/ui-halo.png
 }
 
 return Assets

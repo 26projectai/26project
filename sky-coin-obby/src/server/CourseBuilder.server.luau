@@ -191,6 +191,61 @@ for stage = 1, STAGES do
 	pad.Parent = checkpoints
 end
 
+---------------------------------------------------------------- Boost Stations (every Config.StationInterval stages)
+for stage = Config.StationInterval, STAGES - 1, Config.StationInterval do
+	local padPos = Vector3.new((stage - 1) * SPACING, BASE_Y, 0)
+	local orb = part({
+		Name = "BoostOrb",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.one * 3,
+		Position = padPos + Vector3.new(-3.5, 3.5, 3.5),
+		Color = Color3.fromRGB(255, 210, 40),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Parent = course,
+	})
+	tag(orb, "BoostOrb", { StationId = "Story" .. stage })
+	label(orb, ("x%d COINS - TOUCH ME"):format(Config.StationBoostMultiplier), Color3.fromRGB(255, 230, 120))
+	local boardPos = padPos + Vector3.new(0, 6.5, -8)
+	local board = part({
+		Name = "StationBoard",
+		Size = Vector3.new(11, 8, 0.6),
+		CFrame = CFrame.lookAt(boardPos, boardPos + Vector3.new(0, 0, 1)),
+		Color = Color3.fromRGB(25, 25, 45),
+		CanCollide = false,
+		Parent = course,
+	})
+	tag(board, "Board_Live")
+end
+
+---------------------------------------------------------------- Portals to the 1000-stage OP Obby
+local function opPortal(position, facing)
+	local ring = part({
+		Name = "OPPortal",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.8, 11, 11),
+		CFrame = CFrame.lookAt(position, position + facing) * CFrame.Angles(0, math.rad(90), 0),
+		Color = Color3.fromRGB(255, 0, 90),
+		Material = Enum.Material.ForceField,
+		CanCollide = false,
+		Parent = course,
+	})
+	tag(ring, "OPPortal")
+	label(ring, "OP OBBY\n1000 STAGES", Color3.fromRGB(255, 120, 170), 90)
+	local frame = part({
+		Name = "OPPortalFrame",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 12.5, 12.5),
+		CFrame = ring.CFrame * CFrame.new(-0.4, 0, 0),
+		Color = Color3.fromRGB(40, 0, 30),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Parent = course,
+	})
+	frame.CanTouch = false
+end
+opPortal(Vector3.new(-18, BASE_Y + 6, 13), Vector3.new(0, 0, -1)) -- in the spawn lobby
+
 ---------------------------------------------------------------- Obstacle sections
 -- Pads span x0-6..x0+6, so each section fills x0+6..x0+54.
 -- d = 0..1 difficulty within the zone.
@@ -240,7 +295,26 @@ local skySections = {
 -- Rotating 90 degrees makes a part's front (look) direction point toward -X.
 local FACE_BACK = CFrame.Angles(0, math.rad(90), 0)
 
+-- Trap floor: identical tiles, but some of them drop away (great reaction clips).
+local function trapFloor(stage, x0, d)
+	local rng = Random.new(stage * 31)
+	local tiles = 6
+	for i = 1, tiles do
+		local cx = 6 + (i - 0.5) * (48 / tiles)
+		for row = -1, 1 do
+			local tile = platform(stage, Vector3.new(x0 + cx, BASE_Y, row * 3.2), Vector3.new(48 / tiles - 0.2, 1, 3))
+			tile.Color = Color3.fromRGB(230, 230, 240)
+			-- One safe tile per column; the others are trap doors.
+			if row ~= (rng:NextInteger(-1, 1)) then
+				tag(tile, "TrapDoor")
+			end
+		end
+	end
+	coin(Vector3.new(x0 + 30, BASE_Y + 3.5, 0))
+end
+
 local candySections = {
+	trapFloor,
 	-- Platforms that vanish after you step on them
 	function(stage, x0, d)
 		for i, cx in ipairs({ 12, 21, 30, 39, 48 }) do
@@ -289,6 +363,7 @@ local candySections = {
 
 -- Space has low gravity (see Config.Zones), so jumps go much further.
 local spaceSections = {
+	trapFloor,
 	-- Asteroid hops
 	function(stage, x0, d)
 		local size = 6 - 2 * d
@@ -364,6 +439,34 @@ for stage = 1, STAGES - 1 do
 	sections[(stage - zoneFirst) % #sections + 1](stage, (stage - 1) * SPACING, d)
 end
 
+---------------------------------------------------------------- Gary jumpscares + a silly yeet pad (clip-worthy moments)
+for _, stage in ipairs({ 6, 17, 27, 36 }) do
+	if stage < STAGES then
+		local trigger = part({
+			Name = "GaryScare",
+			Size = Vector3.new(4, 8, 14),
+			Position = Vector3.new((stage - 1) * SPACING + 30, BASE_Y + 4, 0),
+			Transparency = 1,
+			CanCollide = false,
+			Parent = course,
+		})
+		tag(trigger, "Jumpscare")
+	end
+end
+do
+	-- On the lobby island: a pad that launches you absurdly high (land back in the lobby).
+	local yeet = part({
+		Name = "YeetPad",
+		Size = Vector3.new(5, 0.6, 5),
+		Position = Vector3.new(-26, BASE_Y + 0.3, -6),
+		Color = Color3.fromRGB(255, 80, 200),
+		Material = Enum.Material.Neon,
+		Parent = course,
+	})
+	tag(yeet, "JumpPad", { Power = 260, Yeet = true })
+	label(yeet, "DO NOT TOUCH", Color3.fromRGB(255, 120, 220))
+end
+
 ---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
 local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon }
 local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
@@ -413,7 +516,7 @@ board("LiveBoard", "Board_Live", Vector3.new(-16, BASE_Y + 7, -13), Vector3.new(
 local HUB_STAGE = math.clamp(Config.HubStage or 20, 2, STAGES - 1)
 local hubX = (HUB_STAGE - 1) * SPACING
 local HUB_CENTER = Vector3.new(hubX, BASE_Y, -62)
-local HUB_DIAMETER = 58
+local HUB_DIAMETER = 84
 do
 	local hubTheme = THEMES[zoneIndex(HUB_STAGE)]
 	-- Walkable bridge from the hub checkpoint to the island.
@@ -428,12 +531,13 @@ do
 	-- Giant dashboard: three panels facing the course.
 	local dashZ = HUB_CENTER.Z - 24
 	local facing = Vector3.new(0, 0, 1)
-	board("HubWins", "Board_Wins", Vector3.new(hubX - 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
-	board("HubLive", "Board_Live", Vector3.new(hubX, BASE_Y + 11, dashZ), facing, Vector3.new(18, 17, 1))
-	board("HubTime", "Board_Time", Vector3.new(hubX + 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	board("HubWins", "Board_Wins", Vector3.new(hubX - 27, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	board("HubLive", "Board_Live", Vector3.new(hubX - 9, BASE_Y + 11, dashZ), facing, Vector3.new(17, 17, 1))
+	board("HubOP", "Board_OP", Vector3.new(hubX + 9, BASE_Y + 11, dashZ), facing, Vector3.new(17, 17, 1))
+	board("HubTime", "Board_Time", Vector3.new(hubX + 27, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
 	local frame = part({
 		Name = "DashboardFrame",
-		Size = Vector3.new(58, 22, 1),
+		Size = Vector3.new(76, 22, 1),
 		CFrame = CFrame.new(hubX, BASE_Y + 11, dashZ - 0.8),
 		Color = hubTheme.Checkpoint,
 		Material = Enum.Material.Neon,
@@ -459,6 +563,69 @@ do
 	headerText.TextColor3 = Color3.fromRGB(255, 215, 60)
 	headerText.Parent = gui
 	gui.Parent = header
+	opPortal(HUB_CENTER + Vector3.new(20, 6, 6), Vector3.new(-1, 0, 0)) -- on the hub island
+
+	-- Teamwork Vault: glass cage with a coin chest; two plates must be held at once to open it.
+	local vault = HUB_CENTER + Vector3.new(-24, 0, 10)
+	local glass = { Color = Color3.fromRGB(180, 230, 255), Material = Enum.Material.Glass, Transparency = 0.3, Parent = course }
+	local function wall(offset, size)
+		local props = table.clone(glass)
+		props.Size = size
+		props.Position = vault + offset
+		return part(props)
+	end
+	wall(Vector3.new(0, 4, -4), Vector3.new(8, 8, 0.5))
+	wall(Vector3.new(-4, 4, 0), Vector3.new(0.5, 8, 8))
+	wall(Vector3.new(4, 4, 0), Vector3.new(0.5, 8, 8))
+	wall(Vector3.new(0, 8.25, 0), Vector3.new(8, 0.5, 8))
+	local door = wall(Vector3.new(0, 4, 4), Vector3.new(8, 8, 0.5))
+	door.Name = "VaultDoor"
+	CollectionService:AddTag(door, "VaultDoor")
+	local chest = part({
+		Name = "VaultChest",
+		Size = Vector3.new(3, 2.5, 2),
+		Position = vault + Vector3.new(0, 1.3, 0),
+		Color = Color3.fromRGB(255, 200, 40),
+		Material = Enum.Material.Neon,
+		Parent = course,
+	})
+	CollectionService:AddTag(chest, "VaultChest")
+	label(chest, "TEAMWORK VAULT\nStand on BOTH plates!", Color3.fromRGB(255, 230, 120), 70)
+	for _, dx in ipairs({ -7, 7 }) do
+		local plate = part({
+			Name = "VaultPlate",
+			Size = Vector3.new(4, 0.4, 4),
+			Position = vault + Vector3.new(dx, 0.2, 10),
+			Color = Color3.fromRGB(255, 80, 80),
+			Material = Enum.Material.Neon,
+			Parent = course,
+		})
+		CollectionService:AddTag(plate, "VaultPlate")
+	end
+
+	-- Jump Power Tower: ledges far too high to reach... until your Jump Power grows.
+	local towerBase = HUB_CENTER + Vector3.new(26, 0, -24)
+	for i, height in ipairs({ 18, 34, 55 }) do
+		local ledge = part({
+			Name = "PowerLedge",
+			Size = Vector3.new(8, 1, 8),
+			Position = towerBase + Vector3.new(0, height, -i * 2),
+			Color = Color3.fromRGB(255, 220, 60),
+			Material = Enum.Material.Neon,
+			Parent = course,
+		})
+		local reward = ({ 100, 250, 600 })[i]
+		local chestTop = part({
+			Name = "PowerChest",
+			Size = Vector3.new(2.5, 2, 2),
+			Position = ledge.Position + Vector3.new(0, 1.5, 0),
+			Color = Color3.fromRGB(120, 70, 30),
+			Material = Enum.Material.Wood,
+			Parent = course,
+		})
+		tag(chestTop, "RewardChest", { Reward = reward, CooldownMinutes = 60, ChestId = "Power" .. i })
+		label(ledge, ("JUMP POWER %d+\n+%d coins"):format(({ 230, 550, 970 })[i], reward), Color3.new(1, 1, 1), 60)
+	end
 end
 
 ---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)

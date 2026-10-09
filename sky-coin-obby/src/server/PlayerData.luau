@@ -40,6 +40,11 @@ local function defaultData()
 		LastDraw = 0,
 		RedeemedCodes = {}, -- [CODE] = true
 		GroupRewardClaimed = false,
+		Rebirths = 0,
+		JumpPower = 0, -- grows +1 every second online
+		OPStage = 1, -- progress in the 1000-stage OP Obby
+		Mode = "Main", -- "Main" (story course) or "OP"
+		SeenIntro = false,
 	}
 end
 
@@ -98,6 +103,8 @@ local function updateLeaderstats(player)
 	leaderstats.Stage.Value = profile.Data.Stage
 	leaderstats.Wins.Value = profile.Data.Wins
 	leaderstats.Coins.Value = profile.Data.Coins
+	leaderstats.OP.Value = profile.Data.OPStage
+	player:SetAttribute("Mode", profile.Data.Mode)
 end
 
 function PlayerData.Get(player)
@@ -144,14 +151,29 @@ function PlayerData.Multiplier(player)
 		return 1
 	end
 	local mult = math.min(1 + data.Wins * Config.WinMultiplierStep, Config.MaxWinMultiplier)
+	mult *= 1 + (data.Rebirths or 0) * Config.RebirthMultiplierStep
 	if session.Passes.DoubleCoins then
 		mult *= 2
 	end
 	if session.Passes.VIP then
 		mult *= Config.VIPMultiplier
 	end
-	if (session.BoostUntil or 0) > workspace:GetServerTimeNow() then
-		mult *= Config.NPCBoostMultiplier
+	local now = workspace:GetServerTimeNow()
+	-- Temporary boosts: NPC and Boost Station don't stack with each other (the bigger one wins)...
+	local temp = 1
+	if (session.BoostUntil or 0) > now then
+		temp = math.max(temp, Config.NPCBoostMultiplier)
+	end
+	if (session.StationBoostUntil or 0) > now then
+		temp = math.max(temp, Config.StationBoostMultiplier)
+	end
+	mult *= temp
+	-- ...but the friend-invite boost and co-op tether bonus do.
+	if (session.InviteBoostUntil or 0) > now then
+		mult *= Config.InviteBoostMultiplier
+	end
+	if session.TetheredWith then
+		mult *= Config.TetherMultiplier
 	end
 	local rarity = PlayerData.ActiveDraw(player)
 	if rarity and rarity.CoinBoost then
@@ -190,6 +212,14 @@ local function snapshot(player)
 		RedeemedCodes = data.RedeemedCodes,
 		GroupRewardClaimed = data.GroupRewardClaimed,
 		GroupId = Config.GroupId,
+		OPStage = data.OPStage,
+		Mode = data.Mode,
+		SeenIntro = data.SeenIntro,
+		StationBoostUntil = session.StationBoostUntil,
+		InviteBoostUntil = session.InviteBoostUntil,
+		Tethered = session.TetheredWith ~= nil,
+		Rebirths = data.Rebirths,
+		RebirthCost = Config.RebirthCost * ((data.Rebirths or 0) + 1),
 	}
 end
 
@@ -236,6 +266,14 @@ function PlayerData.SetStage(player, stage)
 	PlayerData.Sync(player)
 end
 
+function PlayerData.SetOPStage(player, stage)
+	local data = PlayerData.Get(player)
+	if data then
+		data.OPStage = stage
+		PlayerData.Sync(player)
+	end
+end
+
 function PlayerData.SetPass(player, passName, owned)
 	local session = PlayerData.Session(player)
 	if session then
@@ -247,7 +285,7 @@ end
 local function onPlayerAdded(player)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
-	for _, name in ipairs({ "Stage", "Wins", "Coins" }) do
+	for _, name in ipairs({ "Stage", "OP", "Wins", "Coins" }) do
 		local value = Instance.new("IntValue")
 		value.Name = name
 		value.Parent = leaderstats

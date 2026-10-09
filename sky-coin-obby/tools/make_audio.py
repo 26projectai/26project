@@ -287,3 +287,98 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- extra tracks
+def pad_chord(freqs, seconds, attack=1.2, release=1.5):
+    n = int(SR * seconds)
+    out = np.zeros(n)
+    for f in freqs:
+        for detune in (0.997, 1.0, 1.003):
+            out += sine(f * detune, seconds) * 0.2 + 0.05 * triangle(f * 2 * detune, seconds)
+    return out * env(n, attack, 0.5, 0.8, release)
+
+
+def calm_track():
+    """Relaxing ambient loop: slow pads, soft bell arpeggios, no drums (ASMR-ish)."""
+    bpm = 70
+    beat = 60 / bpm
+    bar = beat * 4
+    chords = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 66]]  # Am9-ish, F, C, G
+    bars = 16
+    out = np.zeros(int(SR * bar * bars) + SR * 3)
+    rng = np.random.default_rng(3)
+    for b in range(bars):
+        chord = chords[b % len(chords)]
+        place(out, pad_chord([midi_hz(m) for m in chord], bar * 1.15), b * bar)
+        for i in range(8):
+            if rng.random() < 0.75:
+                m = chord[int(rng.integers(len(chord)))] + 12 * int(rng.integers(1, 3))
+                bell = sine(midi_hz(m), 1.6) + 0.3 * sine(midi_hz(m) * 2.01, 1.6)
+                place(out, 0.18 * bell * expdecay(len(bell), 3.5), b * bar + i * beat / 2)
+    # simple echo for space
+    delay = int(SR * beat * 0.75)
+    echo = np.zeros_like(out)
+    echo[delay:] = out[:-delay] * 0.35
+    out += echo
+    loop = int(SR * bar * bars)
+    tail = out[loop:]
+    out = out[:loop]
+    out[: len(tail)] += tail
+    return out
+
+
+def soft_clip(x, drive):
+    return np.tanh(x * drive) / np.tanh(drive)
+
+
+def phonk_track():
+    """High-energy drift-phonk style loop: cowbell melody, distorted sliding 808, trap hats."""
+    bpm = 140
+    beat = 60 / bpm
+    bar = beat * 4
+    bars = 16
+    out = np.zeros(int(SR * bar * bars) + SR)
+    root = 41  # F
+    bass_pattern = [0, 0, 3, 0, -2, 0, 5, 3]
+    cowbell = [12, 12, 15, 12, 17, 15, 12, 10, 12, 12, 15, 17, 19, 17, 15, 12]
+    for b in range(bars):
+        start = b * bar
+        # kick + clap
+        for q in range(4):
+            if q in (0, 2) or (q == 3 and b % 2):
+                place(out, 1.0 * kick(), start + q * beat)
+            if q in (1, 3):
+                place(out, 0.6 * snare(b * 4 + q), start + q * beat)
+        # hats with rolls
+        for e in range(16):
+            roll = (e % 8 == 7) and (b % 2 == 1)
+            for r in range(3 if roll else 1):
+                place(out, 0.22 * hat(b * 64 + e * 3 + r), start + e * beat / 4 + r * beat / 12)
+        # sliding distorted 808
+        for e in range(8):
+            m = root + bass_pattern[e]
+            n = int(SR * beat / 2)
+            glide = np.geomspace(midi_hz(m + 2), midi_hz(m), n)
+            tone = soft_clip(sine(glide, beat / 2) * 1.5, 3) * env(n, 0.002, 0.05, 0.85, 0.03)
+            place(out, 0.5 * tone, start + e * beat / 2)
+        # cowbell melody (2 detuned square partials = classic phonk cowbell)
+        if b >= 2:
+            for sx in range(16):
+                if (sx + b) % 3 == 0 or sx % 4 == 0:
+                    m = root + 24 + cowbell[sx]
+                    f = midi_hz(m)
+                    length = beat / 4 * 0.9
+                    bell = pulse(f, length, 0.5) + 0.7 * pulse(f * 1.48, length, 0.5)
+                    place(out, 0.16 * bell * expdecay(len(bell), 14), start + sx * beat / 4)
+    out = soft_clip(out, 1.4)
+    loop = int(SR * bar * bars)
+    tail = out[loop:]
+    out = out[:loop]
+    out[: len(tail)] += tail
+    return out
+
+
+if __name__ == "__main__":
+    write_mp3("music_calm", calm_track(), peak_db=-4)
+    write_mp3("music_phonk", phonk_track(), peak_db=-2)

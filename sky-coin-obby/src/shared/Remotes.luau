@@ -44,4 +44,11 @@ return {
 	SetNickname = get("SetNickname", "RemoteFunction"), -- client -> server: Rare+ name tag nickname
 	RedeemCode = get("RedeemCode", "RemoteFunction"), -- client -> server: promo code
 	ClaimGroup = get("ClaimGroup", "RemoteFunction"), -- client -> server: group member bonus
+	TeleportOPTier = get("TeleportOPTier", "RemoteFunction"), -- client -> server: go to a reached OP tier
+	QuickReset = get("QuickReset", "RemoteEvent"), -- client -> server: respawn at checkpoint now
+	Untether = get("Untether", "RemoteEvent"), -- client -> server: leave co-op tether
+	Rebirth = get("Rebirth", "RemoteFunction"), -- client -> server: prestige reset
+	SkipWithCoins = get("SkipWithCoins", "RemoteFunction"), -- client -> server: coin skip after many fails
+	Slap = get("Slap", "RemoteEvent"), -- client -> server: slap hand hit (target player)
+	Fx = get("Fx", "RemoteEvent"), -- server -> client: (effectName, ...) jumpscare / shake / confetti
 }
