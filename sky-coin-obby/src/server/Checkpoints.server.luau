@@ -74,7 +74,15 @@ local function onCharacterAdded(player, character)
 	end
 	local checkpoint = checkpoints:FindFirstChild(tostring(math.min(data.Stage, finalStage())))
 	if checkpoint and checkpoint:IsA("BasePart") then
-		task.wait() -- let Roblox finish its own spawn positioning first
+		-- CharacterAdded fires before the character is placed in the world;
+		-- wait for Roblox's own spawn positioning, or it overrides our teleport.
+		if not character:IsDescendantOf(workspace) then
+			character.AncestryChanged:Wait()
+		end
+		task.wait(0.1)
+		if not character.Parent then
+			return
+		end
 		character:PivotTo(CFrame.new(checkpoint.Position + Vector3.new(0, checkpoint.Size.Y / 2 + 3, 0)))
 	end
 end
