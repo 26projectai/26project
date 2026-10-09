@@ -12,6 +12,34 @@ local Server = ServerScriptService:WaitForChild("Server")
 local PlayerData = require(Server:WaitForChild("PlayerData"))
 local Course = require(Server:WaitForChild("Course"))
 local Badges = require(Server:WaitForChild("Badges"))
+local Abilities = require(Server:WaitForChild("Abilities"))
+
+-- Roblox Creator Analytics: the first 10 stages are logged as the onboarding funnel, so the
+-- dashboard shows exactly where new players quit. Every stage also logs a custom event.
+-- (pcall: analytics must never break gameplay.)
+local AnalyticsService = game:GetService("AnalyticsService")
+local function logStage(player, stage)
+	if stage <= 10 then
+		pcall(AnalyticsService.LogOnboardingFunnelStepEvent, AnalyticsService, player, stage, "Stage " .. stage)
+	end
+	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "StageReached", stage)
+end
+
+-- First time reaching a milestone stage unlocks a free reward (Config.Milestones).
+local function checkMilestones(player, stage)
+	local data = PlayerData.Get(player)
+	for _, milestone in ipairs(Config.Milestones or {}) do
+		if stage >= milestone.Stage and not data.Unlocks[milestone.Unlock] then
+			data.Unlocks[milestone.Unlock] = true
+			if milestone.Unlock == "CometTrail" then
+				data.Owned.CometTrail = true
+			end
+			Remotes.Notify:FireClient(player, milestone.Message, "gold")
+			Abilities.Grant(player)
+			PlayerData.Sync(player)
+		end
+	end
+end
 
 local function win(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
@@ -27,6 +55,7 @@ local function win(player)
 		isNewBest = true
 	end
 	data.Wins += 1
+	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "Win", data.Wins)
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
 	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
 
@@ -65,6 +94,8 @@ local function onTouched(checkpoint, hit)
 	end
 
 	PlayerData.SetStage(player, stage)
+	checkMilestones(player, stage)
+	logStage(player, stage)
 	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace" }
 	for index, zone in ipairs(Config.Zones) do
 		if zone.FirstStage == stage and zoneBadges[index] then
@@ -139,4 +170,22 @@ end
 Players.PlayerAdded:Connect(onPlayerAdded)
 for _, player in ipairs(Players:GetPlayers()) do
 	onPlayerAdded(player)
+end
+
+-- Stage select: jump back to any stage you've already reached (not counted as a timed run).
+Remotes.TeleportStage.OnServerInvoke = function(player, stage)
+	local data, session = PlayerData.Get(player), PlayerData.Session(player)
+	stage = tonumber(stage)
+	if not data or not stage or stage % 1 ~= 0 then
+		return false, "Bad stage"
+	end
+	if stage < 1 or stage > math.min(data.MaxStage or 1, Course.FinalStage() - 1) then
+		return false, "Reach that stage first!"
+	end
+	session.RunStart = nil
+	PlayerData.SetStage(player, stage)
+	if player.Character then
+		Course.PlaceOnStage(player.Character, stage)
+	end
+	return true, "Teleported to stage " .. stage
 end

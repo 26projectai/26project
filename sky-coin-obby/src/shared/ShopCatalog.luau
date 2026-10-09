@@ -90,6 +90,18 @@ ShopCatalog.Items = {
 		}),
 	},
 	{
+		Id = "CometTrail",
+		Name = "Comet Trail",
+		Slot = "Trail",
+		Price = 0,
+		UnlockText = "Reach stage 20", -- free milestone reward (Config.Milestones)
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.3, Color3.fromRGB(120, 220, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 200)),
+		}),
+	},
+	{
 		Id = "VIPTrail",
 		Name = "VIP Diamond Trail",
 		Slot = "Trail",

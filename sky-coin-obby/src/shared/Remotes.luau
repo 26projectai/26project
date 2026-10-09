@@ -39,4 +39,9 @@ return {
 	ShopAction = get("ShopAction", "RemoteFunction"), -- client -> server: Buy / Equip / Unequip
 	ClaimDaily = get("ClaimDaily", "RemoteFunction"), -- client -> server: claim daily reward
 	AssistUsed = get("AssistUsed", "RemoteEvent"), -- client -> server: used a game-pass ability this run
+	TeleportStage = get("TeleportStage", "RemoteFunction"), -- client -> server: go to an unlocked stage
+	DailyDraw = get("DailyDraw", "RemoteFunction"), -- client -> server: free daily draw
+	SetNickname = get("SetNickname", "RemoteFunction"), -- client -> server: Rare+ name tag nickname
+	RedeemCode = get("RedeemCode", "RemoteFunction"), -- client -> server: promo code
+	ClaimGroup = get("ClaimGroup", "RemoteFunction"), -- client -> server: group member bonus
 }

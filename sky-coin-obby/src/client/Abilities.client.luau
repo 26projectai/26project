@@ -81,6 +81,30 @@ UserInputService.JumpRequest:Connect(function()
 	Remotes.AssistUsed:FireServer()
 end)
 
+---------------------------------------------------------------- Boosted jumps count as assisted
+local function watchJumps(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.StateChanged:Connect(function(_, new)
+		if new == Enum.HumanoidStateType.Jumping and not player:GetAttribute("BootsOff") and (player:GetAttribute("JumpBoost") or 1) > 1 then
+			Remotes.AssistUsed:FireServer()
+		end
+	end)
+end
+player.CharacterAdded:Connect(watchJumps)
+if player.Character then
+	task.spawn(watchJumps, player.Character)
+end
+
+---------------------------------------------------------------- Rainbow name tags (Legendary draw)
+local CollectionService = game:GetService("CollectionService")
+RunService.RenderStepped:Connect(function()
+	local rotation = (os.clock() * 120) % 360
+	for _, gradient in ipairs(CollectionService:GetTagged("RainbowGradient")) do
+		gradient.Rotation = rotation
+		gradient.Offset = Vector2.new(math.sin(os.clock() * 2) * 0.3, 0)
+	end
+end)
+
 ---------------------------------------------------------------- Tools
 local ROCKET_SPEED = 115
 local ROCKET_COOLDOWN = 1.2

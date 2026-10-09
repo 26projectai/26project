@@ -1,6 +1,8 @@
--- Global leaderboards (all servers): Most Wins and Fastest Full Run.
--- Shown on parts named "WinsBoard" and "TimeBoard" inside Workspace.Leaderboards
--- (the sample course builds them next to the start).
+-- Leaderboards on in-world boards:
+--   Board_Wins  - global Most Wins        (all servers)
+--   Board_Time  - global Fastest Full Run (all servers)
+--   Board_Live  - live race in this server, by current stage
+-- Tag any part with one of these and it becomes that board.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -96,17 +98,45 @@ local function fill(list, entries, formatValue)
 	end
 end
 
-local boards = workspace:WaitForChild("Leaderboards", 30)
-if not boards then
-	return -- no boards in this place
-end
-local winsList = buildBoard(boards:WaitForChild("WinsBoard"), "MOST WINS", Color3.fromRGB(255, 170, 40))
-local timeList = buildBoard(boards:WaitForChild("TimeBoard"), "FASTEST RUN", Color3.fromRGB(70, 160, 255))
+-- Boards are found by tag, so the same board type can appear in several places.
+local CollectionService = game:GetService("CollectionService")
 
-local function refresh()
+local function listsFor(tagName, title, color)
+	local lists = {}
+	local function add(part)
+		if part:IsA("BasePart") then
+			table.insert(lists, buildBoard(part, title, color))
+		end
+	end
+	for _, part in ipairs(CollectionService:GetTagged(tagName)) do
+		add(part)
+	end
+	CollectionService:GetInstanceAddedSignal(tagName):Connect(add)
+	return lists
+end
+
+-- Wait for the course builder (boards are created at startup).
+workspace:WaitForChild("Checkpoints", 30)
+local winsLists = listsFor("Board_Wins", "MOST WINS", Color3.fromRGB(255, 170, 40))
+local timeLists = listsFor("Board_Time", "FASTEST RUN", Color3.fromRGB(70, 160, 255))
+local liveLists = listsFor("Board_Live", "LIVE RACE", Color3.fromRGB(80, 220, 120))
+
+local function fillAll(lists, entries, formatValue)
+	for _, list in ipairs(lists) do
+		fill(list, entries, formatValue)
+	end
+end
+
+local function setNotice(lists, text)
+	for _, list in ipairs(lists) do
+		list.Row1.Text = text
+	end
+end
+
+local function refreshGlobal()
 	if not winsStore then
-		winsList.Row1.Text = "Leaderboards work in published games"
-		timeList.Row1.Text = "Leaderboards work in published games"
+		setNotice(winsLists, "Works once the game is published")
+		setNotice(timeLists, "Works once the game is published")
 		return
 	end
 	-- Upload everyone in this server first.
@@ -125,19 +155,47 @@ local function refresh()
 
 	local okWins, winsPage = pcall(winsStore.GetSortedAsync, winsStore, false, SHOWN)
 	if okWins then
-		fill(winsList, winsPage:GetCurrentPage(), function(v)
+		fillAll(winsLists, winsPage:GetCurrentPage(), function(v)
 			return v .. " wins"
 		end)
 	end
 	local okTime, timePage = pcall(timeStore.GetSortedAsync, timeStore, true, SHOWN)
 	if okTime then
-		fill(timeList, timePage:GetCurrentPage(), function(v)
+		fillAll(timeLists, timePage:GetCurrentPage(), function(v)
 			return formatTime(v / 100)
 		end)
 	end
 end
 
+-- Live race: everyone in this server, furthest stage first.
+local function refreshLive()
+	local entries = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local data = PlayerData.Get(player)
+		if data then
+			names[player.UserId] = player.DisplayName
+			table.insert(entries, { key = tostring(player.UserId), value = data.Stage, wins = data.Wins })
+		end
+	end
+	table.sort(entries, function(a, b)
+		if a.value ~= b.value then
+			return a.value > b.value
+		end
+		return a.wins > b.wins
+	end)
+	fillAll(liveLists, entries, function(v)
+		return "Stage " .. v
+	end)
+end
+
+task.spawn(function()
+	while true do
+		refreshLive()
+		task.wait(2)
+	end
+end)
+
 while true do
-	refresh()
+	refreshGlobal()
 	task.wait(REFRESH_SECONDS)
 end

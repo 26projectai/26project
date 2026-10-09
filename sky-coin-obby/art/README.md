@@ -32,5 +32,13 @@ file name shown, then follow **Part C** in the main README to upload them to Rob
 | `pass-speed-coil.png` | Game pass icon: Speed Coil | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_9f12a166-c947-4111-a441-7b22bed96424.png) |
 | `pass-gravity-coil.png` | Game pass icon: Gravity Coil | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_6dc1e513-61a3-472d-bee5-70e010394bd7.png) |
 | `ui-passes.png` | PASSES button → `Assets.Images.Passes` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_479ddfe5-b25f-4697-a248-5194b65b9a11.png) |
+| `draw-common.png` | Daily Draw card → `Assets.Images.DrawCommon` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142319_13f7284f-1123-46e4-bd5c-52034271fcc1.png) |
+| `draw-rare.png` | Daily Draw card → `Assets.Images.DrawRare` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142318_4d365664-abaf-4060-837d-2d90fc37314f.png) |
+| `draw-legendary.png` | Daily Draw card → `Assets.Images.DrawLegendary` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142322_aa167a67-536b-4b32-ba64-2185428c7c0a.png) |
+| `ui-rewards.png` | REWARDS button → `Assets.Images.Rewards` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142319_34bd186e-fbf3-42aa-8158-c1ba5d3e12b8.png) |
+| `concept-landmark-sky.png` | Concept art for the Sky castle 3D model | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142318_4ca82316-627a-4b3e-951d-d7e2d9bfd3a1.png) |
+| `concept-landmark-candy.png` | Concept art for the Candy castle 3D model | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142320_420f1438-8fbe-4262-ae6a-93ea48f11380.png) |
+| `concept-landmark-space.png` | Concept art for the Space station 3D model | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142321_3ec93878-cc14-4039-b093-c328af15b352.png) |
+| `concept-luxury-npc.png` | Concept art for the luxury NPCs | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_142319_5334435d-efdf-48d6-bc6e-8f1d56590768.png) |
 
 All of these are also in your Higgsfield account under your generation history.

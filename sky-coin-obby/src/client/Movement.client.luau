@@ -41,6 +41,15 @@ correction.Parent = Lighting
 local defaultJump = {}
 local currentZone
 
+-- Daily Draw jump boots multiply jump height (JumpBoost attribute, set by the server).
+-- Players can switch them off (BootsOff attribute) for ranked runs.
+local function jumpBoost()
+	if player:GetAttribute("BootsOff") then
+		return 1
+	end
+	return player:GetAttribute("JumpBoost") or 1
+end
+
 local function applyMovement(zone)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -49,15 +58,23 @@ local function applyMovement(zone)
 		return
 	end
 	if not defaultJump[humanoid] then
-		defaultJump[humanoid] = { UseJumpPower = humanoid.UseJumpPower, JumpPower = humanoid.JumpPower }
+		defaultJump[humanoid] = {
+			UseJumpPower = humanoid.UseJumpPower,
+			JumpPower = humanoid.JumpPower,
+			JumpHeight = humanoid.JumpHeight,
+		}
 	end
+	local defaults = defaultJump[humanoid]
+	local boost = jumpBoost()
 	if zone.Gravity < 150 then
 		-- Fixed jump power + low gravity = big floaty moon jumps.
+		-- Jump height grows with velocity squared, so scale velocity by sqrt(boost).
 		humanoid.UseJumpPower = true
-		humanoid.JumpPower = 50
+		humanoid.JumpPower = 50 * math.sqrt(boost)
 	else
-		humanoid.UseJumpPower = defaultJump[humanoid].UseJumpPower
-		humanoid.JumpPower = defaultJump[humanoid].JumpPower
+		humanoid.UseJumpPower = defaults.UseJumpPower
+		humanoid.JumpPower = defaults.JumpPower * math.sqrt(boost)
+		humanoid.JumpHeight = defaults.JumpHeight * boost
 	end
 end
 
@@ -82,6 +99,8 @@ local function applyZone()
 end
 
 stageValue.Changed:Connect(applyZone)
+player:GetAttributeChangedSignal("JumpBoost"):Connect(applyZone)
+player:GetAttributeChangedSignal("BootsOff"):Connect(applyZone)
 player.CharacterAdded:Connect(function(character)
 	character:WaitForChild("Humanoid")
 	applyZone()

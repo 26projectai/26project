@@ -34,6 +34,12 @@ local function defaultData()
 		DailyStreak = 0,
 		RewardedReferrals = {}, -- [tostring(userId)] = true, friends who joined via your invite
 		JoinedViaInvite = false,
+		MaxStage = 1, -- highest stage ever reached (stage select)
+		Unlocks = {}, -- [unlockName] = true, from Config.Milestones
+		Draw = nil, -- { Rarity = "Rare", Expires = os.time(), Nickname = "" }
+		LastDraw = 0,
+		RedeemedCodes = {}, -- [CODE] = true
+		GroupRewardClaimed = false,
 	}
 end
 
@@ -117,6 +123,21 @@ function PlayerData.DailyReady(data)
 	return os.time() - data.LastDaily >= Config.DailyCooldownHours * 3600
 end
 
+-- The player's current Daily Draw rarity table (from Config.DrawRarities), or nil.
+function PlayerData.ActiveDraw(player)
+	local data = PlayerData.Get(player)
+	local draw = data and data.Draw
+	if not draw or os.time() >= (draw.Expires or 0) then
+		return nil
+	end
+	for _, rarity in ipairs(Config.DrawRarities) do
+		if rarity.Name == draw.Rarity then
+			return rarity
+		end
+	end
+	return nil
+end
+
 function PlayerData.Multiplier(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
 	if not data then
@@ -128,6 +149,13 @@ function PlayerData.Multiplier(player)
 	end
 	if session.Passes.VIP then
 		mult *= Config.VIPMultiplier
+	end
+	if (session.BoostUntil or 0) > workspace:GetServerTimeNow() then
+		mult *= Config.NPCBoostMultiplier
+	end
+	local rarity = PlayerData.ActiveDraw(player)
+	if rarity and rarity.CoinBoost then
+		mult *= rarity.CoinBoost
 	end
 	return mult
 end
@@ -153,6 +181,15 @@ local function snapshot(player)
 		NextDailyDay = nextDay,
 		NextDailyReward = Config.DailyRewards[nextDay],
 		Passes = session.Passes,
+		MaxStage = data.MaxStage,
+		Unlocks = data.Unlocks,
+		Draw = PlayerData.ActiveDraw(player) and data.Draw or nil,
+		DrawSecondsLeft = PlayerData.ActiveDraw(player) and (data.Draw.Expires - os.time()) or 0,
+		NextDrawIn = math.max(0, Config.DrawCooldownHours * 3600 - (os.time() - data.LastDraw)),
+		BoostUntil = session.BoostUntil,
+		RedeemedCodes = data.RedeemedCodes,
+		GroupRewardClaimed = data.GroupRewardClaimed,
+		GroupId = Config.GroupId,
 	}
 end
 
@@ -195,6 +232,7 @@ function PlayerData.SetStage(player, stage)
 		return
 	end
 	data.Stage = stage
+	data.MaxStage = math.max(data.MaxStage or 1, stage)
 	PlayerData.Sync(player)
 end
 

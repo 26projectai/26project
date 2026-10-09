@@ -310,7 +310,55 @@ local function buildSpace(x0, x1, baseY)
 end
 
 ---------------------------------------------------------------- entry point
--- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage) }
+-- Optional hero landmarks: import 3D models (e.g. the Higgsfield GLBs) into
+-- ServerStorage > Landmarks named "Sky", "Candy" and "Space"; they get placed and scaled here.
+local function placeLandmark(name, position, targetSize, yaw)
+	local storage = game:GetService("ServerStorage"):FindFirstChild("Landmarks")
+	local template = storage and storage:FindFirstChild(name)
+	if not template then
+		return
+	end
+	local model = template:Clone()
+	if model:IsA("BasePart") then
+		local wrapper = Instance.new("Model")
+		model.Parent = wrapper
+		model = wrapper
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanTouch = false
+			d.CanQuery = false
+		end
+	end
+	local _, size = model:GetBoundingBox()
+	local largest = math.max(size.X, size.Y, size.Z)
+	if largest > 0 then
+		model:ScaleTo(model:GetScale() * targetSize / largest)
+	end
+	model:PivotTo(CFrame.new(position) * CFrame.Angles(0, math.rad(yaw or 0), 0))
+	model.Parent = folder
+end
+
+local function buildHub(center, diameter, baseY)
+	island(center, baseY - 0.55, diameter, 2, true)
+	local padTop = baseY - 0.05
+	-- Fountain with glowing water.
+	pillar(center + Vector3.new(0, padTop - baseY + 1, 8), 2, 14, Color3.fromRGB(240, 240, 250), Enum.Material.Marble)
+	pillar(center + Vector3.new(0, padTop - baseY + 1.6, 8), 1.4, 12, Color3.fromRGB(110, 200, 255), Enum.Material.Neon)
+	pillar(center + Vector3.new(0, padTop - baseY + 4, 8), 5, 2, Color3.fromRGB(240, 240, 250), Enum.Material.Marble)
+	ball(center + Vector3.new(0, padTop - baseY + 7, 8), 3, Color3.fromRGB(255, 205, 40), Enum.Material.Neon)
+	-- Golden lamp posts around the edge.
+	for i = 0, 7 do
+		local a = math.pi * 2 * i / 8
+		local p = center + Vector3.new(math.cos(a) * (diameter / 2 - 4), padTop - baseY, math.sin(a) * (diameter / 2 - 4))
+		pillar(p + Vector3.new(0, 4, 0), 8, 0.6, Color3.fromRGB(60, 50, 40), Enum.Material.Metal)
+		ball(p + Vector3.new(0, 8.5, 0), 1.6, Color3.fromRGB(255, 230, 150), Enum.Material.Neon)
+	end
+end
+
+-- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage), HubCenter, HubDiameter }
 function Scenery.Build(opts)
 	folder = Instance.new("Folder")
 	folder.Name = "Scenery"
@@ -336,7 +384,7 @@ function Scenery.Build(opts)
 	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-12, 0, 17), Vector3.new(-22, 0, -14), Vector3.new(-22, 0, 14) }) do
 		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
 	end
-	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", "30 STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
+	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", opts.Stages .. " STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
 
 	-- World scenery.
 	local zones = opts.Zones
@@ -356,6 +404,28 @@ function Scenery.Build(opts)
 	end
 	if zones[3] then
 		gate((zones[3].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(80, 230, 255), Color3.fromRGB(190, 90, 255) }, Enum.Material.Neon)
+	end
+
+	-- Clear decoration that would poke through the hub island, then build the hub.
+	if opts.HubCenter then
+		local hub = opts.HubCenter
+		local clearRadius = opts.HubDiameter / 2 + 14
+		for _, p in ipairs(folder:GetChildren()) do
+			local offset = p.Position - hub
+			if Vector2.new(offset.X, offset.Z).Magnitude < clearRadius and offset.Y > -40 then
+				p:Destroy()
+			end
+		end
+		buildHub(hub, opts.HubDiameter, baseY)
+	end
+
+	-- Hero landmarks (only if you've imported them into ServerStorage > Landmarks).
+	placeLandmark("Sky", Vector3.new(4 * spacing, baseY + 10, -140), 120, 30)
+	if zones[2] then
+		placeLandmark("Candy", Vector3.new(((zones[2].FirstStage - 1) + 4) * spacing, baseY, 150), 130, 200)
+	end
+	if zones[3] then
+		placeLandmark("Space", Vector3.new(((zones[3].FirstStage - 1) + 8) * spacing, baseY + 40, -170), 160, 0)
 	end
 
 	-- Finish: golden arch and a giant trophy.

@@ -11,7 +11,7 @@ if not Config.BuildSampleCourse or workspace:FindFirstChild("Checkpoints") then
 	return
 end
 
-local STAGES = 30
+local STAGES = Config.Stages or 40
 local SPACING = 60 -- studs between checkpoints
 local BASE_Y = 60 -- course height
 
@@ -326,6 +326,30 @@ local spaceSections = {
 		coin(Vector3.new(x0 + 26, BASE_Y + 29, 0))
 		coin(Vector3.new(x0 + 32, BASE_Y + 24, 0))
 	end,
+	-- Laser gates: neon bars sliding up and down across a walkway
+	function(stage, x0, d)
+		platform(stage, Vector3.new(x0 + 30, BASE_Y, 0), Vector3.new(48, 1, 8))
+		for i, cx in ipairs({ 16, 27, 38, 49 }) do
+			local laser = killBrick(Vector3.zero, Vector3.new(1, 0.6, 9))
+			laser.Color = Color3.fromRGB(255, 50, 200)
+			-- Rotated so the slider's X axis points up: it moves vertically.
+			laser.CFrame = CFrame.new(x0 + cx, BASE_Y + 4, 0) * CFrame.Angles(0, 0, math.rad(90))
+			tag(laser, "Slider", { Distance = 3.2, Speed = 0.35 + 0.25 * d, Phase = i * 0.27 })
+		end
+		for _, cx in ipairs({ 21, 32, 43 }) do
+			coin(Vector3.new(x0 + cx, BASE_Y + 3.5, 0))
+		end
+	end,
+	-- Long moon leaps between tiny platforms
+	function(stage, x0, d)
+		local size = 5 - 1.5 * d
+		for i, cx in ipairs({ 20, 37 }) do
+			local y = BASE_Y + (i == 1 and 4 or 1)
+			platform(stage, Vector3.new(x0 + cx, y, (i == 1 and 3 or -3)), Vector3.new(size, 1, size))
+			coin(Vector3.new(x0 + cx, y + 9, 0))
+		end
+		coin(Vector3.new(x0 + 46, BASE_Y + 12, 0))
+	end,
 }
 
 local sectionsByZone = { skySections, candySections, spaceSections }
@@ -366,19 +390,76 @@ if baseplate and baseplate:IsA("BasePart") then
 	baseplate:Destroy()
 end
 
----------------------------------------------------------------- Leaderboard boards beside the start
-local function board(name, z, facing)
-	local position = Vector3.new(0, BASE_Y + 7, z)
-	part({
+---------------------------------------------------------------- Leaderboard boards
+-- Boards are found by tag: Board_Wins (global most wins), Board_Time (global fastest run),
+-- Board_Live (this server's live race by stage). See Leaderboards.server.
+local function board(name, tagName, position, facing, size)
+	local p = part({
 		Name = name,
-		Size = Vector3.new(14, 12, 1),
+		Size = size or Vector3.new(14, 12, 1),
 		CFrame = CFrame.lookAt(position, position + facing),
 		Color = Color3.fromRGB(25, 25, 45),
 		Parent = boards,
 	})
+	CollectionService:AddTag(p, tagName)
+	return p
 end
-board("WinsBoard", -13, Vector3.new(0, 0, 1))
-board("TimeBoard", 13, Vector3.new(0, 0, -1))
+-- Beside the start.
+board("WinsBoard", "Board_Wins", Vector3.new(0, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+board("TimeBoard", "Board_Time", Vector3.new(0, BASE_Y + 7, 13), Vector3.new(0, 0, -1))
+board("LiveBoard", "Board_Live", Vector3.new(-16, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+
+---------------------------------------------------------------- Central hub (dashboard + NPCs)
+local HUB_STAGE = math.clamp(Config.HubStage or 20, 2, STAGES - 1)
+local hubX = (HUB_STAGE - 1) * SPACING
+local HUB_CENTER = Vector3.new(hubX, BASE_Y, -62)
+local HUB_DIAMETER = 58
+do
+	local hubTheme = THEMES[zoneIndex(HUB_STAGE)]
+	-- Walkable bridge from the hub checkpoint to the island.
+	part({
+		Name = "HubBridge",
+		Size = Vector3.new(7, 1, 30),
+		Position = Vector3.new(hubX, BASE_Y - 0.5, -20),
+		Color = Color3.fromRGB(150, 105, 70),
+		Material = Enum.Material.WoodPlanks,
+		Parent = course,
+	})
+	-- Giant dashboard: three panels facing the course.
+	local dashZ = HUB_CENTER.Z - 24
+	local facing = Vector3.new(0, 0, 1)
+	board("HubWins", "Board_Wins", Vector3.new(hubX - 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	board("HubLive", "Board_Live", Vector3.new(hubX, BASE_Y + 11, dashZ), facing, Vector3.new(18, 17, 1))
+	board("HubTime", "Board_Time", Vector3.new(hubX + 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	local frame = part({
+		Name = "DashboardFrame",
+		Size = Vector3.new(58, 22, 1),
+		CFrame = CFrame.new(hubX, BASE_Y + 11, dashZ - 0.8),
+		Color = hubTheme.Checkpoint,
+		Material = Enum.Material.Neon,
+		Parent = boards,
+	})
+	frame.CanCollide = false
+	local header = part({
+		Name = "DashboardHeader",
+		Size = Vector3.new(40, 5, 1),
+		CFrame = CFrame.lookAt(Vector3.new(hubX, BASE_Y + 24.5, dashZ), Vector3.new(hubX, BASE_Y + 24.5, dashZ) + facing),
+		Color = Color3.fromRGB(25, 25, 45),
+		Parent = boards,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.LightInfluence = 0
+	local headerText = Instance.new("TextLabel")
+	headerText.Size = UDim2.fromScale(1, 1)
+	headerText.BackgroundTransparency = 1
+	headerText.Font = Enum.Font.FredokaOne
+	headerText.TextScaled = true
+	headerText.Text = "SKY COIN DASHBOARD"
+	headerText.TextColor3 = Color3.fromRGB(255, 215, 60)
+	headerText.Parent = gui
+	gui.Parent = header
+end
 
 ---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
 require(script.Parent:WaitForChild("Scenery")).Build({
@@ -387,6 +468,8 @@ require(script.Parent:WaitForChild("Scenery")).Build({
 	BaseY = BASE_Y,
 	Zones = Config.Zones,
 	ZoneIndex = zoneIndex,
+	HubCenter = HUB_CENTER,
+	HubDiameter = HUB_DIAMETER,
 })
 
 course.Parent = workspace

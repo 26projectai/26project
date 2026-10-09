@@ -62,6 +62,10 @@ Assets.Images = {
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
 	Music = "rbxassetid://0", -- art/ui-music.png
 	Passes = "rbxassetid://0", -- art/ui-passes.png
+	Rewards = "rbxassetid://0", -- art/ui-rewards.png
+	DrawCommon = "rbxassetid://0", -- art/draw-common.png
+	DrawRare = "rbxassetid://0", -- art/draw-rare.png
+	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -92,6 +96,7 @@ Assets.ItemIcons = {
 	BubbleAura = "rbxassetid://0", -- art/item-bubble-aura.png
 	LightningTrail = "rbxassetid://0", -- art/item-lightning-trail.png
 	VIPTrail = "rbxassetid://0", -- art/item-vip-trail.png
+	CometTrail = "rbxassetid://0",
 }
 
 return Assets
@@ -120,9 +125,11 @@ Config.AllowStageSkipping = false -- false = players must touch checkpoints in o
 -- Visuals
 Config.CoinSpinSpeed = 2 -- radians per second
 
--- Sample course: builds a 30-stage, 3-zone obby automatically if Workspace has no
+-- Sample course: builds a 40-stage, 3-zone obby automatically if Workspace has no
 -- "Checkpoints" folder. Set to false once you've built your own course.
 Config.BuildSampleCourse = true
+Config.Stages = 40
+Config.HubStage = 20 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
 
 -- Zones change the music, sky and (in space) gravity. FirstStage = where the zone starts.
 Config.Zones = {
@@ -137,6 +144,49 @@ Config.DailyCooldownHours = 20
 
 -- Both players get this when someone joins through a friend's invite.
 Config.InviteReward = 50
+
+-- Free rewards for reaching stages for the first time.
+Config.Milestones = {
+	{ Stage = 10, Unlock = "SpringBoots", Message = "UNLOCKED: Spring Boots - free Double Jump!" },
+	{ Stage = 20, Unlock = "CometTrail", Message = "UNLOCKED: Comet Trail - equip it in the Shop!" },
+}
+
+-- Luxury NPCs: touching one gives a coin boost.
+Config.NPCBoostMultiplier = 2
+Config.NPCBoostSeconds = 60
+Config.NPCCooldownSeconds = 180 -- per NPC, per player
+
+-- Daily Draw: one free draw every 24 hours. Chances must add up to 100.
+-- Free (no Robux), and the odds are shown in-game.
+Config.DrawCooldownHours = 24
+Config.DrawRarities = {
+	{
+		Name = "Common", Chance = 70, Color = Color3.fromRGB(200, 205, 215),
+		JumpBoost = 1.5, Aura = "Small", Tag = "Silver",
+		Perks = { "Jump Boots x1.5", "Small smoke aura", "Silver name tag" },
+	},
+	{
+		Name = "Rare", Chance = 25, Color = Color3.fromRGB(80, 170, 255),
+		JumpBoost = 2.5, Aura = "Medium", Tag = "Gold", Nickname = true,
+		Perks = { "Jump Boots x2.5", "Swirling smoke aura", "Gold name tag + custom nickname" },
+	},
+	{
+		Name = "Legendary", Chance = 5, Color = Color3.fromRGB(255, 200, 40),
+		JumpBoost = 5, Aura = "Super", Tag = "Legendary", Nickname = true, CoinBoost = 1.5, Trail = true,
+		Perks = { "Jump Boots x5", "Super aura + sparkles + glow", "Rainbow name tag + nickname", "+50% coins", "Legendary flame trail" },
+	},
+}
+
+-- Promo codes (share them on TikTok/YouTube). Codes are case-insensitive; one use per player.
+Config.Codes = {
+	LAUNCH = 100,
+	SKYCOIN = 50,
+	MOONJUMP = 75,
+}
+
+-- Optional Roblox group: members can claim a one-time bonus (0 = off).
+Config.GroupId = 0
+Config.GroupReward = 200
 
 -- All Roblox ids (images, sounds, music, game passes, products, badges) live in the
 -- Assets module, so re-running the installer never wipes them.
@@ -224,6 +274,11 @@ return {
 	ShopAction = get("ShopAction", "RemoteFunction"), -- client -> server: Buy / Equip / Unequip
 	ClaimDaily = get("ClaimDaily", "RemoteFunction"), -- client -> server: claim daily reward
 	AssistUsed = get("AssistUsed", "RemoteEvent"), -- client -> server: used a game-pass ability this run
+	TeleportStage = get("TeleportStage", "RemoteFunction"), -- client -> server: go to an unlocked stage
+	DailyDraw = get("DailyDraw", "RemoteFunction"), -- client -> server: free daily draw
+	SetNickname = get("SetNickname", "RemoteFunction"), -- client -> server: Rare+ name tag nickname
+	RedeemCode = get("RedeemCode", "RemoteFunction"), -- client -> server: promo code
+	ClaimGroup = get("ClaimGroup", "RemoteFunction"), -- client -> server: group member bonus
 }
 ]==])
 add(f_shared, "ModuleScript", "Sfx", [==[
@@ -361,6 +416,18 @@ ShopCatalog.Items = {
 		}),
 	},
 	{
+		Id = "CometTrail",
+		Name = "Comet Trail",
+		Slot = "Trail",
+		Price = 0,
+		UnlockText = "Reach stage 20", -- free milestone reward (Config.Milestones)
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.3, Color3.fromRGB(120, 220, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 200)),
+		}),
+	},
+	{
 		Id = "VIPTrail",
 		Name = "VIP Diamond Trail",
 		Slot = "Trail",
@@ -387,6 +454,130 @@ function ShopCatalog.Get(id)
 end
 
 return ShopCatalog
+]==])
+add(f_shared, "ModuleScript", "UI", [==[
+-- Small shared helpers for building UI in code (used by client scripts).
+local UI = {}
+
+UI.FONT = Enum.Font.FredokaOne
+UI.COLORS = {
+	Panel = Color3.fromRGB(30, 30, 50),
+	Card = Color3.fromRGB(48, 48, 78),
+	Outline = Color3.fromRGB(15, 15, 25),
+	Gold = Color3.fromRGB(255, 205, 40),
+	Green = Color3.fromRGB(70, 210, 100),
+	Blue = Color3.fromRGB(70, 150, 255),
+	Pink = Color3.fromRGB(255, 90, 170),
+	Purple = Color3.fromRGB(150, 90, 255),
+	Orange = Color3.fromRGB(255, 140, 40),
+	Red = Color3.fromRGB(235, 70, 70),
+	Grey = Color3.fromRGB(110, 110, 130),
+	Text = Color3.new(1, 1, 1),
+}
+
+function UI.make(className, props, children)
+	local inst = Instance.new(className)
+	local parent = props.Parent
+	props.Parent = nil
+	for key, value in pairs(props) do
+		inst[key] = value
+	end
+	for _, child in ipairs(children or {}) do
+		child.Parent = inst
+	end
+	inst.Parent = parent
+	return inst
+end
+
+function UI.corner(radius)
+	return UI.make("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
+end
+
+function UI.stroke(thickness)
+	return UI.make("UIStroke", {
+		Thickness = thickness or 3,
+		Color = UI.COLORS.Outline,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+end
+
+function UI.text(props)
+	props.BackgroundTransparency = 1
+	props.Font = UI.FONT
+	props.TextColor3 = props.TextColor3 or UI.COLORS.Text
+	props.TextScaled = true
+	local label = UI.make("TextLabel", props)
+	UI.make("UIStroke", { Thickness = 2, Color = UI.COLORS.Outline, Parent = label })
+	return label
+end
+
+function UI.button(props)
+	props.Font = UI.FONT
+	props.TextScaled = true
+	props.TextColor3 = props.TextColor3 or UI.COLORS.Text
+	props.AutoButtonColor = true
+	return UI.make("TextButton", props, {
+		UI.corner(10),
+		UI.stroke(2),
+		UI.make("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }),
+	})
+end
+
+-- A centered window with a title and close button. Returns frame, content area.
+function UI.window(parent, title, maxSize)
+	local frame = UI.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.9, 0.82),
+		BackgroundColor3 = UI.COLORS.Panel,
+		Visible = false,
+		ZIndex = 5,
+		Parent = parent,
+	}, { UI.corner(18), UI.stroke(4), UI.make("UISizeConstraint", { MaxSize = maxSize or Vector2.new(560, 560) }) })
+	UI.text({
+		Position = UDim2.fromOffset(18, 10),
+		Size = UDim2.new(1, -90, 0, 44),
+		Text = title,
+		TextColor3 = UI.COLORS.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 5,
+		Parent = frame,
+	})
+	local close = UI.button({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 12),
+		Size = UDim2.fromOffset(40, 40),
+		BackgroundColor3 = UI.COLORS.Red,
+		Text = "X",
+		ZIndex = 6,
+		Parent = frame,
+	})
+	close.Activated:Connect(function()
+		frame.Visible = false
+	end)
+	local content = UI.make("ScrollingFrame", {
+		Position = UDim2.fromOffset(14, 62),
+		Size = UDim2.new(1, -28, 1, -74),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 5,
+		Parent = frame,
+	})
+	return frame, content
+end
+
+function UI.formatDuration(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	if seconds >= 3600 then
+		return ("%dh %dm"):format(seconds // 3600, (seconds % 3600) // 60)
+	end
+	return ("%d:%02d"):format(seconds // 60, seconds % 60)
+end
+
+return UI
 ]==])
 local f_server = folder(game:GetService("ServerScriptService"), "Server")
 add(f_server, "ModuleScript", "Abilities", [==[
@@ -477,12 +668,18 @@ function Abilities.Grant(player)
 		return
 	end
 	local passes = session.Passes
+	local data = PlayerData.Get(player)
+	local unlocks = data and data.Unlocks or {}
 	for key in pairs(TOOLS) do
 		if passes[key] then
 			giveTool(player, key)
 		end
 	end
-	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or passes.DoubleJump and 2 or 1)
+	-- Spring Boots (stage 10 milestone) give a free double jump.
+	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or (passes.DoubleJump or unlocks.SpringBoots) and 2 or 1)
+	-- Daily Draw jump boots.
+	local rarity = PlayerData.ActiveDraw(player)
+	player:SetAttribute("JumpBoost", rarity and rarity.JumpBoost or 1)
 end
 
 -- The client reports when it uses an ability, so that run's time skips the leaderboard.
@@ -535,6 +732,34 @@ local Server = ServerScriptService:WaitForChild("Server")
 local PlayerData = require(Server:WaitForChild("PlayerData"))
 local Course = require(Server:WaitForChild("Course"))
 local Badges = require(Server:WaitForChild("Badges"))
+local Abilities = require(Server:WaitForChild("Abilities"))
+
+-- Roblox Creator Analytics: the first 10 stages are logged as the onboarding funnel, so the
+-- dashboard shows exactly where new players quit. Every stage also logs a custom event.
+-- (pcall: analytics must never break gameplay.)
+local AnalyticsService = game:GetService("AnalyticsService")
+local function logStage(player, stage)
+	if stage <= 10 then
+		pcall(AnalyticsService.LogOnboardingFunnelStepEvent, AnalyticsService, player, stage, "Stage " .. stage)
+	end
+	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "StageReached", stage)
+end
+
+-- First time reaching a milestone stage unlocks a free reward (Config.Milestones).
+local function checkMilestones(player, stage)
+	local data = PlayerData.Get(player)
+	for _, milestone in ipairs(Config.Milestones or {}) do
+		if stage >= milestone.Stage and not data.Unlocks[milestone.Unlock] then
+			data.Unlocks[milestone.Unlock] = true
+			if milestone.Unlock == "CometTrail" then
+				data.Owned.CometTrail = true
+			end
+			Remotes.Notify:FireClient(player, milestone.Message, "gold")
+			Abilities.Grant(player)
+			PlayerData.Sync(player)
+		end
+	end
+end
 
 local function win(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
@@ -550,6 +775,7 @@ local function win(player)
 		isNewBest = true
 	end
 	data.Wins += 1
+	pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "Win", data.Wins)
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
 	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
 
@@ -588,6 +814,8 @@ local function onTouched(checkpoint, hit)
 	end
 
 	PlayerData.SetStage(player, stage)
+	checkMilestones(player, stage)
+	logStage(player, stage)
 	local zoneBadges = { [2] = "ReachedCandy", [3] = "ReachedSpace" }
 	for index, zone in ipairs(Config.Zones) do
 		if zone.FirstStage == stage and zoneBadges[index] then
@@ -662,6 +890,24 @@ end
 Players.PlayerAdded:Connect(onPlayerAdded)
 for _, player in ipairs(Players:GetPlayers()) do
 	onPlayerAdded(player)
+end
+
+-- Stage select: jump back to any stage you've already reached (not counted as a timed run).
+Remotes.TeleportStage.OnServerInvoke = function(player, stage)
+	local data, session = PlayerData.Get(player), PlayerData.Session(player)
+	stage = tonumber(stage)
+	if not data or not stage or stage % 1 ~= 0 then
+		return false, "Bad stage"
+	end
+	if stage < 1 or stage > math.min(data.MaxStage or 1, Course.FinalStage() - 1) then
+		return false, "Reach that stage first!"
+	end
+	session.RunStart = nil
+	PlayerData.SetStage(player, stage)
+	if player.Character then
+		Course.PlaceOnStage(player.Character, stage)
+	end
+	return true, "Teleported to stage " .. stage
 end
 ]==])
 add(f_server, "Script", "Coins", [==[
@@ -788,7 +1034,7 @@ if not Config.BuildSampleCourse or workspace:FindFirstChild("Checkpoints") then
 	return
 end
 
-local STAGES = 30
+local STAGES = Config.Stages or 40
 local SPACING = 60 -- studs between checkpoints
 local BASE_Y = 60 -- course height
 
@@ -1103,6 +1349,30 @@ local spaceSections = {
 		coin(Vector3.new(x0 + 26, BASE_Y + 29, 0))
 		coin(Vector3.new(x0 + 32, BASE_Y + 24, 0))
 	end,
+	-- Laser gates: neon bars sliding up and down across a walkway
+	function(stage, x0, d)
+		platform(stage, Vector3.new(x0 + 30, BASE_Y, 0), Vector3.new(48, 1, 8))
+		for i, cx in ipairs({ 16, 27, 38, 49 }) do
+			local laser = killBrick(Vector3.zero, Vector3.new(1, 0.6, 9))
+			laser.Color = Color3.fromRGB(255, 50, 200)
+			-- Rotated so the slider's X axis points up: it moves vertically.
+			laser.CFrame = CFrame.new(x0 + cx, BASE_Y + 4, 0) * CFrame.Angles(0, 0, math.rad(90))
+			tag(laser, "Slider", { Distance = 3.2, Speed = 0.35 + 0.25 * d, Phase = i * 0.27 })
+		end
+		for _, cx in ipairs({ 21, 32, 43 }) do
+			coin(Vector3.new(x0 + cx, BASE_Y + 3.5, 0))
+		end
+	end,
+	-- Long moon leaps between tiny platforms
+	function(stage, x0, d)
+		local size = 5 - 1.5 * d
+		for i, cx in ipairs({ 20, 37 }) do
+			local y = BASE_Y + (i == 1 and 4 or 1)
+			platform(stage, Vector3.new(x0 + cx, y, (i == 1 and 3 or -3)), Vector3.new(size, 1, size))
+			coin(Vector3.new(x0 + cx, y + 9, 0))
+		end
+		coin(Vector3.new(x0 + 46, BASE_Y + 12, 0))
+	end,
 }
 
 local sectionsByZone = { skySections, candySections, spaceSections }
@@ -1143,19 +1413,76 @@ if baseplate and baseplate:IsA("BasePart") then
 	baseplate:Destroy()
 end
 
----------------------------------------------------------------- Leaderboard boards beside the start
-local function board(name, z, facing)
-	local position = Vector3.new(0, BASE_Y + 7, z)
-	part({
+---------------------------------------------------------------- Leaderboard boards
+-- Boards are found by tag: Board_Wins (global most wins), Board_Time (global fastest run),
+-- Board_Live (this server's live race by stage). See Leaderboards.server.
+local function board(name, tagName, position, facing, size)
+	local p = part({
 		Name = name,
-		Size = Vector3.new(14, 12, 1),
+		Size = size or Vector3.new(14, 12, 1),
 		CFrame = CFrame.lookAt(position, position + facing),
 		Color = Color3.fromRGB(25, 25, 45),
 		Parent = boards,
 	})
+	CollectionService:AddTag(p, tagName)
+	return p
 end
-board("WinsBoard", -13, Vector3.new(0, 0, 1))
-board("TimeBoard", 13, Vector3.new(0, 0, -1))
+-- Beside the start.
+board("WinsBoard", "Board_Wins", Vector3.new(0, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+board("TimeBoard", "Board_Time", Vector3.new(0, BASE_Y + 7, 13), Vector3.new(0, 0, -1))
+board("LiveBoard", "Board_Live", Vector3.new(-16, BASE_Y + 7, -13), Vector3.new(0, 0, 1))
+
+---------------------------------------------------------------- Central hub (dashboard + NPCs)
+local HUB_STAGE = math.clamp(Config.HubStage or 20, 2, STAGES - 1)
+local hubX = (HUB_STAGE - 1) * SPACING
+local HUB_CENTER = Vector3.new(hubX, BASE_Y, -62)
+local HUB_DIAMETER = 58
+do
+	local hubTheme = THEMES[zoneIndex(HUB_STAGE)]
+	-- Walkable bridge from the hub checkpoint to the island.
+	part({
+		Name = "HubBridge",
+		Size = Vector3.new(7, 1, 30),
+		Position = Vector3.new(hubX, BASE_Y - 0.5, -20),
+		Color = Color3.fromRGB(150, 105, 70),
+		Material = Enum.Material.WoodPlanks,
+		Parent = course,
+	})
+	-- Giant dashboard: three panels facing the course.
+	local dashZ = HUB_CENTER.Z - 24
+	local facing = Vector3.new(0, 0, 1)
+	board("HubWins", "Board_Wins", Vector3.new(hubX - 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	board("HubLive", "Board_Live", Vector3.new(hubX, BASE_Y + 11, dashZ), facing, Vector3.new(18, 17, 1))
+	board("HubTime", "Board_Time", Vector3.new(hubX + 18, BASE_Y + 10, dashZ), facing, Vector3.new(17, 15, 1))
+	local frame = part({
+		Name = "DashboardFrame",
+		Size = Vector3.new(58, 22, 1),
+		CFrame = CFrame.new(hubX, BASE_Y + 11, dashZ - 0.8),
+		Color = hubTheme.Checkpoint,
+		Material = Enum.Material.Neon,
+		Parent = boards,
+	})
+	frame.CanCollide = false
+	local header = part({
+		Name = "DashboardHeader",
+		Size = Vector3.new(40, 5, 1),
+		CFrame = CFrame.lookAt(Vector3.new(hubX, BASE_Y + 24.5, dashZ), Vector3.new(hubX, BASE_Y + 24.5, dashZ) + facing),
+		Color = Color3.fromRGB(25, 25, 45),
+		Parent = boards,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.LightInfluence = 0
+	local headerText = Instance.new("TextLabel")
+	headerText.Size = UDim2.fromScale(1, 1)
+	headerText.BackgroundTransparency = 1
+	headerText.Font = Enum.Font.FredokaOne
+	headerText.TextScaled = true
+	headerText.Text = "SKY COIN DASHBOARD"
+	headerText.TextColor3 = Color3.fromRGB(255, 215, 60)
+	headerText.Parent = gui
+	gui.Parent = header
+end
 
 ---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
 require(script.Parent:WaitForChild("Scenery")).Build({
@@ -1164,6 +1491,8 @@ require(script.Parent:WaitForChild("Scenery")).Build({
 	BaseY = BASE_Y,
 	Zones = Config.Zones,
 	ZoneIndex = zoneIndex,
+	HubCenter = HUB_CENTER,
+	HubDiameter = HUB_DIAMETER,
 })
 
 course.Parent = workspace
@@ -1172,10 +1501,249 @@ coins.Parent = workspace
 boards.Parent = workspace
 checkpoints.Parent = workspace
 ]==])
+add(f_server, "Script", "DailyDraw", [==[
+-- Free Daily Draw (every Config.DrawCooldownHours): Common / Rare / Legendary.
+-- The prize lasts until the next draw is available: jump boots, a smoke aura, a name tag
+-- (Rare+ can set a filtered nickname) and, for Legendary, +50% coins and a flame trail.
+-- No Robux involved, and the odds are shown in-game.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local TextService = game:GetService("TextService")
+local CollectionService = game:GetService("CollectionService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local Server = ServerScriptService:WaitForChild("Server")
+local PlayerData = require(Server:WaitForChild("PlayerData"))
+local Abilities = require(Server:WaitForChild("Abilities"))
+
+local rng = Random.new()
+
+local function roll()
+	local total = 0
+	for _, rarity in ipairs(Config.DrawRarities) do
+		total += rarity.Chance
+	end
+	local pick = rng:NextNumber(0, total)
+	for _, rarity in ipairs(Config.DrawRarities) do
+		pick -= rarity.Chance
+		if pick <= 0 then
+			return rarity
+		end
+	end
+	return Config.DrawRarities[1]
+end
+
+---------------------------------------------------------------- Visual effects
+local AURAS = {
+	Small = { Size = 0.6, Opacity = 0.08, RiseVelocity = 1, Color = Color3.fromRGB(230, 230, 240) },
+	Medium = { Size = 1.4, Opacity = 0.14, RiseVelocity = 2, Color = Color3.fromRGB(120, 180, 255) },
+	Super = { Size = 2.6, Opacity = 0.2, RiseVelocity = 3, Color = Color3.fromRGB(190, 110, 255) },
+}
+
+local TAG_STYLES = {
+	Silver = { Color = Color3.fromRGB(215, 220, 230), Prefix = "" },
+	Gold = { Color = Color3.fromRGB(255, 205, 50), Prefix = "★ " },
+	Legendary = { Color = Color3.new(1, 1, 1), Prefix = "👑 ", Rainbow = true },
+}
+
+local function clearEffects(character)
+	for _, d in ipairs(character:GetDescendants()) do
+		if d:GetAttribute("DrawFx") then
+			d:Destroy()
+		end
+	end
+end
+
+local function fx(className, parent)
+	local inst = Instance.new(className)
+	inst:SetAttribute("DrawFx", true)
+	inst.Parent = parent
+	return inst
+end
+
+local function applyEffects(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local head = character and character:FindFirstChild("Head")
+	if not root or not head then
+		return
+	end
+	clearEffects(character)
+	local rarity = PlayerData.ActiveDraw(player)
+	if not rarity then
+		return
+	end
+	local data = PlayerData.Get(player)
+
+	-- Smoke aura
+	local aura = AURAS[rarity.Aura]
+	if aura then
+		local smoke = fx("Smoke", root)
+		smoke.Size = aura.Size
+		smoke.Opacity = aura.Opacity
+		smoke.RiseVelocity = aura.RiseVelocity
+		smoke.Color = aura.Color
+	end
+	if rarity.Aura == "Super" then
+		local sparkles = fx("ParticleEmitter", root)
+		sparkles.Color = ColorSequence.new(Color3.fromRGB(255, 220, 80), Color3.fromRGB(255, 120, 255))
+		sparkles.LightEmission = 1
+		sparkles.Size = NumberSequence.new(0.5, 0)
+		sparkles.Rate = 25
+		sparkles.Lifetime = NumberRange.new(0.8, 1.5)
+		sparkles.Speed = NumberRange.new(2, 5)
+		sparkles.SpreadAngle = Vector2.new(180, 180)
+		local light = fx("PointLight", root)
+		light.Color = Color3.fromRGB(255, 200, 120)
+		light.Range = 14
+		light.Brightness = 2
+	end
+
+	-- Legendary flame trail
+	if rarity.Trail then
+		local top = fx("Attachment", root)
+		top.Position = Vector3.new(0, 1, 0.5)
+		local bottom = fx("Attachment", root)
+		bottom.Position = Vector3.new(0, -1, 0.5)
+		local trail = fx("Trail", root)
+		trail.Attachment0 = top
+		trail.Attachment1 = bottom
+		trail.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 120)),
+			ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 80, 200)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(110, 60, 255)),
+		})
+		trail.LightEmission = 1
+		trail.Lifetime = 0.9
+		trail.FaceCamera = true
+		trail.Transparency = NumberSequence.new(0, 1)
+	end
+
+	-- Name tag
+	local style = TAG_STYLES[rarity.Tag]
+	if style then
+		local gui = fx("BillboardGui", head)
+		gui.Size = UDim2.fromOffset(200, 40)
+		gui.StudsOffset = Vector3.new(0, 2.6, 0)
+		gui.MaxDistance = 80
+		gui.Adornee = head
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextStrokeTransparency = 0
+		label.TextColor3 = style.Color
+		local nickname = rarity.Nickname and data.Draw.Nickname
+		local name = (nickname and nickname ~= "") and nickname or player.DisplayName
+		label.Text = style.Prefix .. name
+		label.Parent = gui
+		if style.Rainbow then
+			local gradient = Instance.new("UIGradient")
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+				ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 220, 60)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 255, 140)),
+				ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 160, 255)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 90, 255)),
+			})
+			gradient.Parent = label
+			CollectionService:AddTag(gradient, "RainbowGradient") -- animated on clients
+		end
+	end
+end
+
+local function refresh(player)
+	Abilities.Grant(player) -- updates the JumpBoost attribute
+	applyEffects(player)
+	PlayerData.Sync(player)
+end
+
+---------------------------------------------------------------- Remotes
+Remotes.DailyDraw.OnServerInvoke = function(player)
+	local data = PlayerData.Get(player)
+	if not data then
+		return false, "Still loading, try again"
+	end
+	local waitSeconds = Config.DrawCooldownHours * 3600 - (os.time() - data.LastDraw)
+	if waitSeconds > 0 then
+		return false, ("Next draw in %dh %dm"):format(waitSeconds // 3600, (waitSeconds % 3600) // 60)
+	end
+	local rarity = roll()
+	local oldNickname = data.Draw and data.Draw.Nickname or ""
+	data.LastDraw = os.time()
+	data.Draw = {
+		Rarity = rarity.Name,
+		Expires = os.time() + Config.DrawCooldownHours * 3600,
+		Nickname = rarity.Nickname and oldNickname or "",
+	}
+	refresh(player)
+	return true, rarity.Name
+end
+
+Remotes.SetNickname.OnServerInvoke = function(player, text)
+	local rarity = PlayerData.ActiveDraw(player)
+	if not rarity or not rarity.Nickname then
+		return false, "Nicknames need a Rare or Legendary draw"
+	end
+	if type(text) ~= "string" then
+		return false, "Bad nickname"
+	end
+	text = text:gsub("^%s+", ""):gsub("%s+$", "")
+	if #text < 1 or utf8.len(text) == nil or utf8.len(text) > 20 then
+		return false, "Nicknames must be 1-20 characters"
+	end
+	-- Roblox text filtering is required for any player-written text shown to others.
+	local ok, filtered = pcall(function()
+		local result = TextService:FilterStringAsync(text, player.UserId, Enum.TextFilterContext.PublicChat)
+		return result:GetNonChatStringForBroadcastAsync()
+	end)
+	if not ok or not filtered or filtered:find("#") then
+		return false, "That nickname isn't allowed - try another"
+	end
+	PlayerData.Get(player).Draw.Nickname = filtered
+	applyEffects(player)
+	return true, "Nickname set to " .. filtered
+end
+
+---------------------------------------------------------------- Lifecycle
+local function onPlayerAdded(player)
+	player.CharacterAdded:Connect(function(character)
+		character:WaitForChild("Head", 10)
+		PlayerData.WaitFor(player)
+		applyEffects(player)
+	end)
+	task.spawn(function()
+		PlayerData.WaitFor(player)
+		refresh(player)
+	end)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, player in ipairs(Players:GetPlayers()) do
+	onPlayerAdded(player)
+end
+
+-- Expire prizes when their time is up.
+while true do
+	task.wait(30)
+	for _, player in ipairs(Players:GetPlayers()) do
+		local data = PlayerData.Get(player)
+		if data and data.Draw and os.time() >= (data.Draw.Expires or 0) and player:GetAttribute("JumpBoost") ~= 1 then
+			refresh(player)
+		end
+	end
+end
+]==])
 add(f_server, "Script", "Leaderboards", [==[
--- Global leaderboards (all servers): Most Wins and Fastest Full Run.
--- Shown on parts named "WinsBoard" and "TimeBoard" inside Workspace.Leaderboards
--- (the sample course builds them next to the start).
+-- Leaderboards on in-world boards:
+--   Board_Wins  - global Most Wins        (all servers)
+--   Board_Time  - global Fastest Full Run (all servers)
+--   Board_Live  - live race in this server, by current stage
+-- Tag any part with one of these and it becomes that board.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1271,17 +1839,45 @@ local function fill(list, entries, formatValue)
 	end
 end
 
-local boards = workspace:WaitForChild("Leaderboards", 30)
-if not boards then
-	return -- no boards in this place
-end
-local winsList = buildBoard(boards:WaitForChild("WinsBoard"), "MOST WINS", Color3.fromRGB(255, 170, 40))
-local timeList = buildBoard(boards:WaitForChild("TimeBoard"), "FASTEST RUN", Color3.fromRGB(70, 160, 255))
+-- Boards are found by tag, so the same board type can appear in several places.
+local CollectionService = game:GetService("CollectionService")
 
-local function refresh()
+local function listsFor(tagName, title, color)
+	local lists = {}
+	local function add(part)
+		if part:IsA("BasePart") then
+			table.insert(lists, buildBoard(part, title, color))
+		end
+	end
+	for _, part in ipairs(CollectionService:GetTagged(tagName)) do
+		add(part)
+	end
+	CollectionService:GetInstanceAddedSignal(tagName):Connect(add)
+	return lists
+end
+
+-- Wait for the course builder (boards are created at startup).
+workspace:WaitForChild("Checkpoints", 30)
+local winsLists = listsFor("Board_Wins", "MOST WINS", Color3.fromRGB(255, 170, 40))
+local timeLists = listsFor("Board_Time", "FASTEST RUN", Color3.fromRGB(70, 160, 255))
+local liveLists = listsFor("Board_Live", "LIVE RACE", Color3.fromRGB(80, 220, 120))
+
+local function fillAll(lists, entries, formatValue)
+	for _, list in ipairs(lists) do
+		fill(list, entries, formatValue)
+	end
+end
+
+local function setNotice(lists, text)
+	for _, list in ipairs(lists) do
+		list.Row1.Text = text
+	end
+end
+
+local function refreshGlobal()
 	if not winsStore then
-		winsList.Row1.Text = "Leaderboards work in published games"
-		timeList.Row1.Text = "Leaderboards work in published games"
+		setNotice(winsLists, "Works once the game is published")
+		setNotice(timeLists, "Works once the game is published")
 		return
 	end
 	-- Upload everyone in this server first.
@@ -1300,20 +1896,48 @@ local function refresh()
 
 	local okWins, winsPage = pcall(winsStore.GetSortedAsync, winsStore, false, SHOWN)
 	if okWins then
-		fill(winsList, winsPage:GetCurrentPage(), function(v)
+		fillAll(winsLists, winsPage:GetCurrentPage(), function(v)
 			return v .. " wins"
 		end)
 	end
 	local okTime, timePage = pcall(timeStore.GetSortedAsync, timeStore, true, SHOWN)
 	if okTime then
-		fill(timeList, timePage:GetCurrentPage(), function(v)
+		fillAll(timeLists, timePage:GetCurrentPage(), function(v)
 			return formatTime(v / 100)
 		end)
 	end
 end
 
+-- Live race: everyone in this server, furthest stage first.
+local function refreshLive()
+	local entries = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local data = PlayerData.Get(player)
+		if data then
+			names[player.UserId] = player.DisplayName
+			table.insert(entries, { key = tostring(player.UserId), value = data.Stage, wins = data.Wins })
+		end
+	end
+	table.sort(entries, function(a, b)
+		if a.value ~= b.value then
+			return a.value > b.value
+		end
+		return a.wins > b.wins
+	end)
+	fillAll(liveLists, entries, function(v)
+		return "Stage " .. v
+	end)
+end
+
+task.spawn(function()
+	while true do
+		refreshLive()
+		task.wait(2)
+	end
+end)
+
 while true do
-	refresh()
+	refreshGlobal()
 	task.wait(REFRESH_SECONDS)
 end
 ]==])
@@ -1413,6 +2037,202 @@ MarketplaceService.ProcessReceipt = function(receipt)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
+]==])
+add(f_server, "Script", "NPCs", [==[
+-- Luxury NPCs that stroll around the spawn lobby and the central hub.
+-- Touching one gives a coin boost (Config.NPCBoostMultiplier for Config.NPCBoostSeconds).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PlayerData"))
+
+local GOLD = Color3.fromRGB(255, 200, 40)
+local NPC_TYPES = {
+	{ Name = "Sir Goldsworth", Suit = Color3.fromRGB(30, 30, 35), Accent = GOLD },
+	{ Name = "Lady Diamond", Suit = Color3.fromRGB(240, 240, 255), Accent = Color3.fromRGB(120, 210, 255) },
+	{ Name = "Baron Bling", Suit = Color3.fromRGB(120, 30, 160), Accent = GOLD },
+	{ Name = "Countess Coin", Suit = Color3.fromRGB(200, 30, 60), Accent = GOLD },
+}
+
+-- Walking areas: { center, radius } on the lobby and hub islands (built by the course builder).
+local function walkAreas()
+	local areas = {}
+	local checkpoints = workspace:FindFirstChild("Checkpoints")
+	local first = checkpoints and checkpoints:FindFirstChild("1")
+	if first then
+		table.insert(areas, { Center = first.Position + Vector3.new(-16, 0, 0), Radius = 12, Count = 2 })
+	end
+	local hubStage = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 20))
+	if hubStage then
+		table.insert(areas, { Center = hubStage.Position + Vector3.new(0, 0, -62), Radius = 18, Count = 2 })
+	end
+	return areas
+end
+
+local function weldTo(part, target, offset)
+	part.Anchored = false
+	part.CanCollide = false
+	part.Massless = true
+	part.CFrame = target.CFrame * offset
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = target
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+local function decorate(model, npcType)
+	local head = model:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	-- Crown
+	local crown = Instance.new("Part")
+	crown.Name = "Crown"
+	crown.Shape = Enum.PartType.Cylinder
+	crown.Size = Vector3.new(0.7, 1.4, 1.4)
+	crown.Color = GOLD
+	crown.Material = Enum.Material.Neon
+	weldTo(crown, head, CFrame.new(0, 0.9, 0) * CFrame.Angles(0, 0, math.rad(90)))
+	crown.Parent = model
+	-- Sunglasses
+	local glasses = Instance.new("Part")
+	glasses.Name = "Sunglasses"
+	glasses.Size = Vector3.new(1.1, 0.25, 0.1)
+	glasses.Color = Color3.new(0, 0, 0)
+	glasses.Material = Enum.Material.Glass
+	weldTo(glasses, head, CFrame.new(0, 0.15, -0.6))
+	glasses.Parent = model
+	-- Sparkles + gold glow
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if root then
+		local sparkles = Instance.new("ParticleEmitter")
+		sparkles.Color = ColorSequence.new(npcType.Accent)
+		sparkles.LightEmission = 1
+		sparkles.Size = NumberSequence.new(0.3, 0)
+		sparkles.Rate = 10
+		sparkles.Lifetime = NumberRange.new(0.8, 1.4)
+		sparkles.Speed = NumberRange.new(1, 3)
+		sparkles.SpreadAngle = Vector2.new(180, 180)
+		sparkles.Parent = root
+		local light = Instance.new("PointLight")
+		light.Color = npcType.Accent
+		light.Range = 10
+		light.Brightness = 1.5
+		light.Parent = root
+	end
+	-- Name sign
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(220, 60)
+	gui.StudsOffset = Vector3.new(0, 3.2, 0)
+	gui.MaxDistance = 70
+	gui.AlwaysOnTop = true
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.fromScale(1, 0.55)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.FredokaOne
+	title.TextScaled = true
+	title.Text = "💎 " .. npcType.Name
+	title.TextColor3 = GOLD
+	title.TextStrokeTransparency = 0
+	title.Parent = gui
+	local hint = title:Clone()
+	hint.Position = UDim2.fromScale(0, 0.55)
+	hint.Size = UDim2.fromScale(1, 0.45)
+	hint.Text = ("Touch me for %dx COINS!"):format(Config.NPCBoostMultiplier)
+	hint.TextColor3 = Color3.new(1, 1, 1)
+	hint.Parent = gui
+	gui.Adornee = head
+	gui.Parent = head
+end
+
+local function spawnNPC(npcType, area)
+	local description = Instance.new("HumanoidDescription")
+	description.HeadColor = Color3.fromRGB(255, 220, 180)
+	description.LeftArmColor = npcType.Suit
+	description.RightArmColor = npcType.Suit
+	description.TorsoColor = npcType.Suit
+	description.LeftLegColor = Color3.fromRGB(20, 20, 25)
+	description.RightLegColor = Color3.fromRGB(20, 20, 25)
+	local ok, model = pcall(Players.CreateHumanoidModelFromDescription, Players, description, Enum.HumanoidRigType.R15)
+	if not ok or not model then
+		warn("[NPCs] Could not create NPC:", model)
+		return
+	end
+	model.Name = npcType.Name
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local root = model:FindFirstChild("HumanoidRootPart")
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.WalkSpeed = 7
+	decorate(model, npcType)
+	model:PivotTo(CFrame.new(area.Center + Vector3.new(math.random(-6, 6), 4, math.random(-6, 6))))
+	model.Parent = workspace
+	root:SetNetworkOwner(nil) -- the server drives NPC movement
+
+	-- Touch = coin boost, with a cooldown per player.
+	local lastBoost = {}
+	local function onTouched(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		local session = player and PlayerData.Session(player)
+		if not session then
+			return
+		end
+		local now = os.clock()
+		if lastBoost[player] and now - lastBoost[player] < Config.NPCCooldownSeconds then
+			return
+		end
+		lastBoost[player] = now
+		session.BoostUntil = workspace:GetServerTimeNow() + Config.NPCBoostSeconds
+		PlayerData.Sync(player)
+		Remotes.Notify:FireClient(
+			player,
+			("%s gave you %dx COINS for %d seconds!"):format(npcType.Name, Config.NPCBoostMultiplier, Config.NPCBoostSeconds),
+			"gold"
+		)
+	end
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Touched:Connect(onTouched)
+		end
+	end
+
+	-- Stroll between random points, pausing now and then.
+	task.spawn(function()
+		while model.Parent and humanoid.Health > 0 do
+			local angle = math.random() * math.pi * 2
+			local distance = math.random() * area.Radius
+			local target = area.Center + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+			humanoid:MoveTo(target)
+			local reached = false
+			local conn = humanoid.MoveToFinished:Connect(function()
+				reached = true
+			end)
+			local deadline = os.clock() + 8
+			while not reached and os.clock() < deadline do
+				task.wait(0.2)
+			end
+			conn:Disconnect()
+			task.wait(math.random(1, 4))
+			-- Safety: if it ever wanders off the island, put it back.
+			if root.Position.Y < area.Center.Y - 20 then
+				model:PivotTo(CFrame.new(area.Center + Vector3.new(0, 4, 0)))
+			end
+		end
+	end)
+end
+
+workspace:WaitForChild("Checkpoints", 30)
+task.wait(2) -- let the islands finish building
+local index = 0
+for _, area in ipairs(walkAreas()) do
+	for _ = 1, area.Count do
+		index += 1
+		task.spawn(spawnNPC, NPC_TYPES[(index - 1) % #NPC_TYPES + 1], area)
+	end
 end
 ]==])
 add(f_server, "Script", "Obstacles", [==[
@@ -1571,6 +2391,12 @@ local function defaultData()
 		DailyStreak = 0,
 		RewardedReferrals = {}, -- [tostring(userId)] = true, friends who joined via your invite
 		JoinedViaInvite = false,
+		MaxStage = 1, -- highest stage ever reached (stage select)
+		Unlocks = {}, -- [unlockName] = true, from Config.Milestones
+		Draw = nil, -- { Rarity = "Rare", Expires = os.time(), Nickname = "" }
+		LastDraw = 0,
+		RedeemedCodes = {}, -- [CODE] = true
+		GroupRewardClaimed = false,
 	}
 end
 
@@ -1654,6 +2480,21 @@ function PlayerData.DailyReady(data)
 	return os.time() - data.LastDaily >= Config.DailyCooldownHours * 3600
 end
 
+-- The player's current Daily Draw rarity table (from Config.DrawRarities), or nil.
+function PlayerData.ActiveDraw(player)
+	local data = PlayerData.Get(player)
+	local draw = data and data.Draw
+	if not draw or os.time() >= (draw.Expires or 0) then
+		return nil
+	end
+	for _, rarity in ipairs(Config.DrawRarities) do
+		if rarity.Name == draw.Rarity then
+			return rarity
+		end
+	end
+	return nil
+end
+
 function PlayerData.Multiplier(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
 	if not data then
@@ -1665,6 +2506,13 @@ function PlayerData.Multiplier(player)
 	end
 	if session.Passes.VIP then
 		mult *= Config.VIPMultiplier
+	end
+	if (session.BoostUntil or 0) > workspace:GetServerTimeNow() then
+		mult *= Config.NPCBoostMultiplier
+	end
+	local rarity = PlayerData.ActiveDraw(player)
+	if rarity and rarity.CoinBoost then
+		mult *= rarity.CoinBoost
 	end
 	return mult
 end
@@ -1690,6 +2538,15 @@ local function snapshot(player)
 		NextDailyDay = nextDay,
 		NextDailyReward = Config.DailyRewards[nextDay],
 		Passes = session.Passes,
+		MaxStage = data.MaxStage,
+		Unlocks = data.Unlocks,
+		Draw = PlayerData.ActiveDraw(player) and data.Draw or nil,
+		DrawSecondsLeft = PlayerData.ActiveDraw(player) and (data.Draw.Expires - os.time()) or 0,
+		NextDrawIn = math.max(0, Config.DrawCooldownHours * 3600 - (os.time() - data.LastDraw)),
+		BoostUntil = session.BoostUntil,
+		RedeemedCodes = data.RedeemedCodes,
+		GroupRewardClaimed = data.GroupRewardClaimed,
+		GroupId = Config.GroupId,
 	}
 end
 
@@ -1732,6 +2589,7 @@ function PlayerData.SetStage(player, stage)
 		return
 	end
 	data.Stage = stage
+	data.MaxStage = math.max(data.MaxStage or 1, stage)
 	PlayerData.Sync(player)
 end
 
@@ -1838,6 +2696,43 @@ Remotes.ClaimDaily.OnServerInvoke = function(player)
 	local reward = Config.DailyRewards[day]
 	PlayerData.AddCoins(player, reward, false)
 	return true, ("Day %d reward: +%d coins! Come back tomorrow for more."):format(day, reward)
+end
+
+---------------------------------------------------------------- Promo codes
+Remotes.RedeemCode.OnServerInvoke = function(player, code)
+	local data = PlayerData.Get(player)
+	if not data or type(code) ~= "string" then
+		return false, "Try again"
+	end
+	code = code:upper():gsub("%s", "")
+	local reward = Config.Codes[code]
+	if not reward then
+		return false, "That code doesn't exist (yet!)"
+	end
+	if data.RedeemedCodes[code] then
+		return false, "You already used this code"
+	end
+	data.RedeemedCodes[code] = true
+	PlayerData.AddCoins(player, reward, false)
+	return true, ("Code redeemed: +%d coins!"):format(reward)
+end
+
+---------------------------------------------------------------- Group reward
+Remotes.ClaimGroup.OnServerInvoke = function(player)
+	local data = PlayerData.Get(player)
+	if not data or Config.GroupId == 0 then
+		return false, "No group set up yet"
+	end
+	if data.GroupRewardClaimed then
+		return false, "Already claimed - thanks for joining!"
+	end
+	local ok, inGroup = pcall(player.IsInGroup, player, Config.GroupId)
+	if not ok or not inGroup then
+		return false, "Join our Roblox group first, then rejoin the game!"
+	end
+	data.GroupRewardClaimed = true
+	PlayerData.AddCoins(player, Config.GroupReward, false)
+	return true, ("Thanks for joining the group! +%d coins"):format(Config.GroupReward)
 end
 
 ---------------------------------------------------------------- Friend invites
@@ -2192,7 +3087,55 @@ local function buildSpace(x0, x1, baseY)
 end
 
 ---------------------------------------------------------------- entry point
--- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage) }
+-- Optional hero landmarks: import 3D models (e.g. the Higgsfield GLBs) into
+-- ServerStorage > Landmarks named "Sky", "Candy" and "Space"; they get placed and scaled here.
+local function placeLandmark(name, position, targetSize, yaw)
+	local storage = game:GetService("ServerStorage"):FindFirstChild("Landmarks")
+	local template = storage and storage:FindFirstChild(name)
+	if not template then
+		return
+	end
+	local model = template:Clone()
+	if model:IsA("BasePart") then
+		local wrapper = Instance.new("Model")
+		model.Parent = wrapper
+		model = wrapper
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanTouch = false
+			d.CanQuery = false
+		end
+	end
+	local _, size = model:GetBoundingBox()
+	local largest = math.max(size.X, size.Y, size.Z)
+	if largest > 0 then
+		model:ScaleTo(model:GetScale() * targetSize / largest)
+	end
+	model:PivotTo(CFrame.new(position) * CFrame.Angles(0, math.rad(yaw or 0), 0))
+	model.Parent = folder
+end
+
+local function buildHub(center, diameter, baseY)
+	island(center, baseY - 0.55, diameter, 2, true)
+	local padTop = baseY - 0.05
+	-- Fountain with glowing water.
+	pillar(center + Vector3.new(0, padTop - baseY + 1, 8), 2, 14, Color3.fromRGB(240, 240, 250), Enum.Material.Marble)
+	pillar(center + Vector3.new(0, padTop - baseY + 1.6, 8), 1.4, 12, Color3.fromRGB(110, 200, 255), Enum.Material.Neon)
+	pillar(center + Vector3.new(0, padTop - baseY + 4, 8), 5, 2, Color3.fromRGB(240, 240, 250), Enum.Material.Marble)
+	ball(center + Vector3.new(0, padTop - baseY + 7, 8), 3, Color3.fromRGB(255, 205, 40), Enum.Material.Neon)
+	-- Golden lamp posts around the edge.
+	for i = 0, 7 do
+		local a = math.pi * 2 * i / 8
+		local p = center + Vector3.new(math.cos(a) * (diameter / 2 - 4), padTop - baseY, math.sin(a) * (diameter / 2 - 4))
+		pillar(p + Vector3.new(0, 4, 0), 8, 0.6, Color3.fromRGB(60, 50, 40), Enum.Material.Metal)
+		ball(p + Vector3.new(0, 8.5, 0), 1.6, Color3.fromRGB(255, 230, 150), Enum.Material.Neon)
+	end
+end
+
+-- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage), HubCenter, HubDiameter }
 function Scenery.Build(opts)
 	folder = Instance.new("Folder")
 	folder.Name = "Scenery"
@@ -2218,7 +3161,7 @@ function Scenery.Build(opts)
 	for _, offset in ipairs({ Vector3.new(-12, 0, -17), Vector3.new(-12, 0, 17), Vector3.new(-22, 0, -14), Vector3.new(-22, 0, 14) }) do
 		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
 	end
-	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", "30 STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
+	sign(Vector3.new(-31, baseY + 10, 0), Vector3.new(1, 0, 0), Vector3.new(30, 13, 1), "SKY COIN OBBY", opts.Stages .. " STAGES  •  3 WORLDS  •  GLOBAL LEADERBOARDS", Color3.fromRGB(255, 215, 60))
 
 	-- World scenery.
 	local zones = opts.Zones
@@ -2238,6 +3181,28 @@ function Scenery.Build(opts)
 	end
 	if zones[3] then
 		gate((zones[3].FirstStage - 1) * spacing - 7, baseY - 1, 16, { Color3.fromRGB(80, 230, 255), Color3.fromRGB(190, 90, 255) }, Enum.Material.Neon)
+	end
+
+	-- Clear decoration that would poke through the hub island, then build the hub.
+	if opts.HubCenter then
+		local hub = opts.HubCenter
+		local clearRadius = opts.HubDiameter / 2 + 14
+		for _, p in ipairs(folder:GetChildren()) do
+			local offset = p.Position - hub
+			if Vector2.new(offset.X, offset.Z).Magnitude < clearRadius and offset.Y > -40 then
+				p:Destroy()
+			end
+		end
+		buildHub(hub, opts.HubDiameter, baseY)
+	end
+
+	-- Hero landmarks (only if you've imported them into ServerStorage > Landmarks).
+	placeLandmark("Sky", Vector3.new(4 * spacing, baseY + 10, -140), 120, 30)
+	if zones[2] then
+		placeLandmark("Candy", Vector3.new(((zones[2].FirstStage - 1) + 4) * spacing, baseY, 150), 130, 200)
+	end
+	if zones[3] then
+		placeLandmark("Space", Vector3.new(((zones[3].FirstStage - 1) + 8) * spacing, baseY + 40, -170), 160, 0)
 	end
 
 	-- Finish: golden arch and a giant trophy.
@@ -2406,6 +3371,10 @@ Remotes.ShopAction.OnServerInvoke = function(player, action, itemId)
 		data.Owned[itemId] = true -- VIP items are free
 	end
 
+	if item.UnlockText and not data.Owned[itemId] then
+		return false, item.UnlockText .. " to unlock this!"
+	end
+
 	if action == "Buy" then
 		if data.Owned[itemId] and not item.RequiresVIP then
 			return false, "You already own this"
@@ -2538,6 +3507,30 @@ UserInputService.JumpRequest:Connect(function()
 	puff(root, Color3.fromRGB(120, 230, 255))
 	Sfx.Play("JumpPad", 1.4)
 	Remotes.AssistUsed:FireServer()
+end)
+
+---------------------------------------------------------------- Boosted jumps count as assisted
+local function watchJumps(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.StateChanged:Connect(function(_, new)
+		if new == Enum.HumanoidStateType.Jumping and not player:GetAttribute("BootsOff") and (player:GetAttribute("JumpBoost") or 1) > 1 then
+			Remotes.AssistUsed:FireServer()
+		end
+	end)
+end
+player.CharacterAdded:Connect(watchJumps)
+if player.Character then
+	task.spawn(watchJumps, player.Character)
+end
+
+---------------------------------------------------------------- Rainbow name tags (Legendary draw)
+local CollectionService = game:GetService("CollectionService")
+RunService.RenderStepped:Connect(function()
+	local rotation = (os.clock() * 120) % 360
+	for _, gradient in ipairs(CollectionService:GetTagged("RainbowGradient")) do
+		gradient.Rotation = rotation
+		gradient.Offset = Vector2.new(math.sin(os.clock() * 2) * 0.3, 0)
+	end
 end)
 
 ---------------------------------------------------------------- Tools
@@ -2979,7 +3972,18 @@ local function hudPanel(order, width, iconId, iconColor, iconText, textColor)
 end
 
 local coinPanel, coinLabel = hudPanel(1, 150, Config.Images.Coin, COLORS.Gold, "$", COLORS.Gold)
-local _, stageLabel = hudPanel(2, 150)
+local stagePanel, stageLabel = hudPanel(2, 150)
+-- Click the stage counter to open STAGE SELECT.
+local stageClick = make("TextButton", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 3,
+	Parent = stagePanel,
+})
+stageClick.Activated:Connect(function()
+	player:SetAttribute("StageSelectOpen", not player:GetAttribute("StageSelectOpen"))
+end)
 local _, winsLabel = hudPanel(3, 150, Config.Images.Trophy, COLORS.Orange, "W", COLORS.Gold)
 
 local timerLabel = text({
@@ -3007,7 +4011,7 @@ local function toast(message, color)
 	toastLabel.Text = message
 	toastLabel.TextColor3 = TOAST_COLORS[color] or color or COLORS.Text
 	TweenService:Create(toastLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-		Position = UDim2.new(0.5, 0, 0, 96),
+		Position = UDim2.new(0.5, 0, 0, 146),
 	}):Play()
 	task.delay(2.6, function()
 		if token == toastToken then
@@ -3080,7 +4084,7 @@ end
 
 local shopButton = sideButton(1, "SHOP", COLORS.Pink, Config.Images.ShopButton, "$")
 local passesButton = sideButton(2, "PASSES", COLORS.Gold, Config.Images.Passes, "R$")
-local dailyButton = sideButton(3, "DAILY", COLORS.Purple, Config.Images.Daily, "!")
+local dailyButton = sideButton(3, "REWARDS", COLORS.Purple, Config.Images.Rewards or Config.Images.Daily, "!")
 local inviteButton = sideButton(4, "INVITE", COLORS.Green, Config.Images.Invite, "+")
 local skipButton = sideButton(5, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
 local musicButton = sideButton(6, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
@@ -3237,7 +4241,7 @@ for index, item in ipairs(sorted) do
 	text({
 		Position = UDim2.new(0, 6, 0, 122),
 		Size = UDim2.new(1, -12, 0, 16),
-		Text = item.RequiresVIP and "VIP only" or item.Slot,
+		Text = item.RequiresVIP and "VIP only" or item.UnlockText and "Milestone reward" or item.Slot,
 		TextColor3 = item.RequiresVIP and COLORS.Gold or Color3.fromRGB(190, 190, 220),
 		ZIndex = 6,
 		Parent = card,
@@ -3430,12 +4434,11 @@ shopButton.Activated:Connect(function()
 end)
 
 ---------------------------------------------------------------- Daily / invite / skip / music
+-- The REWARDS and STAGE SELECT windows live in Rewards.client; toggled via attributes.
 dailyButton.Activated:Connect(function()
-	local ok, message = Remotes.ClaimDaily:InvokeServer()
-	toast(message or "", ok and "gold" or "bad")
-	if ok then
-		Sfx.Play("Daily")
-	end
+	shopWindow.Visible = false
+	passesWindow.Visible = false
+	player:SetAttribute("RewardsOpen", not player:GetAttribute("RewardsOpen"))
 end)
 
 local function promptInvite()
@@ -3597,7 +4600,7 @@ local function refresh()
 
 	stageLabel.Text = totalStages > 0 and ("Stage %d/%d"):format(state.Stage, totalStages) or ("Stage " .. state.Stage)
 	winsLabel.Text = ("%d  x%s"):format(state.Wins, tostring(math.floor(state.Multiplier * 100 + 0.5) / 100))
-	dailyDot.Visible = state.DailyReady == true
+	dailyDot.Visible = state.DailyReady == true or (state.NextDrawIn or 1) <= 0
 	skipButton.Visible = Config.Products.SkipStage ~= 0 and state.Stage < totalStages - 1
 
 	local zone = Config.ZoneForStage(state.Stage)
@@ -3619,6 +4622,9 @@ local function refresh()
 		elseif item.RequiresVIP then
 			button.Text = "Get VIP"
 			button.BackgroundColor3 = COLORS.Gold
+		elseif item.UnlockText then
+			button.Text = item.UnlockText
+			button.BackgroundColor3 = COLORS.Grey
 		else
 			button.Text = "$ " .. item.Price
 			button.BackgroundColor3 = state.Coins >= item.Price and COLORS.Gold or COLORS.Grey
@@ -3685,9 +4691,9 @@ if initial then
 	state = initial
 end
 refresh()
-if state.DailyReady then
+if state.DailyReady or (state.NextDrawIn or 1) <= 0 then
 	task.delay(2, function()
-		toast("Your daily reward is ready! Tap DAILY", "gold")
+		toast("Free rewards waiting! Tap REWARDS", "gold")
 	end)
 end
 ]==])
@@ -3735,6 +4741,15 @@ correction.Parent = Lighting
 local defaultJump = {}
 local currentZone
 
+-- Daily Draw jump boots multiply jump height (JumpBoost attribute, set by the server).
+-- Players can switch them off (BootsOff attribute) for ranked runs.
+local function jumpBoost()
+	if player:GetAttribute("BootsOff") then
+		return 1
+	end
+	return player:GetAttribute("JumpBoost") or 1
+end
+
 local function applyMovement(zone)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -3743,15 +4758,23 @@ local function applyMovement(zone)
 		return
 	end
 	if not defaultJump[humanoid] then
-		defaultJump[humanoid] = { UseJumpPower = humanoid.UseJumpPower, JumpPower = humanoid.JumpPower }
+		defaultJump[humanoid] = {
+			UseJumpPower = humanoid.UseJumpPower,
+			JumpPower = humanoid.JumpPower,
+			JumpHeight = humanoid.JumpHeight,
+		}
 	end
+	local defaults = defaultJump[humanoid]
+	local boost = jumpBoost()
 	if zone.Gravity < 150 then
 		-- Fixed jump power + low gravity = big floaty moon jumps.
+		-- Jump height grows with velocity squared, so scale velocity by sqrt(boost).
 		humanoid.UseJumpPower = true
-		humanoid.JumpPower = 50
+		humanoid.JumpPower = 50 * math.sqrt(boost)
 	else
-		humanoid.UseJumpPower = defaultJump[humanoid].UseJumpPower
-		humanoid.JumpPower = defaultJump[humanoid].JumpPower
+		humanoid.UseJumpPower = defaults.UseJumpPower
+		humanoid.JumpPower = defaults.JumpPower * math.sqrt(boost)
+		humanoid.JumpHeight = defaults.JumpHeight * boost
 	end
 end
 
@@ -3776,6 +4799,8 @@ local function applyZone()
 end
 
 stageValue.Changed:Connect(applyZone)
+player:GetAttributeChangedSignal("JumpBoost"):Connect(applyZone)
+player:GetAttributeChangedSignal("BootsOff"):Connect(applyZone)
 player.CharacterAdded:Connect(function(character)
 	character:WaitForChild("Humanoid")
 	applyZone()
@@ -3808,5 +4833,602 @@ for _, pad in ipairs(CollectionService:GetTagged("JumpPad")) do
 	hookPad(pad)
 end
 CollectionService:GetInstanceAddedSignal("JumpPad"):Connect(hookPad)
+]==])
+add(f_client, "LocalScript", "RaceBar", [==[
+-- Live race bar: every player's avatar on a track from stage 1 to the finish, so you can see
+-- who's ahead. Also shows the active coin-boost timer (luxury NPC boost).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local UI = require(Shared:WaitForChild("UI"))
+
+local player = Players.LocalPlayer
+local COLORS = UI.COLORS
+local make = UI.make
+
+local gui = make("ScreenGui", {
+	Name = "RaceBarUI",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
+local track = make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 96),
+	Size = UDim2.fromOffset(420, 10),
+	BackgroundColor3 = COLORS.Panel,
+	BackgroundTransparency = 0.2,
+	Parent = gui,
+}, { UI.corner(999), UI.stroke(2) })
+local scale = make("UIScale", { Parent = track })
+
+-- Zone colour bands along the track.
+local function totalStages()
+	local checkpoints = workspace:FindFirstChild("Checkpoints")
+	local total = 0
+	for _, child in ipairs(checkpoints and checkpoints:GetChildren() or {}) do
+		total = math.max(total, tonumber(child.Name) or 0)
+	end
+	return math.max(total, 2)
+end
+
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+task.defer(function()
+	local total = totalStages()
+	for i, zone in ipairs(Config.Zones) do
+		local nextZone = Config.Zones[i + 1]
+		local from = (zone.FirstStage - 1) / (total - 1)
+		local to = nextZone and (nextZone.FirstStage - 1) / (total - 1) or 1
+		make("Frame", {
+			Position = UDim2.fromScale(from, 0),
+			Size = UDim2.fromScale(to - from, 1),
+			BackgroundColor3 = ZONE_COLORS[i] or COLORS.Blue,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+	end
+end)
+
+local markers = {} -- [Player] = ImageLabel
+
+local function markerFor(other)
+	if markers[other] then
+		return markers[other]
+	end
+	local isMe = other == player
+	local marker = make("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(isMe and 30 or 24, isMe and 30 or 24),
+		BackgroundColor3 = isMe and COLORS.Gold or COLORS.Card,
+		ZIndex = isMe and 4 or 3,
+		Parent = track,
+	}, { UI.corner(999), make("UIStroke", { Thickness = 2, Color = isMe and COLORS.Gold or COLORS.Outline }) })
+	task.spawn(function()
+		local ok, image = pcall(Players.GetUserThumbnailAsync, Players, other.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+		if ok then
+			marker.Image = image
+		end
+	end)
+	markers[other] = marker
+	return marker
+end
+
+Players.PlayerRemoving:Connect(function(other)
+	if markers[other] then
+		markers[other]:Destroy()
+		markers[other] = nil
+	end
+end)
+
+---------------------------------------------------------------- Boost badge
+local boostLabel = UI.text({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 114),
+	Size = UDim2.fromOffset(260, 26),
+	Text = "",
+	TextColor3 = COLORS.Gold,
+	Parent = gui,
+})
+local boostUntil = 0
+Remotes.DataUpdated.OnClientEvent:Connect(function(data)
+	boostUntil = data.BoostUntil or 0
+end)
+
+---------------------------------------------------------------- Update loop
+local accumulator = 0
+RunService.RenderStepped:Connect(function(dt)
+	local viewport = workspace.CurrentCamera.ViewportSize
+	scale.Scale = math.clamp(viewport.X / 560, 0.6, 1)
+
+	local left = boostUntil - workspace:GetServerTimeNow()
+	boostLabel.Text = left > 0 and ("%dx COIN BOOST  %s"):format(Config.NPCBoostMultiplier, UI.formatDuration(left)) or ""
+
+	accumulator += dt
+	if accumulator < 0.25 then
+		return
+	end
+	accumulator = 0
+	local total = totalStages()
+	for _, other in ipairs(Players:GetPlayers()) do
+		local stats = other:FindFirstChild("leaderstats")
+		local stage = stats and stats:FindFirstChild("Stage")
+		if stage then
+			local marker = markerFor(other)
+			local target = UDim2.fromScale(math.clamp((stage.Value - 1) / (total - 1), 0, 1), 0.5)
+			marker.Position = marker.Position:Lerp(target, 0.5)
+		end
+	end
+end)
+]==])
+add(f_client, "LocalScript", "Rewards", [==[
+-- REWARDS window (Daily Draw, daily login, promo codes, group bonus) and the STAGE SELECT window.
+-- Opened from the Interface (REWARDS button / clicking the stage counter) via player attributes.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
+local UI = require(Shared:WaitForChild("UI"))
+
+local player = Players.LocalPlayer
+local COLORS = UI.COLORS
+local make, text, button = UI.make, UI.text, UI.button
+
+local state = { Passes = {}, Unlocks = {}, RedeemedCodes = {}, MaxStage = 1, NextDrawIn = 0 }
+local stateTime = os.clock() -- when `state` arrived (for countdowns)
+
+local gui = make("ScreenGui", {
+	Name = "RewardsUI",
+	ResetOnSpawn = false,
+	DisplayOrder = 5,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
+local function rarityByName(name)
+	for _, rarity in ipairs(Config.DrawRarities) do
+		if rarity.Name == name then
+			return rarity
+		end
+	end
+	return nil
+end
+
+local function section(parent, order, height)
+	return make("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, -8, 0, height),
+		BackgroundColor3 = COLORS.Card,
+		ZIndex = 5,
+		Parent = parent,
+	}, { UI.corner(14), UI.stroke(2) })
+end
+
+---------------------------------------------------------------- REWARDS window
+local rewardsWindow, rewardsContent = UI.window(gui, "REWARDS", Vector2.new(560, 600))
+make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = rewardsContent })
+make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), Parent = rewardsContent })
+
+-- Daily Draw
+local drawSection = section(rewardsContent, 1, 300)
+local card = make("Frame", {
+	Position = UDim2.fromOffset(12, 12),
+	Size = UDim2.fromOffset(150, 200),
+	BackgroundColor3 = COLORS.Grey,
+	ZIndex = 6,
+	Parent = drawSection,
+}, { UI.corner(14), UI.stroke(3) })
+local cardImage = make("ImageLabel", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	ScaleType = Enum.ScaleType.Fit,
+	ZIndex = 7,
+	Parent = card,
+})
+local cardText = text({
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.new(1, -12, 0, 40),
+	Text = "?",
+	ZIndex = 8,
+	Parent = card,
+})
+text({
+	Position = UDim2.fromOffset(176, 12),
+	Size = UDim2.new(1, -188, 0, 32),
+	Text = "DAILY DRAW",
+	TextColor3 = COLORS.Gold,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local drawStatus = text({
+	Position = UDim2.fromOffset(176, 46),
+	Size = UDim2.new(1, -188, 0, 100),
+	Text = "",
+	TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextYAlignment = Enum.TextYAlignment.Top,
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local oddsParts = {}
+for _, rarity in ipairs(Config.DrawRarities) do
+	table.insert(oddsParts, ("%s %d%%"):format(rarity.Name, rarity.Chance))
+end
+text({
+	Position = UDim2.fromOffset(176, 150),
+	Size = UDim2.new(1, -188, 0, 20),
+	Text = "Odds: " .. table.concat(oddsParts, "  •  "),
+	TextColor3 = Color3.fromRGB(190, 190, 220),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local drawButton = button({
+	Position = UDim2.fromOffset(176, 176),
+	Size = UDim2.new(1, -188, 0, 40),
+	BackgroundColor3 = COLORS.Green,
+	Text = "DRAW!",
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local nicknameBox = make("TextBox", {
+	Position = UDim2.fromOffset(12, 224),
+	Size = UDim2.new(1, -140, 0, 32),
+	BackgroundColor3 = COLORS.Panel,
+	PlaceholderText = "Type a nickname (Rare+)",
+	Text = "",
+	ClearTextOnFocus = false,
+	Font = UI.FONT,
+	TextScaled = true,
+	TextColor3 = COLORS.Text,
+	ZIndex = 6,
+	Parent = drawSection,
+}, { UI.corner(8) })
+local nicknameButton = button({
+	Position = UDim2.new(1, -120, 0, 224),
+	Size = UDim2.fromOffset(108, 32),
+	BackgroundColor3 = COLORS.Gold,
+	Text = "SET",
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local bootsToggle = button({
+	Position = UDim2.fromOffset(12, 262),
+	Size = UDim2.new(0.5, -18, 0, 30),
+	BackgroundColor3 = COLORS.Blue,
+	Text = "Jump Boots: ON",
+	ZIndex = 6,
+	Parent = drawSection,
+})
+local jumpsToggle = button({
+	Position = UDim2.new(0.5, 6, 0, 262),
+	Size = UDim2.new(0.5, -18, 0, 30),
+	BackgroundColor3 = COLORS.Blue,
+	Text = "Multi-Jump: ON",
+	ZIndex = 6,
+	Parent = drawSection,
+})
+
+-- Daily login
+local loginSection = section(rewardsContent, 2, 96)
+text({
+	Position = UDim2.fromOffset(14, 10),
+	Size = UDim2.new(1, -28, 0, 28),
+	Text = "DAILY LOGIN STREAK",
+	TextColor3 = COLORS.Gold,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = loginSection,
+})
+local loginStatus = text({
+	Position = UDim2.fromOffset(14, 44),
+	Size = UDim2.new(1, -170, 0, 36),
+	Text = "",
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = loginSection,
+})
+local loginButton = button({
+	Position = UDim2.new(1, -150, 0, 42),
+	Size = UDim2.fromOffset(136, 40),
+	BackgroundColor3 = COLORS.Purple,
+	Text = "CLAIM",
+	ZIndex = 6,
+	Parent = loginSection,
+})
+
+-- Codes
+local codeSection = section(rewardsContent, 3, 96)
+text({
+	Position = UDim2.fromOffset(14, 10),
+	Size = UDim2.new(1, -28, 0, 28),
+	Text = "CODES",
+	TextColor3 = COLORS.Gold,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 6,
+	Parent = codeSection,
+})
+local codeBox = make("TextBox", {
+	Position = UDim2.fromOffset(14, 44),
+	Size = UDim2.new(1, -170, 0, 38),
+	BackgroundColor3 = COLORS.Panel,
+	PlaceholderText = "Enter code",
+	Text = "",
+	ClearTextOnFocus = false,
+	Font = UI.FONT,
+	TextScaled = true,
+	TextColor3 = COLORS.Text,
+	ZIndex = 6,
+	Parent = codeSection,
+}, { UI.corner(8) })
+local codeButton = button({
+	Position = UDim2.new(1, -150, 0, 42),
+	Size = UDim2.fromOffset(136, 40),
+	BackgroundColor3 = COLORS.Green,
+	Text = "REDEEM",
+	ZIndex = 6,
+	Parent = codeSection,
+})
+
+-- Group bonus (only if Config.GroupId is set)
+local groupSection = section(rewardsContent, 4, 70)
+groupSection.Visible = Config.GroupId ~= 0
+local groupButton = button({
+	Position = UDim2.fromOffset(14, 14),
+	Size = UDim2.new(1, -28, 0, 42),
+	BackgroundColor3 = COLORS.Orange,
+	Text = ("Join our group for +%d coins"):format(Config.GroupReward),
+	ZIndex = 6,
+	Parent = groupSection,
+})
+
+local feedback = text({
+	LayoutOrder = 5,
+	Size = UDim2.new(1, -8, 0, 28),
+	Text = "",
+	ZIndex = 6,
+	Parent = rewardsContent,
+})
+local function say(message, good)
+	feedback.Text = message or ""
+	feedback.TextColor3 = good and COLORS.Green or COLORS.Red
+end
+
+---------------------------------------------------------------- Draw card + refresh
+local function showRarity(rarity)
+	if not rarity then
+		card.BackgroundColor3 = COLORS.Grey
+		cardImage.Image = ""
+		cardText.Text = "?"
+		return
+	end
+	card.BackgroundColor3 = rarity.Color
+	local image = Config.Images["Draw" .. rarity.Name]
+	cardImage.Image = Config.HasAsset(image) and image or ""
+	cardText.Text = Config.HasAsset(image) and "" or rarity.Name:upper()
+end
+
+local drawing = false
+local function refresh()
+	local elapsed = os.clock() - stateTime
+	local active = state.Draw and rarityByName(state.Draw.Rarity)
+	local left = (state.DrawSecondsLeft or 0) - elapsed
+	if active and left <= 0 then
+		active = nil
+	end
+	if not drawing then
+		showRarity(active)
+	end
+	if active then
+		drawStatus.Text = ("%s prize active (%s left):\n• %s"):format(active.Name, UI.formatDuration(left), table.concat(active.Perks, "\n• "))
+	else
+		drawStatus.Text = "Draw a free prize every day!\nJump boots, auras, name tags...\nLegendary = +50% coins!"
+	end
+	local nextDraw = (state.NextDrawIn or 0) - elapsed
+	if nextDraw <= 0 then
+		drawButton.Text = "DRAW!"
+		drawButton.BackgroundColor3 = COLORS.Green
+	else
+		drawButton.Text = "Next draw in " .. UI.formatDuration(nextDraw)
+		drawButton.BackgroundColor3 = COLORS.Grey
+	end
+	local canNickname = active and active.Nickname
+	nicknameBox.Visible = canNickname == true
+	nicknameButton.Visible = canNickname == true
+	bootsToggle.Visible = active ~= nil
+	bootsToggle.Text = player:GetAttribute("BootsOff") and "Jump Boots: OFF" or "Jump Boots: ON"
+	bootsToggle.BackgroundColor3 = player:GetAttribute("BootsOff") and COLORS.Grey or COLORS.Blue
+	jumpsToggle.Visible = (player:GetAttribute("MaxJumps") or 1) > 1
+	jumpsToggle.Text = player:GetAttribute("MultiJumpOff") and "Multi-Jump: OFF" or "Multi-Jump: ON"
+	jumpsToggle.BackgroundColor3 = player:GetAttribute("MultiJumpOff") and COLORS.Grey or COLORS.Blue
+
+	if state.DailyReady then
+		loginStatus.Text = ("Day %d reward: %d coins"):format(state.NextDailyDay or 1, state.NextDailyReward or 0)
+		loginButton.Text = "CLAIM"
+		loginButton.BackgroundColor3 = COLORS.Purple
+	else
+		loginStatus.Text = "Come back tomorrow for the next day!"
+		loginButton.Text = "CLAIMED"
+		loginButton.BackgroundColor3 = COLORS.Grey
+	end
+	groupSection.Visible = Config.GroupId ~= 0 and not state.GroupRewardClaimed
+end
+
+drawButton.Activated:Connect(function()
+	if drawing then
+		return
+	end
+	drawing = true
+	local ok, result = Remotes.DailyDraw:InvokeServer()
+	if not ok then
+		drawing = false
+		say(result, false)
+		return
+	end
+	-- Reveal: flick through the rarities, slowing down, then land on the prize.
+	local delayTime = 0.05
+	for i = 1, 16 do
+		showRarity(Config.DrawRarities[(i - 1) % #Config.DrawRarities + 1])
+		Sfx.Play("Click", 0.8 + i * 0.04)
+		task.wait(delayTime)
+		delayTime *= 1.18
+	end
+	local rarity = rarityByName(result)
+	showRarity(rarity)
+	local scale = card:FindFirstChildOfClass("UIScale") or make("UIScale", { Parent = card })
+	scale.Scale = 1.3
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	Sfx.Play(result == "Legendary" and "Win" or "Purchase")
+	say(("You got %s!"):format(result:upper()), true)
+	drawing = false
+	refresh()
+end)
+
+nicknameButton.Activated:Connect(function()
+	local ok, message = Remotes.SetNickname:InvokeServer(nicknameBox.Text)
+	say(message, ok)
+end)
+
+bootsToggle.Activated:Connect(function()
+	player:SetAttribute("BootsOff", not player:GetAttribute("BootsOff"))
+	refresh()
+end)
+jumpsToggle.Activated:Connect(function()
+	player:SetAttribute("MultiJumpOff", not player:GetAttribute("MultiJumpOff"))
+	refresh()
+end)
+
+loginButton.Activated:Connect(function()
+	local ok, message = Remotes.ClaimDaily:InvokeServer()
+	say(message, ok)
+	if ok then
+		Sfx.Play("Daily")
+	end
+end)
+
+codeButton.Activated:Connect(function()
+	local ok, message = Remotes.RedeemCode:InvokeServer(codeBox.Text)
+	say(message, ok)
+	if ok then
+		codeBox.Text = ""
+		Sfx.Play("Purchase")
+	end
+end)
+
+groupButton.Activated:Connect(function()
+	local ok, message = Remotes.ClaimGroup:InvokeServer()
+	say(message, ok)
+end)
+
+---------------------------------------------------------------- STAGE SELECT window
+local stagesWindow, stagesContent = UI.window(gui, "STAGE SELECT", Vector2.new(560, 520))
+make("UIGridLayout", {
+	CellSize = UDim2.fromOffset(72, 56),
+	CellPadding = UDim2.fromOffset(8, 8),
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	Parent = stagesContent,
+})
+local ZONE_COLORS = { Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 120, 200), Color3.fromRGB(150, 90, 255) }
+local stageButtons = {}
+
+local function zoneIndex(stage)
+	local index = 1
+	for i, zone in ipairs(Config.Zones) do
+		if stage >= zone.FirstStage then
+			index = i
+		end
+	end
+	return index
+end
+
+local function rebuildStages()
+	local checkpoints = workspace:FindFirstChild("Checkpoints")
+	local total = 0
+	for _, child in ipairs(checkpoints and checkpoints:GetChildren() or {}) do
+		total = math.max(total, tonumber(child.Name) or 0)
+	end
+	for stage = 1, math.max(total - 1, 1) do
+		local b = stageButtons[stage]
+		if not b then
+			b = button({
+				LayoutOrder = stage,
+				Text = tostring(stage),
+				ZIndex = 6,
+				Parent = stagesContent,
+			})
+			b.Activated:Connect(function()
+				local ok, message = Remotes.TeleportStage:InvokeServer(stage)
+				if ok then
+					stagesWindow.Visible = false
+				else
+					b.Text = "🔒"
+					task.delay(1, function()
+						b.Text = tostring(stage)
+					end)
+				end
+				Sfx.Play(ok and "Checkpoint" or "Click")
+				if message then
+					say(message, ok)
+				end
+			end)
+			stageButtons[stage] = b
+		end
+		local unlocked = stage <= (state.MaxStage or 1)
+		b.BackgroundColor3 = unlocked and (ZONE_COLORS[zoneIndex(stage)] or COLORS.Blue) or COLORS.Grey
+		b.AutoButtonColor = unlocked
+	end
+end
+
+---------------------------------------------------------------- Open / close + data
+player:GetAttributeChangedSignal("RewardsOpen"):Connect(function()
+	rewardsWindow.Visible = not rewardsWindow.Visible
+	stagesWindow.Visible = false
+	refresh()
+end)
+player:GetAttributeChangedSignal("StageSelectOpen"):Connect(function()
+	stagesWindow.Visible = not stagesWindow.Visible
+	rewardsWindow.Visible = false
+	rebuildStages()
+end)
+for _, attribute in ipairs({ "MaxJumps", "JumpBoost" }) do
+	player:GetAttributeChangedSignal(attribute):Connect(refresh)
+end
+
+Remotes.DataUpdated.OnClientEvent:Connect(function(data)
+	state = data
+	stateTime = os.clock()
+	refresh()
+	if stagesWindow.Visible then
+		rebuildStages()
+	end
+end)
+
+local initial = Remotes.RequestData:InvokeServer()
+if initial then
+	state = initial
+	stateTime = os.clock()
+end
+refresh()
+
+-- Keep countdowns ticking while the window is open.
+while true do
+	task.wait(1)
+	if rewardsWindow.Visible then
+		refresh()
+	end
+end
 ]==])
 print(keptAssets and "Sky Coin Obby updated! (your Assets ids were kept) Press Play to test." or "Sky Coin Obby installed! Press Play to test.")

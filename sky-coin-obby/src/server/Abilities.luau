@@ -85,12 +85,18 @@ function Abilities.Grant(player)
 		return
 	end
 	local passes = session.Passes
+	local data = PlayerData.Get(player)
+	local unlocks = data and data.Unlocks or {}
 	for key in pairs(TOOLS) do
 		if passes[key] then
 			giveTool(player, key)
 		end
 	end
-	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or passes.DoubleJump and 2 or 1)
+	-- Spring Boots (stage 10 milestone) give a free double jump.
+	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or (passes.DoubleJump or unlocks.SpringBoots) and 2 or 1)
+	-- Daily Draw jump boots.
+	local rarity = PlayerData.ActiveDraw(player)
+	player:SetAttribute("JumpBoost", rarity and rarity.JumpBoost or 1)
 end
 
 -- The client reports when it uses an ability, so that run's time skips the leaderboard.

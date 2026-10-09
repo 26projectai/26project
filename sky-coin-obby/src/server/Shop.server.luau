@@ -145,6 +145,10 @@ Remotes.ShopAction.OnServerInvoke = function(player, action, itemId)
 		data.Owned[itemId] = true -- VIP items are free
 	end
 
+	if item.UnlockText and not data.Owned[itemId] then
+		return false, item.UnlockText .. " to unlock this!"
+	end
+
 	if action == "Buy" then
 		if data.Owned[itemId] and not item.RequiresVIP then
 			return false, "You already own this"

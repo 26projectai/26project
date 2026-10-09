@@ -21,9 +21,11 @@ Config.AllowStageSkipping = false -- false = players must touch checkpoints in o
 -- Visuals
 Config.CoinSpinSpeed = 2 -- radians per second
 
--- Sample course: builds a 30-stage, 3-zone obby automatically if Workspace has no
+-- Sample course: builds a 40-stage, 3-zone obby automatically if Workspace has no
 -- "Checkpoints" folder. Set to false once you've built your own course.
 Config.BuildSampleCourse = true
+Config.Stages = 40
+Config.HubStage = 20 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
 
 -- Zones change the music, sky and (in space) gravity. FirstStage = where the zone starts.
 Config.Zones = {
@@ -38,6 +40,49 @@ Config.DailyCooldownHours = 20
 
 -- Both players get this when someone joins through a friend's invite.
 Config.InviteReward = 50
+
+-- Free rewards for reaching stages for the first time.
+Config.Milestones = {
+	{ Stage = 10, Unlock = "SpringBoots", Message = "UNLOCKED: Spring Boots - free Double Jump!" },
+	{ Stage = 20, Unlock = "CometTrail", Message = "UNLOCKED: Comet Trail - equip it in the Shop!" },
+}
+
+-- Luxury NPCs: touching one gives a coin boost.
+Config.NPCBoostMultiplier = 2
+Config.NPCBoostSeconds = 60
+Config.NPCCooldownSeconds = 180 -- per NPC, per player
+
+-- Daily Draw: one free draw every 24 hours. Chances must add up to 100.
+-- Free (no Robux), and the odds are shown in-game.
+Config.DrawCooldownHours = 24
+Config.DrawRarities = {
+	{
+		Name = "Common", Chance = 70, Color = Color3.fromRGB(200, 205, 215),
+		JumpBoost = 1.5, Aura = "Small", Tag = "Silver",
+		Perks = { "Jump Boots x1.5", "Small smoke aura", "Silver name tag" },
+	},
+	{
+		Name = "Rare", Chance = 25, Color = Color3.fromRGB(80, 170, 255),
+		JumpBoost = 2.5, Aura = "Medium", Tag = "Gold", Nickname = true,
+		Perks = { "Jump Boots x2.5", "Swirling smoke aura", "Gold name tag + custom nickname" },
+	},
+	{
+		Name = "Legendary", Chance = 5, Color = Color3.fromRGB(255, 200, 40),
+		JumpBoost = 5, Aura = "Super", Tag = "Legendary", Nickname = true, CoinBoost = 1.5, Trail = true,
+		Perks = { "Jump Boots x5", "Super aura + sparkles + glow", "Rainbow name tag + nickname", "+50% coins", "Legendary flame trail" },
+	},
+}
+
+-- Promo codes (share them on TikTok/YouTube). Codes are case-insensitive; one use per player.
+Config.Codes = {
+	LAUNCH = 100,
+	SKYCOIN = 50,
+	MOONJUMP = 75,
+}
+
+-- Optional Roblox group: members can claim a one-time bonus (0 = off).
+Config.GroupId = 0
+Config.GroupReward = 200
 
 -- All Roblox ids (images, sounds, music, game passes, products, badges) live in the
 -- Assets module, so re-running the installer never wipes them.

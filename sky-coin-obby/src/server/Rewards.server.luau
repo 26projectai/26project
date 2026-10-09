@@ -30,6 +30,43 @@ Remotes.ClaimDaily.OnServerInvoke = function(player)
 	return true, ("Day %d reward: +%d coins! Come back tomorrow for more."):format(day, reward)
 end
 
+---------------------------------------------------------------- Promo codes
+Remotes.RedeemCode.OnServerInvoke = function(player, code)
+	local data = PlayerData.Get(player)
+	if not data or type(code) ~= "string" then
+		return false, "Try again"
+	end
+	code = code:upper():gsub("%s", "")
+	local reward = Config.Codes[code]
+	if not reward then
+		return false, "That code doesn't exist (yet!)"
+	end
+	if data.RedeemedCodes[code] then
+		return false, "You already used this code"
+	end
+	data.RedeemedCodes[code] = true
+	PlayerData.AddCoins(player, reward, false)
+	return true, ("Code redeemed: +%d coins!"):format(reward)
+end
+
+---------------------------------------------------------------- Group reward
+Remotes.ClaimGroup.OnServerInvoke = function(player)
+	local data = PlayerData.Get(player)
+	if not data or Config.GroupId == 0 then
+		return false, "No group set up yet"
+	end
+	if data.GroupRewardClaimed then
+		return false, "Already claimed - thanks for joining!"
+	end
+	local ok, inGroup = pcall(player.IsInGroup, player, Config.GroupId)
+	if not ok or not inGroup then
+		return false, "Join our Roblox group first, then rejoin the game!"
+	end
+	data.GroupRewardClaimed = true
+	PlayerData.AddCoins(player, Config.GroupReward, false)
+	return true, ("Thanks for joining the group! +%d coins"):format(Config.GroupReward)
+end
+
 ---------------------------------------------------------------- Friend invites
 -- When someone joins through a friend's invite link, and that friend is in this server,
 -- both get Config.InviteReward coins (once per friend pair).

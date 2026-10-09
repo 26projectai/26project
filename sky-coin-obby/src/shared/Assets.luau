@@ -38,6 +38,10 @@ Assets.Images = {
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
 	Music = "rbxassetid://0", -- art/ui-music.png
 	Passes = "rbxassetid://0", -- art/ui-passes.png
+	Rewards = "rbxassetid://0", -- art/ui-rewards.png
+	DrawCommon = "rbxassetid://0", -- art/draw-common.png
+	DrawRare = "rbxassetid://0", -- art/draw-rare.png
+	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -68,6 +72,7 @@ Assets.ItemIcons = {
 	BubbleAura = "rbxassetid://0", -- art/item-bubble-aura.png
 	LightningTrail = "rbxassetid://0", -- art/item-lightning-trail.png
 	VIPTrail = "rbxassetid://0", -- art/item-vip-trail.png
+	CometTrail = "rbxassetid://0",
 }
 
 return Assets

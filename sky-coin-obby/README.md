@@ -1,36 +1,44 @@
 # Sky Coin Obby
 
-A 30-stage Roblox obby built to keep players coming back and bringing friends.
+A 40-stage Roblox obby built to keep players coming back and bringing friends.
 
 **Gameplay**
-- **3 worlds** with their own music, sky colours and obstacles:
-  - **Sky Islands** (stages 1–10): shrinking platforms, kill strips, spinners, narrow beams.
-  - **Candy Land** (stages 11–20): vanishing platforms, a backwards conveyor, jump pads, sliding blocks.
-  - **Outer Space** (stages 21–30): **low gravity moon jumps**, asteroid hops, double spinners, a jump pad launch across a huge gap.
-- **Checkpoints** that save, and you respawn on your last one.
-- **Coins** with a rising-pitch combo sound, a "+N" pop-up, and coins that come back after 45 seconds.
+- **40 stages across 3 worlds**, each with its own music, sky, haze and scenery:
+  - **Sky Islands** (1–10): lava sea, tree islands, rainbow.
+  - **Candy Land** (11–20): vanishing platforms, jump pads, sliders, gumdrop hills, lollipop forest.
+  - **Outer Space** (21–40, the biggest world): **low gravity moon jumps**, laser gates, long leaps, planets, asteroid belt.
+- **Central hub** at stage 20: a big island with a giant **dashboard** showing the live race (who's furthest in
+  this server), global Most Wins and Fastest Run. There's also a fountain, and luxury NPCs walk around.
+- **Luxury NPCs** (Sir Goldsworth, Lady Diamond, …) stroll the lobby and hub. **Touch one for 2x coins for 60 seconds.**
+- **Live race bar** at the top shows every player's avatar on the track. **Stage select**: click the stage counter
+  to replay any stage you've reached.
+- **Optional 3D landmarks** made with Higgsfield: a sky castle, a candy castle and a space station.
 
 **Progress and rewards**
-- **Wins loop:** finish the course for +1 win and 100 coins, then restart for another run. Each win permanently adds +25% coins, up to ×5.
-- **Speedrun timer** on screen, with your personal best.
-- **Global leaderboards** beside the start: *Most Wins* and *Fastest Run*, across all servers.
-- **Cosmetic shop:** 8 trails and auras, plus a VIP-only Diamond Trail.
-
-**Coming back and bringing friends**
-- **Daily login rewards:** a 7-day streak, from 25 up to 250 coins.
-- **Friend invites:** when a friend joins through your invite, you **both get +50 coins**.
+- **Milestones:**
+  - Stage 10 unlocks **Spring Boots**, a free double jump.
+  - Stage 20 unlocks the **Comet Trail**.
+- **Wins loop:** finish the course for +1 win and 100 coins, then restart. Each win adds +25% coins, up to ×5.
+- **Daily Draw** (free, every 24 hours, odds shown):
+  - **Common 70%:** Jump Boots ×1.5, small smoke aura, silver name tag.
+  - **Rare 25%:** Jump Boots ×2.5, swirling aura, gold name tag + **custom nickname** (filtered).
+  - **Legendary 5%:** Jump Boots ×5, super aura + sparkles + glow, rainbow name tag + nickname, **+50% coins**, flame trail.
+- **Daily login streak**, **promo codes**, **Roblox group bonus**, all in the **REWARDS** window.
+- **Speedrun timer**, plus global **leaderboards**. Runs that use passes or boosts still earn wins but aren't ranked.
+- **Cosmetic shop:** trails and auras, plus a VIP-only trail and the milestone Comet Trail.
+- **Friend invites:** +50 coins each.
 
 **Robux**
-- **Game passes:** Rocket Launcher, Double Jump, Triple Jump, Speed Coil, Gravity Coil, 2x Coins and VIP
-  (1.5× coins, VIP trail, `[VIP]` chat tag), all in an in-game **PASSES** store.
+- **Game passes:** Rocket Launcher, Double Jump, Triple Jump, Speed Coil, Gravity Coil, 2x Coins, VIP. They're sold in
+  an in-game **PASSES** store.
 - **Skip Stage** developer product.
 
-**Extras**
-- **Badges:** Welcome, Reached Candy Land, Reached Space, First Win, 10 Wins.
-- **Original music and sound effects:** 3 chiptune tracks and 8 effects, all generated from scratch, so they're copyright-free.
-- **Artwork** from Higgsfield for every icon, game pass and thumbnail (see [`art/`](art/README.md)).
+**Polish and analytics**
+- **Original music and sound effects**, all copyright-free.
+- **Higgsfield artwork** for every icon, card, pass and landmark (see [`art/`](art/README.md)).
+- **Roblox Analytics:** stages 1–10 are logged as the onboarding funnel, and every stage and win as custom events.
 
-How to get players is covered in **[LAUNCH_PLAYBOOK.md](LAUNCH_PLAYBOOK.md)**.
+How to get players: **[LAUNCH_PLAYBOOK.md](LAUNCH_PLAYBOOK.md)** and **[GROWTH_RESEARCH.md](GROWTH_RESEARCH.md)**.
 
 ---
 
@@ -91,6 +99,15 @@ go into `Assets.Badges` the same way.
 3. **Experience Settings → Permissions** → **Public**.
 
 ---
+
+## Optional: 3D landmarks (Higgsfield)
+
+1. Download the three `.glb` models from the links in [`art/README.md`](art/README.md).
+2. In Studio, go to **File → Import 3D**, pick a `.glb`, and import it.
+3. In **ServerStorage**, create a **Folder** named `Landmarks`. Drag each imported model into it, and rename
+   them `Sky`, `Candy` and `Space`.
+4. Press Play. The game places and sizes them automatically: a castle in Sky, a candy castle in Candy Land,
+   and a space station in Space.
 
 ## Build your own stages
 

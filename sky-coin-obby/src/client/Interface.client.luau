@@ -155,7 +155,18 @@ local function hudPanel(order, width, iconId, iconColor, iconText, textColor)
 end
 
 local coinPanel, coinLabel = hudPanel(1, 150, Config.Images.Coin, COLORS.Gold, "$", COLORS.Gold)
-local _, stageLabel = hudPanel(2, 150)
+local stagePanel, stageLabel = hudPanel(2, 150)
+-- Click the stage counter to open STAGE SELECT.
+local stageClick = make("TextButton", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 3,
+	Parent = stagePanel,
+})
+stageClick.Activated:Connect(function()
+	player:SetAttribute("StageSelectOpen", not player:GetAttribute("StageSelectOpen"))
+end)
 local _, winsLabel = hudPanel(3, 150, Config.Images.Trophy, COLORS.Orange, "W", COLORS.Gold)
 
 local timerLabel = text({
@@ -183,7 +194,7 @@ local function toast(message, color)
 	toastLabel.Text = message
 	toastLabel.TextColor3 = TOAST_COLORS[color] or color or COLORS.Text
 	TweenService:Create(toastLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-		Position = UDim2.new(0.5, 0, 0, 96),
+		Position = UDim2.new(0.5, 0, 0, 146),
 	}):Play()
 	task.delay(2.6, function()
 		if token == toastToken then
@@ -256,7 +267,7 @@ end
 
 local shopButton = sideButton(1, "SHOP", COLORS.Pink, Config.Images.ShopButton, "$")
 local passesButton = sideButton(2, "PASSES", COLORS.Gold, Config.Images.Passes, "R$")
-local dailyButton = sideButton(3, "DAILY", COLORS.Purple, Config.Images.Daily, "!")
+local dailyButton = sideButton(3, "REWARDS", COLORS.Purple, Config.Images.Rewards or Config.Images.Daily, "!")
 local inviteButton = sideButton(4, "INVITE", COLORS.Green, Config.Images.Invite, "+")
 local skipButton = sideButton(5, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
 local musicButton = sideButton(6, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
@@ -413,7 +424,7 @@ for index, item in ipairs(sorted) do
 	text({
 		Position = UDim2.new(0, 6, 0, 122),
 		Size = UDim2.new(1, -12, 0, 16),
-		Text = item.RequiresVIP and "VIP only" or item.Slot,
+		Text = item.RequiresVIP and "VIP only" or item.UnlockText and "Milestone reward" or item.Slot,
 		TextColor3 = item.RequiresVIP and COLORS.Gold or Color3.fromRGB(190, 190, 220),
 		ZIndex = 6,
 		Parent = card,
@@ -606,12 +617,11 @@ shopButton.Activated:Connect(function()
 end)
 
 ---------------------------------------------------------------- Daily / invite / skip / music
+-- The REWARDS and STAGE SELECT windows live in Rewards.client; toggled via attributes.
 dailyButton.Activated:Connect(function()
-	local ok, message = Remotes.ClaimDaily:InvokeServer()
-	toast(message or "", ok and "gold" or "bad")
-	if ok then
-		Sfx.Play("Daily")
-	end
+	shopWindow.Visible = false
+	passesWindow.Visible = false
+	player:SetAttribute("RewardsOpen", not player:GetAttribute("RewardsOpen"))
 end)
 
 local function promptInvite()
@@ -773,7 +783,7 @@ local function refresh()
 
 	stageLabel.Text = totalStages > 0 and ("Stage %d/%d"):format(state.Stage, totalStages) or ("Stage " .. state.Stage)
 	winsLabel.Text = ("%d  x%s"):format(state.Wins, tostring(math.floor(state.Multiplier * 100 + 0.5) / 100))
-	dailyDot.Visible = state.DailyReady == true
+	dailyDot.Visible = state.DailyReady == true or (state.NextDrawIn or 1) <= 0
 	skipButton.Visible = Config.Products.SkipStage ~= 0 and state.Stage < totalStages - 1
 
 	local zone = Config.ZoneForStage(state.Stage)
@@ -795,6 +805,9 @@ local function refresh()
 		elseif item.RequiresVIP then
 			button.Text = "Get VIP"
 			button.BackgroundColor3 = COLORS.Gold
+		elseif item.UnlockText then
+			button.Text = item.UnlockText
+			button.BackgroundColor3 = COLORS.Grey
 		else
 			button.Text = "$ " .. item.Price
 			button.BackgroundColor3 = state.Coins >= item.Price and COLORS.Gold or COLORS.Grey
@@ -861,8 +874,8 @@ if initial then
 	state = initial
 end
 refresh()
-if state.DailyReady then
+if state.DailyReady or (state.NextDrawIn or 1) <= 0 then
 	task.delay(2, function()
-		toast("Your daily reward is ready! Tap DAILY", "gold")
+		toast("Free rewards waiting! Tap REWARDS", "gold")
 	end)
 end
