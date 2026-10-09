@@ -11,6 +11,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local Server = ServerScriptService:WaitForChild("Server")
 local PlayerData = require(Server:WaitForChild("PlayerData"))
 local Course = require(Server:WaitForChild("Course"))
+local Abilities = require(Server:WaitForChild("Abilities"))
 
 local passNameById = {}
 for name, id in pairs(Config.GamePasses) do
@@ -32,6 +33,7 @@ local function checkPasses(player)
 	if PlayerData.Session(player) and PlayerData.Session(player).Passes.VIP then
 		player:SetAttribute("VIP", true) -- used for the [VIP] chat tag
 	end
+	Abilities.Grant(player)
 end
 
 Players.PlayerAdded:Connect(checkPasses)
@@ -46,6 +48,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passI
 		if name == "VIP" then
 			player:SetAttribute("VIP", true)
 		end
+		Abilities.Grant(player)
 		Remotes.Notify:FireClient(player, "Thanks for your support! Pass activated.", "good")
 	end
 end)

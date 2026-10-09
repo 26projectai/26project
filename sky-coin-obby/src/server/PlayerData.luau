@@ -148,6 +148,7 @@ local function snapshot(player)
 		Equipped = data.Equipped,
 		Multiplier = PlayerData.Multiplier(player),
 		RunStart = session.RunStart, -- workspace:GetServerTimeNow() when the current run began
+		RunAssisted = session.RunAssisted, -- used a game-pass ability: time won't hit the leaderboard
 		DailyReady = PlayerData.DailyReady(data),
 		NextDailyDay = nextDay,
 		NextDailyReward = Config.DailyRewards[nextDay],

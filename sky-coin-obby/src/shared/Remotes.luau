@@ -38,4 +38,5 @@ return {
 	Notify = get("Notify", "RemoteEvent"), -- server -> client: (message, kind)
 	ShopAction = get("ShopAction", "RemoteFunction"), -- client -> server: Buy / Equip / Unequip
 	ClaimDaily = get("ClaimDaily", "RemoteFunction"), -- client -> server: claim daily reward
+	AssistUsed = get("AssistUsed", "RemoteEvent"), -- client -> server: used a game-pass ability this run
 }

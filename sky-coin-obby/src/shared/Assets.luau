@@ -8,6 +8,11 @@ local Assets = {}
 Assets.GamePasses = {
 	DoubleCoins = 0, -- 2x coins forever
 	VIP = 0, -- 1.5x coins, VIP trail, [VIP] chat tag
+	RocketLauncher = 0, -- rocket tool: blast off where you look
+	DoubleJump = 0, -- 1 extra mid-air jump
+	TripleJump = 0, -- 2 extra mid-air jumps
+	SpeedCoil = 0, -- hold to run 60% faster
+	GravityCoil = 0, -- hold to float
 }
 Assets.Products = {
 	SkipStage = 0, -- skip the current stage
@@ -32,6 +37,7 @@ Assets.Images = {
 	Skip = "rbxassetid://0", -- art/ui-skip.png
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
 	Music = "rbxassetid://0", -- art/ui-music.png
+	Passes = "rbxassetid://0", -- art/ui-passes.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.

@@ -26,5 +26,11 @@ file name shown, then follow **Part C** in the main README to upload them to Rob
 | `pass-2x-coins.png` | Game pass icon: 2x Coins (upload when creating the pass) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_132731_aa878948-47c8-44c2-b702-ab13485e0f54.png) |
 | `pass-vip.png` | Game pass icon: VIP (upload when creating the pass) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_132730_b7b7a814-c5b8-4955-958c-63ba2eaab68b.png) |
 | `product-skip-stage.png` | Developer product icon: Skip Stage | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_132730_bf4de180-6a73-466f-b12b-0c69b46b4b30.png) |
+| `pass-rocket-launcher.png` | Game pass icon: Rocket Launcher | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141323_dcd4181c-cb27-44c7-a747-9630f9340c6d.png) |
+| `pass-double-jump.png` | Game pass icon: Double Jump | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_cdab80d1-22d7-4551-af9e-3ca6bd398181.png) |
+| `pass-triple-jump.png` | Game pass icon: Triple Jump | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141323_28855d8a-eebd-40c0-83d5-e514814674ba.png) |
+| `pass-speed-coil.png` | Game pass icon: Speed Coil | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_9f12a166-c947-4111-a441-7b22bed96424.png) |
+| `pass-gravity-coil.png` | Game pass icon: Gravity Coil | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_6dc1e513-61a3-472d-bee5-70e010394bd7.png) |
+| `ui-passes.png` | PASSES button → `Assets.Images.Passes` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_141324_479ddfe5-b25f-4697-a248-5194b65b9a11.png) |
 
 All of these are also in your Higgsfield account under your generation history.

@@ -32,6 +32,11 @@ local Assets = {}
 Assets.GamePasses = {
 	DoubleCoins = 0, -- 2x coins forever
 	VIP = 0, -- 1.5x coins, VIP trail, [VIP] chat tag
+	RocketLauncher = 0, -- rocket tool: blast off where you look
+	DoubleJump = 0, -- 1 extra mid-air jump
+	TripleJump = 0, -- 2 extra mid-air jumps
+	SpeedCoil = 0, -- hold to run 60% faster
+	GravityCoil = 0, -- hold to float
 }
 Assets.Products = {
 	SkipStage = 0, -- skip the current stage
@@ -56,6 +61,7 @@ Assets.Images = {
 	Skip = "rbxassetid://0", -- art/ui-skip.png
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
 	Music = "rbxassetid://0", -- art/ui-music.png
+	Passes = "rbxassetid://0", -- art/ui-passes.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -162,6 +168,20 @@ end
 
 return Config
 ]==])
+add(f_shared, "ModuleScript", "PassCatalog", [==[
+-- Game passes shown in the PASSES window, in display order.
+-- Key = the name used in Assets.GamePasses (where you paste each pass id).
+-- Assisted = using it makes the run not count for the Fastest Run leaderboard.
+return {
+	{ Key = "RocketLauncher", Name = "Rocket Launcher", Description = "Click to blast off where you're looking!", Assisted = true },
+	{ Key = "TripleJump", Name = "Triple Jump", Description = "Jump twice more in mid-air.", Assisted = true },
+	{ Key = "DoubleJump", Name = "Double Jump", Description = "Jump once more in mid-air.", Assisted = true },
+	{ Key = "SpeedCoil", Name = "Speed Coil", Description = "Hold it to run 60% faster.", Assisted = true },
+	{ Key = "GravityCoil", Name = "Gravity Coil", Description = "Hold it to float in low gravity.", Assisted = true },
+	{ Key = "DoubleCoins", Name = "2x Coins", Description = "Double coins forever." },
+	{ Key = "VIP", Name = "VIP", Description = "1.5x coins, VIP trail and [VIP] chat tag." },
+}
+]==])
 add(f_shared, "ModuleScript", "Remotes", [==[
 -- Creates the RemoteEvents/RemoteFunctions on the server and finds them on the client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -203,6 +223,7 @@ return {
 	Notify = get("Notify", "RemoteEvent"), -- server -> client: (message, kind)
 	ShopAction = get("ShopAction", "RemoteFunction"), -- client -> server: Buy / Equip / Unequip
 	ClaimDaily = get("ClaimDaily", "RemoteFunction"), -- client -> server: claim daily reward
+	AssistUsed = get("AssistUsed", "RemoteEvent"), -- client -> server: used a game-pass ability this run
 }
 ]==])
 add(f_shared, "ModuleScript", "Sfx", [==[
@@ -368,6 +389,113 @@ end
 return ShopCatalog
 ]==])
 local f_server = folder(game:GetService("ServerScriptService"), "Server")
+add(f_server, "ModuleScript", "Abilities", [==[
+-- Gives game-pass abilities: Rocket Launcher / Speed Coil / Gravity Coil tools, and
+-- Double/Triple Jump (via the "MaxJumps" attribute). The actual movement runs on the client
+-- (Abilities.client), because players' characters are simulated on their own device.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
+local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PlayerData"))
+
+local Abilities = {}
+
+local function makeTool(name, tip, handleProps, extraParts)
+	local tool = Instance.new("Tool")
+	tool.Name = name
+	tool.ToolTip = tip
+	tool.CanBeDropped = false
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.CanCollide = false
+	handle.Massless = true
+	for key, value in pairs(handleProps) do
+		handle[key] = value
+	end
+	handle.Parent = tool
+	for _, props in ipairs(extraParts or {}) do
+		local part = Instance.new("Part")
+		part.CanCollide = false
+		part.Massless = true
+		local offset = props.Offset
+		props.Offset = nil
+		for key, value in pairs(props) do
+			part[key] = value
+		end
+		part.CFrame = handle.CFrame * offset
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = handle
+		weld.Part1 = part
+		weld.Parent = part
+		part.Parent = tool
+	end
+	return tool
+end
+
+local TOOLS = {
+	RocketLauncher = makeTool("Rocket Launcher", "Click to blast off!", {
+		Size = Vector3.new(1, 1, 4),
+		Color = Color3.fromRGB(220, 40, 40),
+		Material = Enum.Material.Metal,
+	}, {
+		{ Size = Vector3.new(1.2, 1.2, 0.6), Offset = CFrame.new(0, 0, -2.2), Color = Color3.fromRGB(255, 170, 40), Material = Enum.Material.Neon },
+		{ Size = Vector3.new(0.4, 1, 0.4), Offset = CFrame.new(0, -0.9, 0.6), Color = Color3.fromRGB(40, 40, 40) },
+	}),
+	SpeedCoil = makeTool("Speed Coil", "Hold to run faster", {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(2, 1, 1),
+		Color = Color3.fromRGB(255, 60, 60),
+		Material = Enum.Material.Neon,
+	}),
+	GravityCoil = makeTool("Gravity Coil", "Hold to float", {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(2, 1, 1),
+		Color = Color3.fromRGB(160, 80, 255),
+		Material = Enum.Material.Neon,
+	}),
+}
+
+local function giveTool(player, key)
+	local template = TOOLS[key]
+	local starterGear = player:FindFirstChild("StarterGear")
+	if not template or not starterGear or starterGear:FindFirstChild(template.Name) then
+		return
+	end
+	template:Clone().Parent = starterGear -- kept after respawns
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local character = player.Character
+	if backpack and not backpack:FindFirstChild(template.Name) and not (character and character:FindFirstChild(template.Name)) then
+		template:Clone().Parent = backpack
+	end
+end
+
+-- Call after the player's passes are known or change.
+function Abilities.Grant(player)
+	local session = PlayerData.Session(player)
+	if not session then
+		return
+	end
+	local passes = session.Passes
+	for key in pairs(TOOLS) do
+		if passes[key] then
+			giveTool(player, key)
+		end
+	end
+	player:SetAttribute("MaxJumps", passes.TripleJump and 3 or passes.DoubleJump and 2 or 1)
+end
+
+-- The client reports when it uses an ability, so that run's time skips the leaderboard.
+Remotes.AssistUsed.OnServerEvent:Connect(function(player)
+	local session = PlayerData.Session(player)
+	if session and session.RunStart and not session.RunAssisted then
+		session.RunAssisted = true
+		PlayerData.Sync(player)
+	end
+end)
+
+return Abilities
+]==])
 add(f_server, "ModuleScript", "Badges", [==[
 -- Awards badges listed in Config.Badges (ids of 0 are skipped).
 local BadgeService = game:GetService("BadgeService")
@@ -411,16 +539,19 @@ local Badges = require(Server:WaitForChild("Badges"))
 local function win(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
 	local elapsed = session.RunStart and (workspace:GetServerTimeNow() - session.RunStart)
+	local assisted = session.RunAssisted == true
 	session.RunStart = nil
+	session.RunAssisted = false
 
+	-- Runs that used game-pass abilities still earn wins + coins, but don't set best times.
 	local isNewBest = false
-	if elapsed and (data.BestTime == 0 or elapsed < data.BestTime) then
+	if elapsed and not assisted and (data.BestTime == 0 or elapsed < data.BestTime) then
 		data.BestTime = elapsed
 		isNewBest = true
 	end
 	data.Wins += 1
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
-	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins)
+	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
 
 	Badges.Award(player, "FirstWin")
 	if data.Wins >= 10 then
@@ -514,6 +645,7 @@ local function onCharacterAdded(player, character)
 	local session = PlayerData.Session(player)
 	if data.Stage == 1 and session then
 		session.RunStart = workspace:GetServerTimeNow()
+		session.RunAssisted = false
 		PlayerData.Sync(player)
 	end
 end
@@ -1199,6 +1331,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local Server = ServerScriptService:WaitForChild("Server")
 local PlayerData = require(Server:WaitForChild("PlayerData"))
 local Course = require(Server:WaitForChild("Course"))
+local Abilities = require(Server:WaitForChild("Abilities"))
 
 local passNameById = {}
 for name, id in pairs(Config.GamePasses) do
@@ -1220,6 +1353,7 @@ local function checkPasses(player)
 	if PlayerData.Session(player) and PlayerData.Session(player).Passes.VIP then
 		player:SetAttribute("VIP", true) -- used for the [VIP] chat tag
 	end
+	Abilities.Grant(player)
 end
 
 Players.PlayerAdded:Connect(checkPasses)
@@ -1234,6 +1368,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passI
 		if name == "VIP" then
 			player:SetAttribute("VIP", true)
 		end
+		Abilities.Grant(player)
 		Remotes.Notify:FireClient(player, "Thanks for your support! Pass activated.", "good")
 	end
 end)
@@ -1550,6 +1685,7 @@ local function snapshot(player)
 		Equipped = data.Equipped,
 		Multiplier = PlayerData.Multiplier(player),
 		RunStart = session.RunStart, -- workspace:GetServerTimeNow() when the current run began
+		RunAssisted = session.RunAssisted, -- used a game-pass ability: time won't hit the leaderboard
 		DailyReady = PlayerData.DailyReady(data),
 		NextDailyDay = nextDay,
 		NextDailyReward = Config.DailyRewards[nextDay],
@@ -2320,6 +2456,184 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 ]==])
 local f_client = folder(game:GetService("StarterPlayer"):WaitForChild("StarterPlayerScripts"), "Client")
+add(f_client, "LocalScript", "Abilities", [==[
+-- Game-pass abilities on the player's own device:
+--   Double/Triple Jump (MaxJumps attribute, toggle with the player's "MultiJumpOff" attribute),
+--   Rocket Launcher (click to launch), Speed Coil and Gravity Coil (hold to use).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local function parts()
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return character, humanoid, root
+end
+
+local function puff(root, color, count)
+	local attachment = Instance.new("Attachment")
+	attachment.Position = Vector3.new(0, -2.5, 0)
+	attachment.Parent = root
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 0.6
+	emitter.Size = NumberSequence.new(0.9, 0)
+	emitter.Lifetime = NumberRange.new(0.3, 0.6)
+	emitter.Speed = NumberRange.new(6, 12)
+	emitter.SpreadAngle = Vector2.new(180, 20)
+	emitter.Rate = 0
+	emitter.Parent = attachment
+	emitter:Emit(count or 16)
+	task.delay(1, function()
+		attachment:Destroy()
+	end)
+end
+
+---------------------------------------------------------------- Double / triple jump
+local extraJumpsUsed = 0
+local airborneSince = 0
+
+RunService.Heartbeat:Connect(function()
+	local _, humanoid = parts()
+	if not humanoid then
+		return
+	end
+	if humanoid.FloorMaterial ~= Enum.Material.Air then
+		extraJumpsUsed = 0
+		airborneSince = os.clock()
+	end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+	local maxJumps = player:GetAttribute("MaxJumps") or 1
+	if maxJumps <= 1 or player:GetAttribute("MultiJumpOff") then
+		return
+	end
+	local _, humanoid, root = parts()
+	if not humanoid or not root or humanoid.Health <= 0 then
+		return
+	end
+	-- Only in mid-air, and not in the instant right after the normal jump (held jump key).
+	if humanoid.FloorMaterial ~= Enum.Material.Air or os.clock() - airborneSince < 0.2 then
+		return
+	end
+	if extraJumpsUsed >= maxJumps - 1 then
+		return
+	end
+	extraJumpsUsed += 1
+	airborneSince = os.clock()
+	local jumpVelocity = humanoid.UseJumpPower and humanoid.JumpPower or math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight)
+	local v = root.AssemblyLinearVelocity
+	root.AssemblyLinearVelocity = Vector3.new(v.X, jumpVelocity, v.Z)
+	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	puff(root, Color3.fromRGB(120, 230, 255))
+	Sfx.Play("JumpPad", 1.4)
+	Remotes.AssistUsed:FireServer()
+end)
+
+---------------------------------------------------------------- Tools
+local ROCKET_SPEED = 115
+local ROCKET_COOLDOWN = 1.2
+local SPEED_COIL_WALKSPEED = 26
+local GRAVITY_COIL_LIFT = 0.6 -- cancels this fraction of gravity
+
+local lastRocket = 0
+local hooked = {}
+
+local function hookTool(tool)
+	if not tool:IsA("Tool") or hooked[tool] then
+		return
+	end
+	hooked[tool] = true
+
+	if tool.Name == "Rocket Launcher" then
+		tool.Activated:Connect(function()
+			local _, humanoid, root = parts()
+			if not root or not humanoid or humanoid.Health <= 0 or os.clock() - lastRocket < ROCKET_COOLDOWN then
+				return
+			end
+			lastRocket = os.clock()
+			local direction = camera.CFrame.LookVector
+			root.AssemblyLinearVelocity = direction * ROCKET_SPEED + Vector3.new(0, 25, 0)
+			humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+			puff(root, Color3.fromRGB(255, 150, 40), 30)
+			Sfx.Play("JumpPad", 0.6)
+			Remotes.AssistUsed:FireServer()
+		end)
+	elseif tool.Name == "Speed Coil" then
+		local normalSpeed
+		tool.Equipped:Connect(function()
+			local _, humanoid = parts()
+			if humanoid then
+				normalSpeed = humanoid.WalkSpeed
+				humanoid.WalkSpeed = SPEED_COIL_WALKSPEED
+				Remotes.AssistUsed:FireServer()
+			end
+		end)
+		tool.Unequipped:Connect(function()
+			local _, humanoid = parts()
+			if humanoid and normalSpeed then
+				humanoid.WalkSpeed = normalSpeed
+			end
+		end)
+	elseif tool.Name == "Gravity Coil" then
+		local force, conn
+		tool.Equipped:Connect(function()
+			local _, _, root = parts()
+			if not root then
+				return
+			end
+			force = Instance.new("VectorForce")
+			local attachment = root:FindFirstChild("RootAttachment")
+			if not attachment then
+				attachment = Instance.new("Attachment")
+				attachment.Parent = root
+			end
+			force.Attachment0 = attachment
+			force.RelativeTo = Enum.ActuatorRelativeTo.World
+			force.ApplyAtCenterOfMass = true
+			force.Parent = root
+			conn = RunService.Heartbeat:Connect(function()
+				force.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity * GRAVITY_COIL_LIFT, 0)
+			end)
+			Remotes.AssistUsed:FireServer()
+		end)
+		tool.Unequipped:Connect(function()
+			if conn then
+				conn:Disconnect()
+			end
+			if force then
+				force:Destroy()
+			end
+		end)
+	end
+end
+
+local function watch(container)
+	for _, child in ipairs(container:GetChildren()) do
+		hookTool(child)
+	end
+	container.ChildAdded:Connect(hookTool)
+end
+
+player.CharacterAdded:Connect(function(character)
+	watch(character)
+	watch(player:WaitForChild("Backpack"))
+end)
+if player.Character then
+	watch(player.Character)
+end
+watch(player:WaitForChild("Backpack"))
+]==])
 add(f_client, "LocalScript", "Audio", [==[
 -- Background music (changes per zone, mute with the music button) and event sound effects.
 local Players = game:GetService("Players")
@@ -2543,6 +2857,8 @@ local COLORS = {
 }
 local FONT = Enum.Font.FredokaOne
 
+local refreshPasses -- defined with the game passes window
+
 local state = { Coins = 0, Stage = 1, Wins = 0, BestTime = 0, Owned = {}, Equipped = {}, Multiplier = 1, Passes = {} }
 
 ---------------------------------------------------------------- UI helpers
@@ -2723,7 +3039,7 @@ end
 local sideBar = make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(0, 12, 0.6, 0),
-	Size = UDim2.fromOffset(84, 460),
+	Size = UDim2.fromOffset(84, 560),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -2763,10 +3079,11 @@ local function sideButton(order, title, color, iconId, fallbackText, height)
 end
 
 local shopButton = sideButton(1, "SHOP", COLORS.Pink, Config.Images.ShopButton, "$")
-local dailyButton = sideButton(2, "DAILY", COLORS.Purple, Config.Images.Daily, "!")
-local inviteButton = sideButton(3, "INVITE", COLORS.Green, Config.Images.Invite, "+")
-local skipButton = sideButton(4, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
-local musicButton = sideButton(5, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
+local passesButton = sideButton(2, "PASSES", COLORS.Gold, Config.Images.Passes, "R$")
+local dailyButton = sideButton(3, "DAILY", COLORS.Purple, Config.Images.Daily, "!")
+local inviteButton = sideButton(4, "INVITE", COLORS.Green, Config.Images.Invite, "+")
+local skipButton = sideButton(5, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
+local musicButton = sideButton(6, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
 skipButton.Visible = Config.Products.SkipStage ~= 0
 
 local dailyDot = make("Frame", {
@@ -2825,46 +3142,9 @@ local closeButton = make("TextButton", {
 	Parent = shopWindow,
 }, { corner(10), stroke(2) })
 
--- Game pass buttons (only shown for passes that have an id in Config).
-local passBar = make("Frame", {
-	Position = UDim2.fromOffset(14, 62),
-	Size = UDim2.new(1, -28, 0, 44),
-	BackgroundTransparency = 1,
-	ZIndex = 5,
-	Parent = shopWindow,
-}, {
-	make("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		Padding = UDim.new(0, 10),
-	}),
-})
-local passButtons = {}
-local PASS_LABELS = { DoubleCoins = "2X COINS", VIP = "VIP" }
-for name, id in pairs(Config.GamePasses) do
-	if id ~= 0 then
-		local button = make("TextButton", {
-			Size = UDim2.fromOffset(200, 44),
-			BackgroundColor3 = name == "VIP" and COLORS.Gold or COLORS.Purple,
-			Font = FONT,
-			TextScaled = true,
-			TextColor3 = COLORS.Text,
-			Text = "Get " .. (PASS_LABELS[name] or name),
-			ZIndex = 5,
-			Parent = passBar,
-		}, { corner(10), stroke(2), make("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }) })
-		button.Activated:Connect(function()
-			MarketplaceService:PromptGamePassPurchase(player, id)
-		end)
-		passButtons[name] = button
-	end
-end
-local hasPassBar = next(passButtons) ~= nil
-passBar.Visible = hasPassBar
-
 local grid = make("ScrollingFrame", {
-	Position = UDim2.fromOffset(14, hasPassBar and 114 or 64),
-	Size = UDim2.new(1, -28, 1, hasPassBar and -128 or -78),
+	Position = UDim2.fromOffset(14, 64),
+	Size = UDim2.new(1, -28, 1, -78),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 6,
@@ -2979,6 +3259,175 @@ for index, item in ipairs(sorted) do
 	end)
 	cards[item.Id] = { Button = button, Item = item }
 end
+
+---------------------------------------------------------------- Game passes window
+local PassCatalog = require(Shared:WaitForChild("PassCatalog"))
+
+local passesWindow = make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromScale(0.9, 0.8),
+	BackgroundColor3 = COLORS.Panel,
+	Visible = false,
+	ZIndex = 5,
+	Parent = gui,
+}, {
+	corner(18),
+	stroke(4),
+	make("UISizeConstraint", { MaxSize = Vector2.new(660, 520) }),
+})
+text({
+	Position = UDim2.fromOffset(18, 10),
+	Size = UDim2.new(1, -90, 0, 44),
+	Text = "GAME PASSES",
+	TextColor3 = COLORS.Gold,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 5,
+	Parent = passesWindow,
+})
+local passesClose = make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -12, 0, 12),
+	Size = UDim2.fromOffset(40, 40),
+	BackgroundColor3 = COLORS.Red,
+	Font = FONT,
+	Text = "X",
+	TextScaled = true,
+	TextColor3 = COLORS.Text,
+	ZIndex = 5,
+	Parent = passesWindow,
+}, { corner(10), stroke(2) })
+local passGrid = make("ScrollingFrame", {
+	Position = UDim2.fromOffset(14, 64),
+	Size = UDim2.new(1, -28, 1, -78),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 6,
+	CanvasSize = UDim2.new(),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ZIndex = 5,
+	Parent = passesWindow,
+}, {
+	make("UIGridLayout", {
+		CellSize = UDim2.fromOffset(185, 230),
+		CellPadding = UDim2.fromOffset(12, 12),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
+	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }),
+})
+
+local JUMP_PASSES = { DoubleJump = true, TripleJump = true }
+local passCards = {} -- [key] = { Button, Pass, Id, Price }
+
+local function onPassClicked(card)
+	if state.Passes[card.Pass.Key] then
+		if JUMP_PASSES[card.Pass.Key] then
+			player:SetAttribute("MultiJumpOff", not player:GetAttribute("MultiJumpOff"))
+			refreshPasses()
+		end
+		return
+	end
+	MarketplaceService:PromptGamePassPurchase(player, card.Id)
+end
+
+for index, pass in ipairs(PassCatalog) do
+	local id = Config.GamePasses[pass.Key] or 0
+	if id ~= 0 then
+		local cardFrame = make("Frame", {
+			LayoutOrder = index,
+			BackgroundColor3 = COLORS.Card,
+			ZIndex = 5,
+			Parent = passGrid,
+		}, { corner(14), stroke(3) })
+		local art = make("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 8),
+			Size = UDim2.fromOffset(84, 84),
+			BackgroundColor3 = COLORS.Purple,
+			ScaleType = Enum.ScaleType.Fit,
+			ZIndex = 6,
+			Parent = cardFrame,
+		}, { corner(14) })
+		text({
+			Position = UDim2.new(0, 6, 0, 96),
+			Size = UDim2.new(1, -12, 0, 24),
+			Text = pass.Name,
+			TextColor3 = COLORS.Gold,
+			ZIndex = 6,
+			Parent = cardFrame,
+		})
+		text({
+			Position = UDim2.new(0, 8, 0, 122),
+			Size = UDim2.new(1, -16, 0, 50),
+			Text = pass.Description,
+			TextWrapped = true,
+			ZIndex = 6,
+			Parent = cardFrame,
+		})
+		local button = make("TextButton", {
+			Position = UDim2.new(0, 10, 1, -46),
+			Size = UDim2.new(1, -20, 0, 36),
+			Font = FONT,
+			TextScaled = true,
+			TextColor3 = COLORS.Text,
+			BackgroundColor3 = COLORS.Green,
+			Text = "Buy",
+			ZIndex = 6,
+			Parent = cardFrame,
+		}, { corner(10), stroke(2), make("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }) })
+		local card = { Button = button, Pass = pass, Id = id }
+		passCards[pass.Key] = card
+		button.Activated:Connect(function()
+			onPassClicked(card)
+		end)
+		-- Fetch the pass's real icon and price from Roblox.
+		task.spawn(function()
+			local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, Enum.InfoType.GamePass)
+			if ok and info then
+				if info.IconImageAssetId and info.IconImageAssetId ~= 0 then
+					art.Image = "rbxassetid://" .. info.IconImageAssetId
+					art.BackgroundTransparency = 1
+				end
+				card.Price = info.PriceInRobux
+				if refreshPasses then
+					refreshPasses()
+				end
+			end
+		end)
+	end
+end
+passesButton.Visible = next(passCards) ~= nil
+
+refreshPasses = function()
+	for key, card in pairs(passCards) do
+		local button = card.Button
+		if state.Passes[key] then
+			if JUMP_PASSES[key] then
+				local off = player:GetAttribute("MultiJumpOff")
+				button.Text = off and "Jumps: OFF" or "Jumps: ON"
+				button.BackgroundColor3 = off and COLORS.Grey or COLORS.Blue
+			else
+				button.Text = "Owned ✓"
+				button.BackgroundColor3 = COLORS.Grey
+			end
+		else
+			button.Text = card.Price and ("R$ " .. card.Price) or "Buy"
+			button.BackgroundColor3 = COLORS.Green
+		end
+	end
+end
+
+passesButton.Activated:Connect(function()
+	passesWindow.Visible = not passesWindow.Visible
+	shopWindow.Visible = false
+end)
+passesClose.Activated:Connect(function()
+	passesWindow.Visible = false
+end)
+shopButton.Activated:Connect(function()
+	passesWindow.Visible = false
+end)
 
 ---------------------------------------------------------------- Daily / invite / skip / music
 dailyButton.Activated:Connect(function()
@@ -3105,9 +3554,11 @@ local function confetti()
 	end)
 end
 
-Remotes.Won.OnClientEvent:Connect(function(elapsed, isNewBest, reward, wins)
+Remotes.Won.OnClientEvent:Connect(function(elapsed, isNewBest, reward, wins, assisted)
 	local lines = {}
-	if elapsed then
+	if elapsed and assisted then
+		table.insert(lines, "Time: " .. formatTime(elapsed) .. " (used passes - not ranked)")
+	elseif elapsed then
 		table.insert(lines, "Time: " .. formatTime(elapsed) .. (isNewBest and "  NEW BEST!" or ""))
 	else
 		table.insert(lines, "Start from stage 1 for a timed run!")
@@ -3155,9 +3606,7 @@ local function refresh()
 	end
 	lastZone = zone
 
-	for name, button in pairs(passButtons) do
-		button.Visible = not state.Passes[name]
-	end
+	refreshPasses()
 
 	for id, card in pairs(cards) do
 		local button, item = card.Button, card.Item
@@ -3180,7 +3629,8 @@ end
 RunService.RenderStepped:Connect(function()
 	if state.RunStart then
 		local best = state.BestTime > 0 and ("   Best " .. formatTime(state.BestTime)) or ""
-		timerLabel.Text = formatTime(workspace:GetServerTimeNow() - state.RunStart) .. best
+		local tag = state.RunAssisted and "  (passes used)" or ""
+		timerLabel.Text = formatTime(workspace:GetServerTimeNow() - state.RunStart) .. tag .. best
 	elseif state.BestTime > 0 then
 		timerLabel.Text = "Best " .. formatTime(state.BestTime)
 	else

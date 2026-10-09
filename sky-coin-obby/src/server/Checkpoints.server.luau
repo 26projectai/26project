@@ -16,16 +16,19 @@ local Badges = require(Server:WaitForChild("Badges"))
 local function win(player)
 	local data, session = PlayerData.Get(player), PlayerData.Session(player)
 	local elapsed = session.RunStart and (workspace:GetServerTimeNow() - session.RunStart)
+	local assisted = session.RunAssisted == true
 	session.RunStart = nil
+	session.RunAssisted = false
 
+	-- Runs that used game-pass abilities still earn wins + coins, but don't set best times.
 	local isNewBest = false
-	if elapsed and (data.BestTime == 0 or elapsed < data.BestTime) then
+	if elapsed and not assisted and (data.BestTime == 0 or elapsed < data.BestTime) then
 		data.BestTime = elapsed
 		isNewBest = true
 	end
 	data.Wins += 1
 	local reward = PlayerData.AddCoins(player, Config.WinReward, true)
-	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins)
+	Remotes.Won:FireClient(player, elapsed, isNewBest, reward, data.Wins, assisted)
 
 	Badges.Award(player, "FirstWin")
 	if data.Wins >= 10 then
@@ -119,6 +122,7 @@ local function onCharacterAdded(player, character)
 	local session = PlayerData.Session(player)
 	if data.Stage == 1 and session then
 		session.RunStart = workspace:GetServerTimeNow()
+		session.RunAssisted = false
 		PlayerData.Sync(player)
 	end
 end

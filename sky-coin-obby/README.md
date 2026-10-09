@@ -21,7 +21,8 @@ A 30-stage Roblox obby built to keep players coming back and bringing friends.
 - **Friend invites:** when a friend joins through your invite, you **both get +50 coins**.
 
 **Robux**
-- **2x Coins** game pass and **VIP** game pass (1.5× coins, VIP trail, `[VIP]` chat tag).
+- **Game passes:** Rocket Launcher, Double Jump, Triple Jump, Speed Coil, Gravity Coil, 2x Coins and VIP
+  (1.5× coins, VIP trail, `[VIP]` chat tag), all in an in-game **PASSES** store.
 - **Skip Stage** developer product.
 
 **Extras**
@@ -72,9 +73,15 @@ Go to the [Creator Hub](https://create.roblox.com) → **Creations** → your ex
 |---|---|---|---|
 | Pass: **2x Coins** | 99 R$ | `pass-2x-coins.png` | `Assets.GamePasses.DoubleCoins` |
 | Pass: **VIP** | 199 R$ | `pass-vip.png` | `Assets.GamePasses.VIP` |
+| Pass: **Rocket Launcher** | 299 R$ | `pass-rocket-launcher.png` | `Assets.GamePasses.RocketLauncher` |
+| Pass: **Triple Jump** | 99 R$ | `pass-triple-jump.png` | `Assets.GamePasses.TripleJump` |
+| Pass: **Double Jump** | 49 R$ | `pass-double-jump.png` | `Assets.GamePasses.DoubleJump` |
+| Pass: **Speed Coil** | 79 R$ | `pass-speed-coil.png` | `Assets.GamePasses.SpeedCoil` |
+| Pass: **Gravity Coil** | 79 R$ | `pass-gravity-coil.png` | `Assets.GamePasses.GravityCoil` |
 | Developer Product: **Skip Stage** | 15 R$ | `product-skip-stage.png` | `Assets.Products.SkipStage` |
 
-The buttons appear in-game automatically once an ID is set. **Badges** (under **Engagement → Badges**)
+Passes appear in the in-game **PASSES** store automatically once an ID is set, with their real icon and price.
+Runs that use Rocket / Jump / Coil passes still earn wins and coins but don't count for the Fastest Run board. **Badges** (under **Engagement → Badges**)
 go into `Assets.Badges` the same way.
 
 ## Part E: Turn on saving and go public
