@@ -79,18 +79,18 @@ Assets.Skyboxes = {
 -- Animated floor textures (art/floor-*.png). Upload them as images and paste the ids.
 -- "rbxassetid://0" = keep the plain material floor.
 Assets.Floors = {
-	Sky = "rbxassetid://0", -- art/floor-gold.png (molten gold)
-	Candy = "rbxassetid://0", -- art/floor-candy.png (bubblegum goo)
-	Space = "rbxassetid://0", -- art/floor-space.png (nebula void)
-	Lair = "rbxassetid://0", -- art/floor-lava.png (magma)
+	Sky = "rbxassetid://118334347239534", -- art/floor-gold.png (molten gold)
+	Candy = "rbxassetid://104839541243931", -- art/floor-candy.png (bubblegum goo)
+	Space = "rbxassetid://128786772816458", -- art/floor-space.png (nebula void)
+	Lair = "rbxassetid://86492301122667", -- art/floor-lava.png (magma)
 }
 
 -- Spinning world portal swirls (art/portal-*.png). "rbxassetid://0" = plain glowing portal.
 Assets.Portals = {
-	Sky = "rbxassetid://0", -- art/portal-sky.png
-	Candy = "rbxassetid://0", -- art/portal-candy.png
-	Space = "rbxassetid://0", -- art/portal-space.png
-	Lair = "rbxassetid://0", -- art/portal-lair.png
+	Sky = "rbxassetid://133903079187908", -- art/portal-sky.png
+	Candy = "rbxassetid://122790115664473", -- art/portal-candy.png
+	Space = "rbxassetid://123080754434628", -- art/portal-space.png
+	Lair = "rbxassetid://140172290427373", -- art/portal-lair.png
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
