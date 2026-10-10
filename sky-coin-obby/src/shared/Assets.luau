@@ -76,6 +76,15 @@ Assets.Skyboxes = {
 	Lair = { Bk = "rbxassetid://0", Dn = "rbxassetid://0", Ft = "rbxassetid://0", Lf = "rbxassetid://0", Rt = "rbxassetid://0", Up = "rbxassetid://0" },
 }
 
+-- Animated floor textures (art/floor-*.png). Upload them as images and paste the ids.
+-- "rbxassetid://0" = keep the plain material floor.
+Assets.Floors = {
+	Sky = "rbxassetid://0", -- art/floor-gold.png (molten gold)
+	Candy = "rbxassetid://0", -- art/floor-candy.png (bubblegum goo)
+	Space = "rbxassetid://0", -- art/floor-space.png (nebula void)
+	Lair = "rbxassetid://0", -- art/floor-lava.png (magma)
+}
+
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
 Assets.ItemIcons = {
 	RainbowTrail = "rbxassetid://0", -- art/item-rainbow-trail.png

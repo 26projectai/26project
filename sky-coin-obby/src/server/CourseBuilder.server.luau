@@ -531,8 +531,88 @@ do
 end
 
 ---------------------------------------------------------------- Kill floors (one per zone, out to the horizon)
+-- Each world's floor is a living "danger sea": two layers of its Higgsfield texture flowing in
+-- different directions (animated by the FloorFlow client script) plus rising particles.
 local FLOOR_MATERIALS = { Enum.Material.CrackedLava, Enum.Material.SmoothPlastic, Enum.Material.Neon, Enum.Material.CrackedLava }
 local FLOOR_WIDTH = 1400 -- studs across (z); parts max out at 2048
+local FLOOR_STYLES = {
+	{ -- Sky: Gary's molten gold
+		Key = "Sky",
+		Tint = Color3.fromRGB(255, 230, 160),
+		Tile = 70,
+		Flow = Vector2.new(4, 1.5),
+		Particle = { Color = Color3.fromRGB(255, 210, 60), Size = 3, Speed = 14, Rate = 80, Light = 1 },
+	},
+	{ -- Candy: bubblegum goo
+		Key = "Candy",
+		Tint = Color3.fromRGB(255, 255, 255),
+		Tile = 60,
+		Flow = Vector2.new(2.5, -2),
+		Particle = { Color = Color3.fromRGB(255, 170, 220), Size = 4, Speed = 8, Rate = 60, Light = 0.3, Bubble = true },
+	},
+	{ -- Space: nebula void
+		Key = "Space",
+		Tint = Color3.fromRGB(220, 200, 255),
+		Tile = 120,
+		Flow = Vector2.new(1.5, 1),
+		Transparency = 0.25,
+		Particle = { Color = Color3.fromRGB(150, 230, 255), Size = 1.5, Speed = 6, Rate = 70, Light = 1 },
+	},
+	{ -- Gary's Lair: magma
+		Key = "Lair",
+		Tint = Color3.fromRGB(255, 255, 255),
+		Tile = 80,
+		Flow = Vector2.new(3, 2),
+		Particle = { Color = Color3.fromRGB(255, 120, 30), Size = 2.5, Speed = 20, Rate = 110, Light = 1 },
+	},
+}
+
+local function floorLayer(floor, image, style, scale, flow, transparency)
+	local texture = Instance.new("Texture")
+	texture.Name = "FlowLayer"
+	texture.Face = Enum.NormalId.Top
+	texture.Texture = image
+	texture.Color3 = style.Tint
+	texture.StudsPerTileU = style.Tile * scale
+	texture.StudsPerTileV = style.Tile * scale
+	texture.Transparency = transparency
+	texture:SetAttribute("FlowU", flow.X)
+	texture:SetAttribute("FlowV", flow.Y)
+	texture.Parent = floor
+	CollectionService:AddTag(texture, "FlowTexture")
+end
+
+local function decorateFloor(floor, style)
+	local image = Config.Floors[style.Key]
+	if image and image ~= "" and image ~= "rbxassetid://0" then
+		floor.Material = Enum.Material.SmoothPlastic
+		floor.Color = Color3.fromRGB(20, 20, 30)
+		-- base layer + a bigger, see-through layer drifting the other way = flowing depth
+		floorLayer(floor, image, style, 1, style.Flow, style.Transparency or 0)
+		floorLayer(floor, image, style, 1.7, -style.Flow * 0.6, 0.6)
+	end
+	local p = style.Particle
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "FloorFx"
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.Color = ColorSequence.new(p.Color)
+	emitter.LightEmission = p.Light
+	emitter.Rate = p.Rate
+	emitter.Lifetime = NumberRange.new(2, 4)
+	emitter.Speed = NumberRange.new(p.Speed * 0.6, p.Speed)
+	emitter.SpreadAngle = Vector2.new(15, 15)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, p.Size),
+		NumberSequenceKeypoint.new(0.7, p.Size * (p.Bubble and 1.4 or 0.8)),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, p.Bubble and 0.3 or 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.Parent = floor
+end
+
 for zIndex, zone in ipairs(Config.Zones) do
 	if zIndex > #THEMES then
 		break
@@ -540,13 +620,20 @@ for zIndex, zone in ipairs(Config.Zones) do
 	local nextZone = Config.Zones[zIndex + 1]
 	local xStart = (zone.FirstStage - 1) * SPACING - (zIndex == 1 and 600 or 0)
 	local xEnd = nextZone and (nextZone.FirstStage - 1) * SPACING or (STAGES - 1) * SPACING + 600
-	local floor = killBrick(Vector3.new((xStart + xEnd) / 2, BASE_Y - 30, 0), Vector3.new(xEnd - xStart, 2, FLOOR_WIDTH))
-	floor.Name = "Floor"
-	floor.Color = THEMES[zIndex].Floor
-	floor.Material = FLOOR_MATERIALS[zIndex] or Enum.Material.SmoothPlastic
-	floor.CastShadow = false
-	if zIndex == 3 then
-		floor.Transparency = 0.45 -- see the asteroid belt below the space void
+	-- Parts max out at 2048 studs, so long zones get several floor pieces.
+	local pieces = math.ceil((xEnd - xStart) / 2000)
+	local pieceLength = (xEnd - xStart) / pieces
+	for i = 0, pieces - 1 do
+		local x0 = xStart + i * pieceLength
+		local floor = killBrick(Vector3.new(x0 + pieceLength / 2, BASE_Y - 30, 0), Vector3.new(pieceLength, 2, FLOOR_WIDTH))
+		floor.Name = "Floor"
+		floor.Color = THEMES[zIndex].Floor
+		floor.Material = FLOOR_MATERIALS[zIndex] or Enum.Material.SmoothPlastic
+		floor.CastShadow = false
+		if zIndex == 3 then
+			floor.Transparency = 0.45 -- see the asteroid belt below the space void
+		end
+		decorateFloor(floor, FLOOR_STYLES[zIndex])
 	end
 end
 
