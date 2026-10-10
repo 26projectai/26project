@@ -49,5 +49,14 @@ file name shown, then follow **Part C** in the main README to upload them to Rob
 | `landmark-sky.glb` | **3D model**: Sky castle → ServerStorage/Landmarks/`Sky` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143140_f9c37c72-a446-4bd0-b628-e20b088b626b.glb) |
 | `landmark-candy.glb` | **3D model**: Candy castle → ServerStorage/Landmarks/`Candy` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143143_a7d0e28e-747c-4879-abdf-6f1ccad06c16.glb) |
 | `landmark-space.glb` | **3D model**: Space station → ServerStorage/Landmarks/`Space` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261009_143146_eca144f2-2b4a-4060-a2be-ba818ed55d3f.glb) |
+| `badge-welcome.png` | Badge: Welcome! | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002226_572d0ce1-a2cc-453f-8eb8-49df21382a15.png) |
+| `badge-candy.png` | Badge: Reached Candy Land | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002227_cd11b1e9-e246-49f0-9aee-b642650f775d.png) |
+| `badge-space.png` | Badge: Reached Outer Space | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002228_9237ede3-cd48-4efa-baf9-e72352702822.png) |
+| `badge-lair.png` | Badge: Reached Gary's Lair | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002227_b457d99f-aa6d-47f0-a241-ac10a58a0deb.png) |
+| `badge-escaped.png` | Badge: Escaped Gary (first win) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002227_a32491cb-5407-4e63-865f-ee664bdd873b.png) |
+| `badge-10wins.png` | Badge: 10 Wins | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002226_8b179577-b528-4948-968e-83ec26ddac91.png) |
+| `badge-op100.png` | Badge: OP Stage 100 | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002228_440aa185-bd4d-4b19-8fa1-b0eea99e88e3.png) |
+| `badge-op500.png` | Badge: OP Stage 500 | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002228_946142f0-8c1b-4ee0-8a8f-28f557365c5c.png) |
+| `badge-op1000.png` | Badge: OP Stage 1000 | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002227_ba781478-d086-474b-8133-915915606f64.png) |
 
 All of these are also in your Higgsfield account under your generation history.
