@@ -6,13 +6,13 @@ local Assets = {}
 
 -- Robux items. Create them on the Creator Hub, then paste the ids here (0 = hidden).
 Assets.GamePasses = {
-	DoubleCoins = 0, -- 2x coins forever
-	VIP = 0, -- 1.5x coins, VIP trail, [VIP] chat tag
-	RocketLauncher = 0, -- rocket tool: blast off where you look
-	DoubleJump = 0, -- 1 extra mid-air jump
-	TripleJump = 0, -- 2 extra mid-air jumps
-	SpeedCoil = 0, -- hold to run 60% faster
-	GravityCoil = 0, -- hold to float
+	DoubleCoins = 2025200302, -- 2x coins forever
+	VIP = 2027162312, -- 1.5x coins, VIP trail, [VIP] chat tag
+	RocketLauncher = 2026628307, -- rocket tool: blast off where you look
+	DoubleJump = 2026136310, -- 1 extra mid-air jump
+	TripleJump = 2025812309, -- 2 extra mid-air jumps
+	SpeedCoil = 2025584314, -- hold to run 60% faster
+	GravityCoil = 2026400306, -- hold to float
 }
 Assets.Products = {
 	SkipStage = 3717552827, -- skip the current stage
