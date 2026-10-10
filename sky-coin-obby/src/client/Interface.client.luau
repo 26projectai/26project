@@ -333,18 +333,27 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------- Shop window
+-- Windows live in their own layer above every other button/bar on screen.
+local windowsGui = make("ScreenGui", {
+	Name = "ObbyWindows",
+	ResetOnSpawn = false,
+	DisplayOrder = 20,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
 local shopWindow = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromScale(0.9, 0.8),
+	Size = UDim2.fromScale(0.92, 0.86),
 	BackgroundColor3 = COLORS.Panel,
 	Visible = false,
 	ZIndex = 5,
-	Parent = gui,
+	Parent = windowsGui,
 }, {
 	corner(18),
 	stroke(4),
-	make("UISizeConstraint", { MaxSize = Vector2.new(660, 500) }),
+	make("UISizeConstraint", { MaxSize = Vector2.new(720, 540) }),
 })
 text({
 	Position = UDim2.fromOffset(18, 10),
@@ -368,9 +377,25 @@ local closeButton = make("TextButton", {
 	Parent = shopWindow,
 }, { corner(10), stroke(2) })
 
+-- Category tabs
+local tabBar = make("Frame", {
+	Position = UDim2.fromOffset(14, 60),
+	Size = UDim2.new(1, -28, 0, 34),
+	BackgroundTransparency = 1,
+	ZIndex = 5,
+	Parent = shopWindow,
+}, {
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
+})
+
 local grid = make("ScrollingFrame", {
-	Position = UDim2.fromOffset(14, 64),
-	Size = UDim2.new(1, -28, 1, -78),
+	Position = UDim2.fromOffset(14, 102),
+	Size = UDim2.new(1, -28, 1, -116),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 6,
@@ -425,13 +450,69 @@ local function onCardClicked(item)
 	Sfx.Play(ok and action == "Buy" and "Purchase" or "Click")
 end
 
+local SLOT_ORDER = { Trail = 1, Aura = 2, Halo = 3, Hat = 4, Back = 5, Pet = 6 }
+local SLOT_NAME = { Trail = "Trail", Aura = "Aura", Halo = "Halo", Hat = "Hat", Back = "Wings", Pet = "Pet" }
+local function unlockLevel(item)
+	return (item.Stage or 0) + (item.OPStage and 100 + item.OPStage or 0)
+end
 local sorted = table.clone(Catalog.Items)
 table.sort(sorted, function(a, b)
 	if (a.RequiresVIP or false) ~= (b.RequiresVIP or false) then
 		return b.RequiresVIP == true
 	end
-	return a.Price < b.Price
+	if (a.UnlockText ~= nil) ~= (b.UnlockText ~= nil) then
+		return b.UnlockText ~= nil
+	end
+	if unlockLevel(a) ~= unlockLevel(b) then
+		return unlockLevel(a) < unlockLevel(b)
+	end
+	if a.Price ~= b.Price then
+		return a.Price < b.Price
+	end
+	return (SLOT_ORDER[a.Slot] or 9) < (SLOT_ORDER[b.Slot] or 9)
 end)
+
+local currentTab = Catalog.Tabs[1]
+local tabButtons = {}
+local function applyTab()
+	for _, card in pairs(cards) do
+		card.Frame.Visible = currentTab.Slots == nil or currentTab.Slots[card.Item.Slot] == true
+	end
+	for tab, button in pairs(tabButtons) do
+		button.BackgroundColor3 = tab == currentTab and COLORS.Gold or COLORS.Card
+	end
+	grid.CanvasPosition = Vector2.zero
+end
+for index, tab in ipairs(Catalog.Tabs) do
+	local button = make("TextButton", {
+		LayoutOrder = index,
+		Size = UDim2.new(1 / #Catalog.Tabs, -6, 1, 0),
+		BackgroundColor3 = COLORS.Card,
+		Font = FONT,
+		Text = tab.Name,
+		TextScaled = true,
+		TextColor3 = COLORS.Text,
+		ZIndex = 6,
+		Parent = tabBar,
+	}, { corner(10), stroke(2), make("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }) })
+	button.Activated:Connect(function()
+		currentTab = tab
+		Sfx.Play("Click")
+		applyTab()
+	end)
+	tabButtons[tab] = button
+end
+
+local function subtitleFor(item)
+	if item.RequiresVIP then
+		return "VIP only"
+	elseif item.UnlockText then
+		return "Milestone reward"
+	elseif item.CoinBoost then
+		return ("Pet  •  +%d%% coins"):format(math.floor(item.CoinBoost * 100 + 0.5))
+	end
+	return SLOT_NAME[item.Slot] or item.Slot
+end
 
 for index, item in ipairs(sorted) do
 	local card = make("Frame", {
@@ -440,8 +521,8 @@ for index, item in ipairs(sorted) do
 		ZIndex = 5,
 		Parent = grid,
 	}, { corner(14), stroke(3) })
-	local fallbackColor = item.Slot == "Trail" and COLORS.Blue or COLORS.Pink
-	local art = icon(item.Icon, fallbackColor, item.Name:sub(1, 1), {
+	local fallbackColor = ({ Trail = COLORS.Blue, Aura = COLORS.Pink, Halo = COLORS.Gold, Hat = COLORS.Purple, Back = COLORS.Green, Pet = COLORS.Orange })[item.Slot] or COLORS.Pink
+	local art = icon(item.Icon, fallbackColor, item.Emoji or item.Name:sub(1, 1), {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 8),
 		Size = UDim2.fromOffset(88, 88),
@@ -463,8 +544,8 @@ for index, item in ipairs(sorted) do
 	text({
 		Position = UDim2.new(0, 6, 0, 122),
 		Size = UDim2.new(1, -12, 0, 16),
-		Text = item.RequiresVIP and "VIP only" or item.UnlockText and "Milestone reward" or item.Slot,
-		TextColor3 = item.RequiresVIP and COLORS.Gold or Color3.fromRGB(190, 190, 220),
+		Text = subtitleFor(item),
+		TextColor3 = (item.RequiresVIP or item.CoinBoost) and COLORS.Gold or Color3.fromRGB(190, 190, 220),
 		ZIndex = 6,
 		Parent = card,
 	})
@@ -483,20 +564,31 @@ for index, item in ipairs(sorted) do
 	button.Activated:Connect(function()
 		onCardClicked(item)
 	end)
-	cards[item.Id] = { Button = button, Item = item }
+	cards[item.Id] = { Button = button, Item = item, Frame = card }
 end
+applyTab()
+
+-- Hide the Roblox tool hotbar while a window is open (it would sit on top of the cards).
+local function syncHotbar()
+	local open = shopWindow.Visible or (windowsGui:FindFirstChild("PassesWindow") and windowsGui.PassesWindow.Visible)
+	pcall(function()
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not open)
+	end)
+end
+shopWindow:GetPropertyChangedSignal("Visible"):Connect(syncHotbar)
 
 ---------------------------------------------------------------- Game passes window
 local PassCatalog = require(Shared:WaitForChild("PassCatalog"))
 
 local passesWindow = make("Frame", {
+	Name = "PassesWindow",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
 	Size = UDim2.fromScale(0.9, 0.8),
 	BackgroundColor3 = COLORS.Panel,
 	Visible = false,
 	ZIndex = 5,
-	Parent = gui,
+	Parent = windowsGui,
 }, {
 	corner(18),
 	stroke(4),
@@ -863,6 +955,9 @@ local function refresh()
 		elseif item.UnlockText then
 			button.Text = item.UnlockText
 			button.BackgroundColor3 = COLORS.Grey
+		elseif Catalog.LockText(item, state.MaxStage, state.MaxOPStage) then
+			button.Text = "🔒 " .. Catalog.LockText(item, state.MaxStage, state.MaxOPStage)
+			button.BackgroundColor3 = COLORS.Grey
 		else
 			button.Text = "$ " .. item.Price
 			button.BackgroundColor3 = state.Coins >= item.Price and COLORS.Gold or COLORS.Grey
@@ -919,6 +1014,8 @@ TextChatService.OnIncomingMessage = function(message)
 	end
 	return properties
 end
+
+passesWindow:GetPropertyChangedSignal("Visible"):Connect(syncHotbar)
 
 ---------------------------------------------------------------- Fit small screens (phones)
 local hudScale = make("UIScale", { Parent = hud })

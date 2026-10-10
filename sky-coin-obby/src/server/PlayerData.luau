@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
 
 local AUTOSAVE_SECONDS = 120
 
@@ -179,6 +180,11 @@ function PlayerData.Multiplier(player)
 	if rarity and rarity.CoinBoost then
 		mult *= rarity.CoinBoost
 	end
+	-- Pets from the shop add a bonus while equipped.
+	local pet = data.Equipped and data.Equipped.Pet and ShopCatalog.Get(data.Equipped.Pet)
+	if pet and pet.CoinBoost and data.Owned[pet.Id] then
+		mult *= 1 + pet.CoinBoost
+	end
 	return mult
 end
 
@@ -204,6 +210,7 @@ local function snapshot(player)
 		NextDailyReward = Config.DailyRewards[nextDay],
 		Passes = session.Passes,
 		MaxStage = data.MaxStage,
+		MaxOPStage = math.max(data.MaxOPStage or 1, data.OPStage or 1),
 		Unlocks = data.Unlocks,
 		Draw = PlayerData.ActiveDraw(player) and data.Draw or nil,
 		DrawSecondsLeft = PlayerData.ActiveDraw(player) and (data.Draw.Expires - os.time()) or 0,
@@ -270,6 +277,7 @@ function PlayerData.SetOPStage(player, stage)
 	local data = PlayerData.Get(player)
 	if data then
 		data.OPStage = stage
+		data.MaxOPStage = math.max(data.MaxOPStage or 1, stage)
 		PlayerData.Sync(player)
 	end
 end

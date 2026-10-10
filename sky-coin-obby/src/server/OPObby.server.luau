@@ -194,6 +194,7 @@ Remotes.TeleportOPTier.OnServerInvoke = function(player, tier)
 	if stage > data.OPStage then
 		return false, "Reach that tier first!"
 	end
+	data.MaxOPStage = math.max(data.MaxOPStage or 1, data.OPStage) -- keep shop unlocks when going back
 	data.OPStage = stage
 	if data.Mode ~= "OP" then
 		setMode(player, "OP")

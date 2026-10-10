@@ -460,9 +460,11 @@ return Sfx
 ]==])
 add(f_shared, "ModuleScript", "ShopCatalog", [==[
 -- Everything sold in the cosmetic shop.
--- Slot: "Trail" or "Aura" (a player can equip one of each).
+-- Slot: "Trail", "Aura", "Halo", "Hat", "Back" or "Pet" (a player can equip one of each).
+-- Stage / OPStage: you must have reached that story / OP stage before you can buy it.
+-- CoinBoost (pets): extra coins while equipped, e.g. 0.1 = +10%.
 -- RequiresVIP: only VIP game pass owners can get it.
--- Icons come from Assets.ItemIcons.
+-- Icons come from Assets.ItemIcons; without one the card shows the Emoji.
 local ShopCatalog = {}
 
 ShopCatalog.Items = {
@@ -605,6 +607,94 @@ ShopCatalog.Items = {
 		}),
 	},
 }
+
+local function cs(...)
+	local colors = { ... }
+	local points = {}
+	for i, color in ipairs(colors) do
+		table.insert(points, ColorSequenceKeypoint.new((i - 1) / math.max(#colors - 1, 1), color))
+	end
+	if #points == 1 then
+		table.insert(points, ColorSequenceKeypoint.new(1, colors[1]))
+	end
+	return ColorSequence.new(points)
+end
+local rgb = Color3.fromRGB
+
+-- More items, unlocked as you climb. Prices rise with the stage they unlock at.
+local MORE = {
+	-- Trails
+	{ Id = "CandyTrail", Name = "Candy Cane Trail", Slot = "Trail", Price = 400, Stage = 26, Emoji = "🍭", Color = cs(rgb(255, 255, 255), rgb(255, 60, 90), rgb(255, 255, 255), rgb(255, 60, 90)) },
+	{ Id = "StarlightTrail", Name = "Starlight Trail", Slot = "Trail", Price = 800, Stage = 51, Emoji = "🌠", Color = cs(rgb(255, 255, 200), rgb(140, 120, 255), rgb(20, 10, 60)) },
+	{ Id = "MagmaTrail", Name = "Magma Trail", Slot = "Trail", Price = 1200, Stage = 76, Emoji = "🌋", Color = cs(rgb(255, 230, 80), rgb(255, 80, 0), rgb(40, 10, 10)) },
+	{ Id = "GoldRushTrail", Name = "Gold Rush Trail", Slot = "Trail", Price = 2500, OPStage = 50, Emoji = "💰", Color = cs(rgb(255, 255, 220), rgb(255, 200, 40), rgb(200, 120, 0)) },
+	{ Id = "VoidTrail", Name = "Void Trail", Slot = "Trail", Price = 6000, OPStage = 300, Emoji = "🕳️", Color = cs(rgb(200, 0, 255), rgb(10, 0, 20), rgb(0, 255, 200)) },
+	{ Id = "PrismTrail", Name = "Prismatic Trail", Slot = "Trail", Price = 15000, OPStage = 700, Emoji = "💎", Color = cs(rgb(255, 0, 120), rgb(255, 200, 0), rgb(0, 255, 120), rgb(0, 160, 255), rgb(200, 0, 255)) },
+
+	-- Auras (Kind "Particles" = coloured particles; Smoke = dark smoke)
+	{ Id = "SnowAura", Name = "Snow Aura", Slot = "Aura", Kind = "Particles", Price = 350, Stage = 15, Emoji = "❄️", Color = cs(rgb(255, 255, 255), rgb(170, 220, 255)), Rate = 14, Size = 0.4, Accel = Vector3.new(0, -4, 0) },
+	{ Id = "HeartAura", Name = "Heart Aura", Slot = "Aura", Kind = "Particles", Price = 600, Stage = 35, Emoji = "💖", Color = cs(rgb(255, 120, 180), rgb(255, 40, 120)), Rate = 10, Size = 0.6, Accel = Vector3.new(0, 3, 0) },
+	{ Id = "GalaxyAura", Name = "Galaxy Aura", Slot = "Aura", Kind = "Particles", Price = 1000, Stage = 55, Emoji = "🌌", Color = cs(rgb(120, 230, 255), rgb(170, 80, 255), rgb(255, 255, 255)), Rate = 24, Size = 0.35, Accel = Vector3.zero },
+	{ Id = "ShadowAura", Name = "Shadow Aura", Slot = "Aura", Kind = "Smoke", Price = 1800, Stage = 85, Emoji = "🌑", Color = rgb(30, 10, 40) },
+	{ Id = "CoinRainAura", Name = "Coin Rain Aura", Slot = "Aura", Kind = "Particles", Price = 4000, OPStage = 150, Emoji = "🪙", Color = cs(rgb(255, 230, 90), rgb(255, 180, 20)), Rate = 12, Size = 0.7, Accel = Vector3.new(0, -12, 0), Above = true },
+
+	-- Hats
+	{ Id = "PartyHat", Name = "Party Hat", Slot = "Hat", Kind = "PartyHat", Price = 150, Stage = 5, Emoji = "🥳", Color = rgb(255, 80, 200) },
+	{ Id = "CatEars", Name = "Cat Ears", Slot = "Hat", Kind = "CatEars", Price = 300, Stage = 12, Emoji = "🐱", Color = rgb(255, 170, 200) },
+	{ Id = "TopHat", Name = "Greedy Top Hat", Slot = "Hat", Kind = "TopHat", Price = 700, Stage = 30, Emoji = "🎩", Color = rgb(30, 25, 35) },
+	{ Id = "DevilHorns", Name = "Devil Horns", Slot = "Hat", Kind = "Horns", Price = 1200, Stage = 60, Emoji = "😈", Color = rgb(220, 20, 40) },
+	{ Id = "GoldCrown", Name = "Golden Crown", Slot = "Hat", Kind = "Crown", Price = 3000, Stage = 100, Emoji = "👑", Color = rgb(255, 200, 40) },
+	{ Id = "DiamondCrown", Name = "Diamond Crown", Slot = "Hat", Kind = "Crown", Price = 8000, OPStage = 400, Emoji = "💠", Color = rgb(170, 235, 255) },
+
+	-- Wings (Back)
+	{ Id = "FairyWings", Name = "Fairy Wings", Slot = "Back", Kind = "Wings", Price = 500, Stage = 18, Emoji = "🧚", Color = rgb(170, 255, 230), Neon = true, Transparency = 0.35 },
+	{ Id = "BatWings", Name = "Bat Wings", Slot = "Back", Kind = "Wings", Price = 900, Stage = 40, Emoji = "🦇", Color = rgb(40, 30, 50) },
+	{ Id = "AngelWings", Name = "Angel Wings", Slot = "Back", Kind = "Wings", Price = 2000, Stage = 70, Emoji = "👼", Color = rgb(255, 255, 255), Neon = true, Transparency = 0.1 },
+	{ Id = "Jetpack", Name = "Rocket Jetpack", Slot = "Back", Kind = "Jetpack", Price = 3500, Stage = 90, Emoji = "🚀", Color = rgb(200, 205, 215) },
+	{ Id = "DragonWings", Name = "Dragon Wings", Slot = "Back", Kind = "Wings", Price = 10000, OPStage = 600, Emoji = "🐉", Color = rgb(200, 30, 30), Neon = true },
+
+	-- Pets: follow you around AND give bonus coins
+	{ Id = "CoinBuddy", Name = "Coin Buddy", Slot = "Pet", Kind = "Coin", Price = 250, Stage = 8, Emoji = "🪙", Color = rgb(255, 200, 40), CoinBoost = 0.05 },
+	{ Id = "SlimePet", Name = "Bouncy Slime", Slot = "Pet", Kind = "Blob", Price = 750, Stage = 22, Emoji = "🟢", Color = rgb(90, 230, 120), CoinBoost = 0.1 },
+	{ Id = "GhostPet", Name = "Ghosty", Slot = "Pet", Kind = "Ghost", Price = 1500, Stage = 45, Emoji = "👻", Color = rgb(240, 240, 255), CoinBoost = 0.15 },
+	{ Id = "MiniGary", Name = "Mini Gary", Slot = "Pet", Kind = "Gary", Price = 4000, Stage = 80, Emoji = "😈", Color = rgb(120, 200, 60), CoinBoost = 0.25 },
+	{ Id = "StarPup", Name = "Star Pup", Slot = "Pet", Kind = "Star", Price = 9000, OPStage = 200, Emoji = "⭐", Color = rgb(255, 230, 90), CoinBoost = 0.35 },
+	{ Id = "GoldDragon", Name = "Golden Dragon", Slot = "Pet", Kind = "Dragon", Price = 25000, OPStage = 800, Emoji = "🐲", Color = rgb(255, 190, 30), CoinBoost = 0.5 },
+}
+for _, item in ipairs(MORE) do
+	table.insert(ShopCatalog.Items, item)
+end
+
+-- Emojis for the original items (shown when no icon image is set).
+local EMOJI = {
+	RainbowTrail = "🌈", FireTrail = "🔥", GalaxyTrail = "🌌", SparkleAura = "✨", FireAura = "🔥",
+	GoldenGlow = "🌟", BubbleAura = "🫧", LightningTrail = "⚡", CometTrail = "☄️", RebirthTrail = "🔁",
+	ChampionHalo = "😇", OPHalo = "💥", VIPTrail = "💎",
+}
+for _, item in ipairs(ShopCatalog.Items) do
+	item.Emoji = item.Emoji or EMOJI[item.Id]
+end
+
+-- Shop tabs, in order.
+ShopCatalog.Tabs = {
+	{ Name = "ALL" },
+	{ Name = "TRAILS", Slots = { Trail = true } },
+	{ Name = "AURAS", Slots = { Aura = true, Halo = true } },
+	{ Name = "HATS", Slots = { Hat = true } },
+	{ Name = "WINGS", Slots = { Back = true } },
+	{ Name = "PETS", Slots = { Pet = true } },
+}
+
+-- "Reach stage 26" style lock text, or nil if this player has unlocked it.
+function ShopCatalog.LockText(item, maxStage, maxOP)
+	if item.Stage and (maxStage or 1) < item.Stage then
+		return "Stage " .. item.Stage
+	end
+	if item.OPStage and (maxOP or 1) < item.OPStage then
+		return "OP " .. item.OPStage
+	end
+	return nil
+end
 
 local Assets = require(script.Parent:WaitForChild("Assets"))
 
@@ -4242,6 +4332,7 @@ Remotes.TeleportOPTier.OnServerInvoke = function(player, tier)
 	if stage > data.OPStage then
 		return false, "Reach that tier first!"
 	end
+	data.MaxOPStage = math.max(data.MaxOPStage or 1, data.OPStage) -- keep shop unlocks when going back
 	data.OPStage = stage
 	if data.Mode ~= "OP" then
 		setMode(player, "OP")
@@ -4381,6 +4472,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
 
 local AUTOSAVE_SECONDS = 120
 
@@ -4553,6 +4645,11 @@ function PlayerData.Multiplier(player)
 	if rarity and rarity.CoinBoost then
 		mult *= rarity.CoinBoost
 	end
+	-- Pets from the shop add a bonus while equipped.
+	local pet = data.Equipped and data.Equipped.Pet and ShopCatalog.Get(data.Equipped.Pet)
+	if pet and pet.CoinBoost and data.Owned[pet.Id] then
+		mult *= 1 + pet.CoinBoost
+	end
 	return mult
 end
 
@@ -4578,6 +4675,7 @@ local function snapshot(player)
 		NextDailyReward = Config.DailyRewards[nextDay],
 		Passes = session.Passes,
 		MaxStage = data.MaxStage,
+		MaxOPStage = math.max(data.MaxOPStage or 1, data.OPStage or 1),
 		Unlocks = data.Unlocks,
 		Draw = PlayerData.ActiveDraw(player) and data.Draw or nil,
 		DrawSecondsLeft = PlayerData.ActiveDraw(player) and (data.Draw.Expires - os.time()) or 0,
@@ -4644,6 +4742,7 @@ function PlayerData.SetOPStage(player, stage)
 	local data = PlayerData.Get(player)
 	if data then
 		data.OPStage = stage
+		data.MaxOPStage = math.max(data.MaxOPStage or 1, stage)
 		PlayerData.Sync(player)
 	end
 end
@@ -5971,6 +6070,32 @@ local function addAura(character, root, item)
 		fire.Size = 6
 		fire.Heat = 4
 		fire.Parent = root
+	elseif item.Kind == "Particles" then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter:SetAttribute("Cosmetic", true)
+		emitter.Color = item.Color
+		emitter.LightEmission = 0.8
+		emitter.Rate = item.Rate or 15
+		emitter.Lifetime = NumberRange.new(1, 1.8)
+		emitter.Speed = NumberRange.new(0.5, 2)
+		emitter.Acceleration = item.Accel or Vector3.zero
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Size = NumberSequence.new(item.Size or 0.4, 0)
+		if item.Above then
+			local att = cosmetic("Attachment", root)
+			att.Position = Vector3.new(0, 4, 0)
+			emitter.Parent = att
+		else
+			emitter.Parent = root
+		end
+	elseif item.Kind == "Smoke" then
+		local smoke = Instance.new("Smoke")
+		smoke:SetAttribute("Cosmetic", true)
+		smoke.Color = item.Color
+		smoke.Opacity = 0.25
+		smoke.Size = 1.5
+		smoke.RiseVelocity = 1.5
+		smoke.Parent = root
 	elseif item.Kind == "Glow" then
 		local highlight = Instance.new("Highlight")
 		highlight:SetAttribute("Cosmetic", true)
@@ -6017,6 +6142,172 @@ local function addHalo(character, item)
 	halo.Parent = character
 end
 
+---------------------------------------------------------------- Hats, wings and pets (built from parts)
+-- Each piece is welded to the head / root, massless and non-colliding, so it never affects movement.
+local function piece(character, anchor, offset, props)
+	local p = Instance.new("Part")
+	p:SetAttribute("Cosmetic", true)
+	p.Name = "Cosmetic"
+	p.Anchored = false
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.Massless = true
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for key, value in pairs(props) do
+		p[key] = value
+	end
+	p.CFrame = anchor.CFrame * offset
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = anchor
+	weld.Part1 = p
+	weld.Parent = p
+	p.Parent = character
+	return p
+end
+
+local UP = CFrame.Angles(0, 0, math.rad(90)) -- stands a cylinder upright
+local GOLD = Color3.fromRGB(255, 200, 40)
+
+local function addHat(character, item)
+	local head = character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local top = head.Size.Y / 2
+	local c = item.Color
+	if item.Kind == "PartyHat" then
+		for k = 0, 4 do
+			local d = 1.3 - k * 0.26
+			piece(character, head, CFrame.new(0, top + 0.15 + k * 0.28, 0) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, d, d),
+				Color = k % 2 == 0 and c or Color3.fromRGB(255, 230, 80),
+			})
+		end
+		piece(character, head, CFrame.new(0, top + 1.6, 0), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.4, Color = Color3.new(1, 1, 1), Material = Enum.Material.Neon })
+	elseif item.Kind == "CatEars" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, head, CFrame.new(side * 0.45, top + 0.3, 0) * CFrame.Angles(0, math.rad(90), math.rad(side * -12)), {
+				Size = Vector3.new(0.2, 0.7, 0.55), Color = c,
+			})
+			piece(character, head, CFrame.new(side * 0.45, top + 0.27, -0.05) * CFrame.Angles(0, 0, math.rad(side * -12)), {
+				Size = Vector3.new(0.3, 0.45, 0.1), Color = Color3.fromRGB(255, 220, 230),
+			})
+		end
+	elseif item.Kind == "TopHat" then
+		piece(character, head, CFrame.new(0, top + 0.05, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, 1.9, 1.9), Color = c })
+		piece(character, head, CFrame.new(0, top + 0.65, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.1, 1.25, 1.25), Color = c })
+		piece(character, head, CFrame.new(0, top + 0.3, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.22, 1.28, 1.28), Color = GOLD, Material = Enum.Material.Metal })
+	elseif item.Kind == "Horns" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, head, CFrame.new(side * 0.4, top + 0.25, 0) * CFrame.Angles(0, 0, math.rad(side * -25)) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 0.32, 0.32), Color = c,
+			})
+			piece(character, head, CFrame.new(side * 0.55, top + 0.55, 0), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.25, Color = c, Material = Enum.Material.Neon })
+		end
+	elseif item.Kind == "Crown" then
+		piece(character, head, CFrame.new(0, top + 0.2, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 1.35, 1.35), Color = c, Material = Enum.Material.Metal })
+		for k = 0, 5 do
+			local a = math.pi * 2 * k / 6
+			piece(character, head, CFrame.new(math.cos(a) * 0.6, top + 0.55, math.sin(a) * 0.6) * CFrame.Angles(0, -a, 0), {
+				Size = Vector3.new(0.18, 0.45, 0.3), Color = c, Material = Enum.Material.Metal,
+			})
+			piece(character, head, CFrame.new(math.cos(a) * 0.62, top + 0.82, math.sin(a) * 0.62), {
+				Shape = Enum.PartType.Ball, Size = Vector3.one * 0.2,
+				Color = k % 2 == 0 and Color3.fromRGB(255, 40, 90) or Color3.fromRGB(60, 160, 255), Material = Enum.Material.Neon,
+			})
+		end
+	end
+end
+
+local function addBack(character, root, item)
+	if item.Kind == "Jetpack" then
+		for _, side in ipairs({ -0.45, 0.45 }) do
+			piece(character, root, CFrame.new(side, 0.2, 0.75) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 0.7, 0.7), Color = item.Color, Material = Enum.Material.Metal,
+			})
+			local nozzle = piece(character, root, CFrame.new(side, -0.75, 0.75), { Size = Vector3.new(0.4, 0.3, 0.4), Color = Color3.fromRGB(60, 60, 70), Material = Enum.Material.Metal })
+			local fire = Instance.new("Fire")
+			fire.Size = 2
+			fire.Heat = -6
+			fire.Parent = nozzle
+			piece(character, root, CFrame.new(side, 1.05, 0.75), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.7, Color = Color3.fromRGB(255, 70, 70) })
+		end
+		return
+	end
+	-- Wings: three feathers per side, fanned out.
+	for _, side in ipairs({ -1, 1 }) do
+		for k = 0, 2 do
+			local length = 2.6 - k * 0.5
+			piece(character, root, CFrame.new(side * 0.4, 0.5, 0.65)
+				* CFrame.Angles(0, side * math.rad(-20), side * math.rad(-60 + k * 30))
+				* CFrame.new(side * length / 2, 0, 0), {
+				Size = Vector3.new(length, 0.55, 0.12),
+				Color = item.Color,
+				Material = item.Neon and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+				Transparency = item.Transparency or 0,
+			})
+		end
+	end
+end
+
+local function addPet(character, root, item)
+	local c = item.Color
+	local offset = CFrame.new(2.6, 1.6, 1.2)
+	local body
+	if item.Kind == "Coin" then
+		body = piece(character, root, offset * CFrame.Angles(0, math.rad(90), 0), { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 1.5, 1.5), Color = c, Material = Enum.Material.Metal })
+	else
+		body = piece(character, root, offset, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * (item.Kind == "Dragon" and 1.7 or 1.4),
+			Color = c,
+			Material = (item.Kind == "Star" or item.Kind == "Dragon") and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+			Transparency = item.Kind == "Ghost" and 0.25 or 0,
+		})
+	end
+	-- face (looks forward, same way as the player)
+	for _, side in ipairs({ -0.25, 0.25 }) do
+		piece(character, root, offset * CFrame.new(side, 0.15, -0.62), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.32, Color = Color3.new(1, 1, 1) })
+		piece(character, root, offset * CFrame.new(side, 0.15, -0.76), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.16, Color = Color3.new(0, 0, 0) })
+	end
+	if item.Kind == "Gary" then
+		piece(character, root, offset * CFrame.new(0, 0.75, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 0.7, 0.7), Color = Color3.fromRGB(30, 25, 35) })
+		piece(character, root, offset * CFrame.new(0, 0.45, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.08, 1.1, 1.1), Color = Color3.fromRGB(30, 25, 35) })
+	elseif item.Kind == "Dragon" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, root, offset * CFrame.new(side * 0.9, 0.3, 0.2) * CFrame.Angles(0, 0, side * math.rad(-30)), { Size = Vector3.new(1, 0.1, 0.7), Color = Color3.fromRGB(200, 30, 30), Material = Enum.Material.Neon })
+		end
+	end
+	if item.Kind == "Star" or item.Kind == "Dragon" or item.Kind == "Coin" then
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Color = ColorSequence.new(c)
+		sparkle.LightEmission = 1
+		sparkle.Rate = 6
+		sparkle.Lifetime = NumberRange.new(0.6, 1)
+		sparkle.Speed = NumberRange.new(0.5, 1)
+		sparkle.Size = NumberSequence.new(0.25, 0)
+		sparkle.Parent = body
+	end
+	local tag = Instance.new("BillboardGui")
+	tag.Size = UDim2.fromOffset(110, 22)
+	tag.StudsOffset = Vector3.new(0, 1.3, 0)
+	tag.MaxDistance = 40
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 230, 120)
+	label.TextStrokeTransparency = 0
+	label.Text = ("+%d%% coins"):format(math.floor((item.CoinBoost or 0) * 100 + 0.5))
+	label.Parent = tag
+	tag.Parent = body
+end
+
 local function applyCosmetics(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -6034,6 +6325,12 @@ local function applyCosmetics(player)
 				addAura(character, root, item)
 			elseif item.Slot == "Halo" then
 				addHalo(character, item)
+			elseif item.Slot == "Hat" then
+				addHat(character, item)
+			elseif item.Slot == "Back" then
+				addBack(character, root, item)
+			elseif item.Slot == "Pet" then
+				addPet(character, root, item)
 			end
 		end
 	end
@@ -6076,6 +6373,10 @@ Remotes.ShopAction.OnServerInvoke = function(player, action, itemId)
 	if action == "Buy" then
 		if data.Owned[itemId] and not item.RequiresVIP then
 			return false, "You already own this"
+		end
+		local lock = Catalog.LockText(item, data.MaxStage, math.max(data.MaxOPStage or 1, data.OPStage or 1))
+		if lock then
+			return false, ("Reach %s to unlock this!"):format(lock)
 		end
 		if item.Price > 0 and not PlayerData.SpendCoins(player, item.Price) then
 			return false, ("You need %d more coins"):format(item.Price - data.Coins)
@@ -7217,18 +7518,27 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------- Shop window
+-- Windows live in their own layer above every other button/bar on screen.
+local windowsGui = make("ScreenGui", {
+	Name = "ObbyWindows",
+	ResetOnSpawn = false,
+	DisplayOrder = 20,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
 local shopWindow = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromScale(0.9, 0.8),
+	Size = UDim2.fromScale(0.92, 0.86),
 	BackgroundColor3 = COLORS.Panel,
 	Visible = false,
 	ZIndex = 5,
-	Parent = gui,
+	Parent = windowsGui,
 }, {
 	corner(18),
 	stroke(4),
-	make("UISizeConstraint", { MaxSize = Vector2.new(660, 500) }),
+	make("UISizeConstraint", { MaxSize = Vector2.new(720, 540) }),
 })
 text({
 	Position = UDim2.fromOffset(18, 10),
@@ -7252,9 +7562,25 @@ local closeButton = make("TextButton", {
 	Parent = shopWindow,
 }, { corner(10), stroke(2) })
 
+-- Category tabs
+local tabBar = make("Frame", {
+	Position = UDim2.fromOffset(14, 60),
+	Size = UDim2.new(1, -28, 0, 34),
+	BackgroundTransparency = 1,
+	ZIndex = 5,
+	Parent = shopWindow,
+}, {
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
+})
+
 local grid = make("ScrollingFrame", {
-	Position = UDim2.fromOffset(14, 64),
-	Size = UDim2.new(1, -28, 1, -78),
+	Position = UDim2.fromOffset(14, 102),
+	Size = UDim2.new(1, -28, 1, -116),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 6,
@@ -7309,13 +7635,69 @@ local function onCardClicked(item)
 	Sfx.Play(ok and action == "Buy" and "Purchase" or "Click")
 end
 
+local SLOT_ORDER = { Trail = 1, Aura = 2, Halo = 3, Hat = 4, Back = 5, Pet = 6 }
+local SLOT_NAME = { Trail = "Trail", Aura = "Aura", Halo = "Halo", Hat = "Hat", Back = "Wings", Pet = "Pet" }
+local function unlockLevel(item)
+	return (item.Stage or 0) + (item.OPStage and 100 + item.OPStage or 0)
+end
 local sorted = table.clone(Catalog.Items)
 table.sort(sorted, function(a, b)
 	if (a.RequiresVIP or false) ~= (b.RequiresVIP or false) then
 		return b.RequiresVIP == true
 	end
-	return a.Price < b.Price
+	if (a.UnlockText ~= nil) ~= (b.UnlockText ~= nil) then
+		return b.UnlockText ~= nil
+	end
+	if unlockLevel(a) ~= unlockLevel(b) then
+		return unlockLevel(a) < unlockLevel(b)
+	end
+	if a.Price ~= b.Price then
+		return a.Price < b.Price
+	end
+	return (SLOT_ORDER[a.Slot] or 9) < (SLOT_ORDER[b.Slot] or 9)
 end)
+
+local currentTab = Catalog.Tabs[1]
+local tabButtons = {}
+local function applyTab()
+	for _, card in pairs(cards) do
+		card.Frame.Visible = currentTab.Slots == nil or currentTab.Slots[card.Item.Slot] == true
+	end
+	for tab, button in pairs(tabButtons) do
+		button.BackgroundColor3 = tab == currentTab and COLORS.Gold or COLORS.Card
+	end
+	grid.CanvasPosition = Vector2.zero
+end
+for index, tab in ipairs(Catalog.Tabs) do
+	local button = make("TextButton", {
+		LayoutOrder = index,
+		Size = UDim2.new(1 / #Catalog.Tabs, -6, 1, 0),
+		BackgroundColor3 = COLORS.Card,
+		Font = FONT,
+		Text = tab.Name,
+		TextScaled = true,
+		TextColor3 = COLORS.Text,
+		ZIndex = 6,
+		Parent = tabBar,
+	}, { corner(10), stroke(2), make("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }) })
+	button.Activated:Connect(function()
+		currentTab = tab
+		Sfx.Play("Click")
+		applyTab()
+	end)
+	tabButtons[tab] = button
+end
+
+local function subtitleFor(item)
+	if item.RequiresVIP then
+		return "VIP only"
+	elseif item.UnlockText then
+		return "Milestone reward"
+	elseif item.CoinBoost then
+		return ("Pet  •  +%d%% coins"):format(math.floor(item.CoinBoost * 100 + 0.5))
+	end
+	return SLOT_NAME[item.Slot] or item.Slot
+end
 
 for index, item in ipairs(sorted) do
 	local card = make("Frame", {
@@ -7324,8 +7706,8 @@ for index, item in ipairs(sorted) do
 		ZIndex = 5,
 		Parent = grid,
 	}, { corner(14), stroke(3) })
-	local fallbackColor = item.Slot == "Trail" and COLORS.Blue or COLORS.Pink
-	local art = icon(item.Icon, fallbackColor, item.Name:sub(1, 1), {
+	local fallbackColor = ({ Trail = COLORS.Blue, Aura = COLORS.Pink, Halo = COLORS.Gold, Hat = COLORS.Purple, Back = COLORS.Green, Pet = COLORS.Orange })[item.Slot] or COLORS.Pink
+	local art = icon(item.Icon, fallbackColor, item.Emoji or item.Name:sub(1, 1), {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 8),
 		Size = UDim2.fromOffset(88, 88),
@@ -7347,8 +7729,8 @@ for index, item in ipairs(sorted) do
 	text({
 		Position = UDim2.new(0, 6, 0, 122),
 		Size = UDim2.new(1, -12, 0, 16),
-		Text = item.RequiresVIP and "VIP only" or item.UnlockText and "Milestone reward" or item.Slot,
-		TextColor3 = item.RequiresVIP and COLORS.Gold or Color3.fromRGB(190, 190, 220),
+		Text = subtitleFor(item),
+		TextColor3 = (item.RequiresVIP or item.CoinBoost) and COLORS.Gold or Color3.fromRGB(190, 190, 220),
 		ZIndex = 6,
 		Parent = card,
 	})
@@ -7367,20 +7749,31 @@ for index, item in ipairs(sorted) do
 	button.Activated:Connect(function()
 		onCardClicked(item)
 	end)
-	cards[item.Id] = { Button = button, Item = item }
+	cards[item.Id] = { Button = button, Item = item, Frame = card }
 end
+applyTab()
+
+-- Hide the Roblox tool hotbar while a window is open (it would sit on top of the cards).
+local function syncHotbar()
+	local open = shopWindow.Visible or (windowsGui:FindFirstChild("PassesWindow") and windowsGui.PassesWindow.Visible)
+	pcall(function()
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not open)
+	end)
+end
+shopWindow:GetPropertyChangedSignal("Visible"):Connect(syncHotbar)
 
 ---------------------------------------------------------------- Game passes window
 local PassCatalog = require(Shared:WaitForChild("PassCatalog"))
 
 local passesWindow = make("Frame", {
+	Name = "PassesWindow",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
 	Size = UDim2.fromScale(0.9, 0.8),
 	BackgroundColor3 = COLORS.Panel,
 	Visible = false,
 	ZIndex = 5,
-	Parent = gui,
+	Parent = windowsGui,
 }, {
 	corner(18),
 	stroke(4),
@@ -7747,6 +8140,9 @@ local function refresh()
 		elseif item.UnlockText then
 			button.Text = item.UnlockText
 			button.BackgroundColor3 = COLORS.Grey
+		elseif Catalog.LockText(item, state.MaxStage, state.MaxOPStage) then
+			button.Text = "🔒 " .. Catalog.LockText(item, state.MaxStage, state.MaxOPStage)
+			button.BackgroundColor3 = COLORS.Grey
 		else
 			button.Text = "$ " .. item.Price
 			button.BackgroundColor3 = state.Coins >= item.Price and COLORS.Gold or COLORS.Grey
@@ -7803,6 +8199,8 @@ TextChatService.OnIncomingMessage = function(message)
 	end
 	return properties
 end
+
+passesWindow:GetPropertyChangedSignal("Visible"):Connect(syncHotbar)
 
 ---------------------------------------------------------------- Fit small screens (phones)
 local hudScale = make("UIScale", { Parent = hud })

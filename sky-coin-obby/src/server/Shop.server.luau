@@ -79,6 +79,32 @@ local function addAura(character, root, item)
 		fire.Size = 6
 		fire.Heat = 4
 		fire.Parent = root
+	elseif item.Kind == "Particles" then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter:SetAttribute("Cosmetic", true)
+		emitter.Color = item.Color
+		emitter.LightEmission = 0.8
+		emitter.Rate = item.Rate or 15
+		emitter.Lifetime = NumberRange.new(1, 1.8)
+		emitter.Speed = NumberRange.new(0.5, 2)
+		emitter.Acceleration = item.Accel or Vector3.zero
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Size = NumberSequence.new(item.Size or 0.4, 0)
+		if item.Above then
+			local att = cosmetic("Attachment", root)
+			att.Position = Vector3.new(0, 4, 0)
+			emitter.Parent = att
+		else
+			emitter.Parent = root
+		end
+	elseif item.Kind == "Smoke" then
+		local smoke = Instance.new("Smoke")
+		smoke:SetAttribute("Cosmetic", true)
+		smoke.Color = item.Color
+		smoke.Opacity = 0.25
+		smoke.Size = 1.5
+		smoke.RiseVelocity = 1.5
+		smoke.Parent = root
 	elseif item.Kind == "Glow" then
 		local highlight = Instance.new("Highlight")
 		highlight:SetAttribute("Cosmetic", true)
@@ -125,6 +151,172 @@ local function addHalo(character, item)
 	halo.Parent = character
 end
 
+---------------------------------------------------------------- Hats, wings and pets (built from parts)
+-- Each piece is welded to the head / root, massless and non-colliding, so it never affects movement.
+local function piece(character, anchor, offset, props)
+	local p = Instance.new("Part")
+	p:SetAttribute("Cosmetic", true)
+	p.Name = "Cosmetic"
+	p.Anchored = false
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.Massless = true
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for key, value in pairs(props) do
+		p[key] = value
+	end
+	p.CFrame = anchor.CFrame * offset
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = anchor
+	weld.Part1 = p
+	weld.Parent = p
+	p.Parent = character
+	return p
+end
+
+local UP = CFrame.Angles(0, 0, math.rad(90)) -- stands a cylinder upright
+local GOLD = Color3.fromRGB(255, 200, 40)
+
+local function addHat(character, item)
+	local head = character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local top = head.Size.Y / 2
+	local c = item.Color
+	if item.Kind == "PartyHat" then
+		for k = 0, 4 do
+			local d = 1.3 - k * 0.26
+			piece(character, head, CFrame.new(0, top + 0.15 + k * 0.28, 0) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, d, d),
+				Color = k % 2 == 0 and c or Color3.fromRGB(255, 230, 80),
+			})
+		end
+		piece(character, head, CFrame.new(0, top + 1.6, 0), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.4, Color = Color3.new(1, 1, 1), Material = Enum.Material.Neon })
+	elseif item.Kind == "CatEars" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, head, CFrame.new(side * 0.45, top + 0.3, 0) * CFrame.Angles(0, math.rad(90), math.rad(side * -12)), {
+				Size = Vector3.new(0.2, 0.7, 0.55), Color = c,
+			})
+			piece(character, head, CFrame.new(side * 0.45, top + 0.27, -0.05) * CFrame.Angles(0, 0, math.rad(side * -12)), {
+				Size = Vector3.new(0.3, 0.45, 0.1), Color = Color3.fromRGB(255, 220, 230),
+			})
+		end
+	elseif item.Kind == "TopHat" then
+		piece(character, head, CFrame.new(0, top + 0.05, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, 1.9, 1.9), Color = c })
+		piece(character, head, CFrame.new(0, top + 0.65, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.1, 1.25, 1.25), Color = c })
+		piece(character, head, CFrame.new(0, top + 0.3, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.22, 1.28, 1.28), Color = GOLD, Material = Enum.Material.Metal })
+	elseif item.Kind == "Horns" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, head, CFrame.new(side * 0.4, top + 0.25, 0) * CFrame.Angles(0, 0, math.rad(side * -25)) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 0.32, 0.32), Color = c,
+			})
+			piece(character, head, CFrame.new(side * 0.55, top + 0.55, 0), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.25, Color = c, Material = Enum.Material.Neon })
+		end
+	elseif item.Kind == "Crown" then
+		piece(character, head, CFrame.new(0, top + 0.2, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 1.35, 1.35), Color = c, Material = Enum.Material.Metal })
+		for k = 0, 5 do
+			local a = math.pi * 2 * k / 6
+			piece(character, head, CFrame.new(math.cos(a) * 0.6, top + 0.55, math.sin(a) * 0.6) * CFrame.Angles(0, -a, 0), {
+				Size = Vector3.new(0.18, 0.45, 0.3), Color = c, Material = Enum.Material.Metal,
+			})
+			piece(character, head, CFrame.new(math.cos(a) * 0.62, top + 0.82, math.sin(a) * 0.62), {
+				Shape = Enum.PartType.Ball, Size = Vector3.one * 0.2,
+				Color = k % 2 == 0 and Color3.fromRGB(255, 40, 90) or Color3.fromRGB(60, 160, 255), Material = Enum.Material.Neon,
+			})
+		end
+	end
+end
+
+local function addBack(character, root, item)
+	if item.Kind == "Jetpack" then
+		for _, side in ipairs({ -0.45, 0.45 }) do
+			piece(character, root, CFrame.new(side, 0.2, 0.75) * UP, {
+				Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 0.7, 0.7), Color = item.Color, Material = Enum.Material.Metal,
+			})
+			local nozzle = piece(character, root, CFrame.new(side, -0.75, 0.75), { Size = Vector3.new(0.4, 0.3, 0.4), Color = Color3.fromRGB(60, 60, 70), Material = Enum.Material.Metal })
+			local fire = Instance.new("Fire")
+			fire.Size = 2
+			fire.Heat = -6
+			fire.Parent = nozzle
+			piece(character, root, CFrame.new(side, 1.05, 0.75), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.7, Color = Color3.fromRGB(255, 70, 70) })
+		end
+		return
+	end
+	-- Wings: three feathers per side, fanned out.
+	for _, side in ipairs({ -1, 1 }) do
+		for k = 0, 2 do
+			local length = 2.6 - k * 0.5
+			piece(character, root, CFrame.new(side * 0.4, 0.5, 0.65)
+				* CFrame.Angles(0, side * math.rad(-20), side * math.rad(-60 + k * 30))
+				* CFrame.new(side * length / 2, 0, 0), {
+				Size = Vector3.new(length, 0.55, 0.12),
+				Color = item.Color,
+				Material = item.Neon and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+				Transparency = item.Transparency or 0,
+			})
+		end
+	end
+end
+
+local function addPet(character, root, item)
+	local c = item.Color
+	local offset = CFrame.new(2.6, 1.6, 1.2)
+	local body
+	if item.Kind == "Coin" then
+		body = piece(character, root, offset * CFrame.Angles(0, math.rad(90), 0), { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 1.5, 1.5), Color = c, Material = Enum.Material.Metal })
+	else
+		body = piece(character, root, offset, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * (item.Kind == "Dragon" and 1.7 or 1.4),
+			Color = c,
+			Material = (item.Kind == "Star" or item.Kind == "Dragon") and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+			Transparency = item.Kind == "Ghost" and 0.25 or 0,
+		})
+	end
+	-- face (looks forward, same way as the player)
+	for _, side in ipairs({ -0.25, 0.25 }) do
+		piece(character, root, offset * CFrame.new(side, 0.15, -0.62), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.32, Color = Color3.new(1, 1, 1) })
+		piece(character, root, offset * CFrame.new(side, 0.15, -0.76), { Shape = Enum.PartType.Ball, Size = Vector3.one * 0.16, Color = Color3.new(0, 0, 0) })
+	end
+	if item.Kind == "Gary" then
+		piece(character, root, offset * CFrame.new(0, 0.75, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 0.7, 0.7), Color = Color3.fromRGB(30, 25, 35) })
+		piece(character, root, offset * CFrame.new(0, 0.45, 0) * UP, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.08, 1.1, 1.1), Color = Color3.fromRGB(30, 25, 35) })
+	elseif item.Kind == "Dragon" then
+		for _, side in ipairs({ -1, 1 }) do
+			piece(character, root, offset * CFrame.new(side * 0.9, 0.3, 0.2) * CFrame.Angles(0, 0, side * math.rad(-30)), { Size = Vector3.new(1, 0.1, 0.7), Color = Color3.fromRGB(200, 30, 30), Material = Enum.Material.Neon })
+		end
+	end
+	if item.Kind == "Star" or item.Kind == "Dragon" or item.Kind == "Coin" then
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Color = ColorSequence.new(c)
+		sparkle.LightEmission = 1
+		sparkle.Rate = 6
+		sparkle.Lifetime = NumberRange.new(0.6, 1)
+		sparkle.Speed = NumberRange.new(0.5, 1)
+		sparkle.Size = NumberSequence.new(0.25, 0)
+		sparkle.Parent = body
+	end
+	local tag = Instance.new("BillboardGui")
+	tag.Size = UDim2.fromOffset(110, 22)
+	tag.StudsOffset = Vector3.new(0, 1.3, 0)
+	tag.MaxDistance = 40
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 230, 120)
+	label.TextStrokeTransparency = 0
+	label.Text = ("+%d%% coins"):format(math.floor((item.CoinBoost or 0) * 100 + 0.5))
+	label.Parent = tag
+	tag.Parent = body
+end
+
 local function applyCosmetics(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -142,6 +334,12 @@ local function applyCosmetics(player)
 				addAura(character, root, item)
 			elseif item.Slot == "Halo" then
 				addHalo(character, item)
+			elseif item.Slot == "Hat" then
+				addHat(character, item)
+			elseif item.Slot == "Back" then
+				addBack(character, root, item)
+			elseif item.Slot == "Pet" then
+				addPet(character, root, item)
 			end
 		end
 	end
@@ -184,6 +382,10 @@ Remotes.ShopAction.OnServerInvoke = function(player, action, itemId)
 	if action == "Buy" then
 		if data.Owned[itemId] and not item.RequiresVIP then
 			return false, "You already own this"
+		end
+		local lock = Catalog.LockText(item, data.MaxStage, math.max(data.MaxOPStage or 1, data.OPStage or 1))
+		if lock then
+			return false, ("Reach %s to unlock this!"):format(lock)
 		end
 		if item.Price > 0 and not PlayerData.SpendCoins(player, item.Price) then
 			return false, ("You need %d more coins"):format(item.Price - data.Coins)
