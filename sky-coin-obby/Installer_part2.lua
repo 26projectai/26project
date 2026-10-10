@@ -754,35 +754,33 @@ end
 
 ---------------------------------------------------------------- Side buttons (left)
 local sideBar = make("Frame", {
-	AnchorPoint = Vector2.new(0, 0.5),
-	Position = UDim2.new(0, 12, 0.5, 40),
-	Size = UDim2.fromOffset(84, 600),
+	-- Pinned to the bottom-left, so the last button (MUSIC) can never fall off the screen.
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 12, 1, -10),
+	Size = UDim2.fromOffset(84, 540),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
 	make("UIListLayout", {
 		Padding = UDim.new(0, 8),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
 	}),
 })
 
--- Shrink the whole column on small screens (phones, small Studio windows) so every button,
--- including MUSIC at the bottom, always fits between the top bar and the bottom edge.
+-- Shrink the whole column to the space the screen really has (phones, small Studio windows).
 do
 	local sideScale = Instance.new("UIScale")
 	sideScale.Parent = sideBar
+	local USED = 5 * 8 + 5 * 84 + 64 -- gaps + five big buttons + the music button
 	local function fitSideBar()
-		local camera = workspace.CurrentCamera
-		local height = camera and camera.ViewportSize.Y or 800
-		local used = 6 * 8 + 5 * 84 + 64 -- gaps + five big buttons + the music button
-		sideScale.Scale = math.clamp((height - 190) / used, 0.45, 1)
+		local available = gui.AbsoluteSize.Y - 30
+		if available > 0 then
+			sideScale.Scale = math.clamp(available / USED, 0.4, 1)
+		end
 	end
 	fitSideBar()
-	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(fitSideBar)
-	if workspace.CurrentCamera then
-		workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitSideBar)
-	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitSideBar)
 end
 
 local function sideButton(order, title, color, iconId, fallbackText, height)
@@ -1431,13 +1429,11 @@ end
 
 ---------------------------------------------------------------- Fit small screens (phones)
 local hudScale = make("UIScale", { Parent = hud })
-local sideScale = make("UIScale", { Parent = sideBar })
 local timerScale = make("UIScale", { Parent = timerLabel })
 local function fitScreen()
 	local viewport = workspace.CurrentCamera.ViewportSize
 	hudScale.Scale = math.clamp(viewport.X / 560, 0.6, 1)
 	timerScale.Scale = hudScale.Scale
-	sideScale.Scale = math.clamp(viewport.Y / 640, 0.55, 1)
 end
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitScreen)
 fitScreen()
