@@ -248,8 +248,8 @@ end
 ---------------------------------------------------------------- Side buttons (left)
 local sideBar = make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5),
-	Position = UDim2.new(0, 12, 0.6, 0),
-	Size = UDim2.fromOffset(84, 560),
+	Position = UDim2.new(0, 12, 0.5, 40),
+	Size = UDim2.fromOffset(84, 600),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -259,6 +259,24 @@ local sideBar = make("Frame", {
 		VerticalAlignment = Enum.VerticalAlignment.Center,
 	}),
 })
+
+-- Shrink the whole column on small screens (phones, small Studio windows) so every button,
+-- including MUSIC at the bottom, always fits between the top bar and the bottom edge.
+do
+	local sideScale = Instance.new("UIScale")
+	sideScale.Parent = sideBar
+	local function fitSideBar()
+		local camera = workspace.CurrentCamera
+		local height = camera and camera.ViewportSize.Y or 800
+		local used = 6 * 8 + 5 * 84 + 64 -- gaps + five big buttons + the music button
+		sideScale.Scale = math.clamp((height - 150) / used, 0.45, 1)
+	end
+	fitSideBar()
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(fitSideBar)
+	if workspace.CurrentCamera then
+		workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitSideBar)
+	end
+end
 
 local function sideButton(order, title, color, iconId, fallbackText, height)
 	local button = make("TextButton", {

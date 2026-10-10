@@ -124,6 +124,15 @@ Config.OP = {
 		{ "ABSURD", Color3.fromRGB(255, 160, 40) }, { "LEGENDARY", Color3.fromRGB(255, 205, 40) },
 		{ "MYTHIC", Color3.fromRGB(170, 255, 200) }, { "OP", Color3.fromRGB(255, 0, 90) },
 	},
+	-- Every 4 tiers the tower changes biome (look, sky, sea and scenery).
+	TiersPerBiome = 4,
+	Biomes = {
+		{ Name = "RAINBOW MEADOWS", Look = "SKY ISLANDS", ClockTime = 14, Sea = "Sky" },
+		{ Name = "INFERNO FORGE", Look = "GARY'S LAIR", ClockTime = 18.6, Sea = "Lair" },
+		{ Name = "FROZEN PEAKS", Look = "FROZEN PEAKS", ClockTime = 8, Sea = "Space" },
+		{ Name = "NEON CITY", Look = "OUTER SPACE", ClockTime = 0, Sea = "Space" },
+		{ Name = "GARY'S GOLDEN VAULT", Look = "GOLDEN VAULT", ClockTime = 17, Sea = "Sky" },
+	},
 }
 
 -- Every N stages (story + OP) there's a Boost Station: mini dashboard + x2 coin orb.

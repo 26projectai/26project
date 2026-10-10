@@ -28,6 +28,14 @@ local LOOKS = {
 		Tint = Color3.fromRGB(215, 205, 255), Saturation = 0.2, Brightness = 1,
 		Density = 0.12, Haze = 0, Glare = 0, Color = Color3.fromRGB(60, 40, 110), Decay = Color3.fromRGB(20, 10, 50),
 	},
+	["FROZEN PEAKS"] = {
+		Tint = Color3.fromRGB(225, 240, 255), Saturation = 0, Brightness = 2.2,
+		Density = 0.35, Haze = 2, Glare = 0.5, Color = Color3.fromRGB(220, 240, 255), Decay = Color3.fromRGB(140, 190, 240),
+	},
+	["GOLDEN VAULT"] = {
+		Tint = Color3.fromRGB(255, 240, 210), Saturation = 0.2, Brightness = 2,
+		Density = 0.3, Haze = 1.8, Glare = 0.6, Color = Color3.fromRGB(255, 225, 160), Decay = Color3.fromRGB(220, 160, 70),
+	},
 	["GARY'S LAIR"] = {
 		Tint = Color3.fromRGB(255, 220, 205), Saturation = 0.15, Brightness = 1.6,
 		Density = 0.4, Haze = 2.4, Glare = 0.2, Color = Color3.fromRGB(255, 150, 110), Decay = Color3.fromRGB(150, 50, 40),
@@ -95,25 +103,32 @@ local function applyMovement(zone)
 	end
 end
 
--- In the OP tower the look cycles by tier (gravity stays normal so the difficulty is fair).
-local OP_LOOKS = { "SKY ISLANDS", "CANDY LAND", "OUTER SPACE" }
+-- In the OP tower the look follows the biome (gravity stays normal so the difficulty is fair).
 local opLook = { Name = "OP", Gravity = 196.2 }
 
 local function currentZoneInfo()
 	if player:GetAttribute("Mode") == "OP" then
 		local opStat = player.leaderstats:FindFirstChild("OP")
 		local tier = math.floor(((opStat and opStat.Value or 1) - 1) / Config.OP.TierSize)
-		local lookName = OP_LOOKS[tier % #OP_LOOKS + 1]
-		opLook.LookName = lookName
-		opLook.ClockTime = ({ 14, 17.4, 0 })[tier % #OP_LOOKS + 1]
-		return opLook, lookName
+		local biomes = Config.OP.Biomes
+		local biome = biomes[math.min(math.floor(tier / Config.OP.TiersPerBiome) + 1, #biomes)]
+		opLook.LookName = biome.Look
+		opLook.ClockTime = biome.ClockTime
+		return opLook, biome.Look
 	end
 	local zone = Config.ZoneForStage(stageValue.Value)
 	return zone, zone.Name
 end
 
 -- Custom skyboxes (Assets.Skyboxes) per world, if the ids have been set.
-local SKY_FOR_LOOK = { ["SKY ISLANDS"] = "Sky", ["CANDY LAND"] = "Candy", ["OUTER SPACE"] = "Space", ["GARY'S LAIR"] = "Lair" }
+local SKY_FOR_LOOK = {
+	["SKY ISLANDS"] = "Sky",
+	["CANDY LAND"] = "Candy",
+	["OUTER SPACE"] = "Space",
+	["GARY'S LAIR"] = "Lair",
+	["FROZEN PEAKS"] = "Sky",
+	["GOLDEN VAULT"] = "Sky",
+}
 local function applySky(lookName)
 	local ids = Config.Skyboxes[SKY_FOR_LOOK[lookName] or "Sky"]
 	if not ids or not Config.HasAsset(ids.Ft) then
