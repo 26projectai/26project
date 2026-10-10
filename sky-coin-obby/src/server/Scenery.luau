@@ -152,6 +152,106 @@ local function sign(position, facing, size, title, subtitle, color)
 	gui.Parent = board
 end
 
+
+-- Luxury spawn plaza: marble floor with a gold rim, red carpet with gold trim and lamp posts,
+-- twin gold fountains, a gold-framed Hall of Fame and a grand entrance arch.
+local GOLD = Color3.fromRGB(255, 200, 60)
+local MARBLE = Color3.fromRGB(245, 242, 235)
+
+local function lamp(base)
+	pillar(base + Vector3.new(0, 0.4, 0), 0.8, 1.6, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 4, 0), 8, 0.45, GOLD, Enum.Material.Metal)
+	local bulb = ball(base + Vector3.new(0, 8.6, 0), 1.6, Color3.fromRGB(255, 235, 170), Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 220, 150)
+	light.Range = 16
+	light.Brightness = 1.5
+	light.Parent = bulb
+end
+
+local function fountain(base)
+	pillar(base + Vector3.new(0, 0.6, 0), 1.2, 12, MARBLE, Enum.Material.Marble)
+	pillar(base + Vector3.new(0, 1.25, 0), 0.3, 12.4, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 1.05, 0), 0.3, 10.6, Color3.fromRGB(80, 190, 255), Enum.Material.Glass).Transparency = 0.25
+	pillar(base + Vector3.new(0, 3, 0), 4, 1.4, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 5.1, 0), 0.4, 5, GOLD, Enum.Material.Metal)
+	-- golden coin on top
+	deco({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, 3.2, 3.2),
+		CFrame = CFrame.new(base + Vector3.new(0, 7.4, 0)),
+		Color = GOLD,
+		Material = Enum.Material.Neon,
+	})
+	local spout = deco({ Size = Vector3.new(1, 0.2, 1), Position = base + Vector3.new(0, 5.4, 0), Transparency = 1 })
+	local water = Instance.new("ParticleEmitter")
+	water.Color = ColorSequence.new(Color3.fromRGB(150, 220, 255))
+	water.LightEmission = 0.4
+	water.Rate = 60
+	water.Lifetime = NumberRange.new(1, 1.4)
+	water.Speed = NumberRange.new(7, 9)
+	water.SpreadAngle = Vector2.new(25, 25)
+	water.Acceleration = Vector3.new(0, -22, 0)
+	water.Size = NumberSequence.new(0.5, 0.2)
+	water.Transparency = NumberSequence.new(0.2, 0.8)
+	water.Parent = spout
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Color = ColorSequence.new(GOLD)
+	sparkle.LightEmission = 1
+	sparkle.Rate = 6
+	sparkle.Lifetime = NumberRange.new(1.5, 2.5)
+	sparkle.Speed = NumberRange.new(1, 2)
+	sparkle.Size = NumberSequence.new(0.3, 0)
+	sparkle.Parent = spout
+end
+
+local function luxuryLobby(lobby, baseY)
+	local floorTop = baseY - 0.5
+	-- marble floor with a gold rim (walkable)
+	local rim = pillar(Vector3.new(lobby.X, floorTop - 0.17, lobby.Z), 0.3, 95, GOLD, Enum.Material.Metal)
+	local marble = pillar(Vector3.new(lobby.X, floorTop - 0.15, lobby.Z), 0.3, 92, MARBLE, Enum.Material.Marble)
+	rim.CanCollide, marble.CanCollide = true, true
+	-- gold inlay rings + centre medallion
+	pillar(Vector3.new(lobby.X, floorTop + 0.01, lobby.Z), 0.02, 70, GOLD, Enum.Material.Metal)
+	pillar(Vector3.new(lobby.X, floorTop + 0.02, lobby.Z), 0.02, 69.2, MARBLE, Enum.Material.Marble)
+
+	-- red carpet from the spawn to the Hall of Fame, with gold trim and lamp posts
+	local x0, x1 = -4, -78
+	local carpet = deco({
+		Size = Vector3.new(x0 - x1, 0.1, 7),
+		Position = Vector3.new((x0 + x1) / 2, floorTop + 0.06, 0),
+		Color = Color3.fromRGB(170, 15, 35),
+		Material = Enum.Material.Fabric,
+	})
+	carpet.Name = "RedCarpet"
+	for _, z in ipairs({ -3.7, 3.7 }) do
+		deco({
+			Size = Vector3.new(x0 - x1, 0.12, 0.5),
+			Position = Vector3.new((x0 + x1) / 2, floorTop + 0.07, z),
+			Color = GOLD,
+			Material = Enum.Material.Metal,
+		})
+	end
+	for x = -12, -60, -12 do
+		lamp(Vector3.new(x, floorTop, -5.5))
+		lamp(Vector3.new(x, floorTop, 5.5))
+	end
+
+	-- twin fountains
+	fountain(Vector3.new(-20, floorTop, -18))
+	fountain(Vector3.new(-20, floorTop, 18))
+
+	-- grand entrance arch over the carpet (gold + white)
+	gate(-8, floorTop, 9, { GOLD, MARBLE }, Enum.Material.Metal)
+
+	-- gold frame around the Hall of Fame wall
+	for _, z in ipairs({ -27.5, 27.5 }) do
+		pillar(Vector3.new(-85, floorTop + 16, z), 32, 2.6, GOLD, Enum.Material.Metal)
+		ball(Vector3.new(-85, floorTop + 33, z), 3, Color3.fromRGB(255, 235, 150), Enum.Material.Neon)
+	end
+	deco({ Size = Vector3.new(2.6, 1.2, 55), Position = Vector3.new(-85, floorTop + 30.3, 0), Color = GOLD, Material = Enum.Material.Neon })
+end
+
 ---------------------------------------------------------------- per-world scenery
 local function buildSky(x0, x1, baseY)
 	for _ = 1, 45 do
@@ -485,6 +585,7 @@ function Scenery.Build(opts)
 	-- Spawn plaza: a big island with room for the Hall of Fame wall, podium, portal and NPCs.
 	local LOBBY = Vector3.new(-44, 0, 0)
 	island(LOBBY, baseY - 0.55, 100, 1, true)
+	luxuryLobby(LOBBY, baseY)
 	for _, offset in ipairs({
 		Vector3.new(-14, 0, -42), Vector3.new(-14, 0, 42), Vector3.new(-40, 0, -46), Vector3.new(-40, 0, 46),
 		Vector3.new(-64, 0, -40), Vector3.new(-64, 0, 40), Vector3.new(-2, 0, -28), Vector3.new(-2, 0, 28),

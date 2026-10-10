@@ -109,6 +109,14 @@ Assets.Floors = {
 	Lair = "rbxassetid://0", -- art/floor-lava.png (magma)
 }
 
+-- Spinning world portal swirls (art/portal-*.png). "rbxassetid://0" = plain glowing portal.
+Assets.Portals = {
+	Sky = "rbxassetid://0", -- art/portal-sky.png
+	Candy = "rbxassetid://0", -- art/portal-candy.png
+	Space = "rbxassetid://0", -- art/portal-space.png
+	Lair = "rbxassetid://0", -- art/portal-lair.png
+}
+
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
 Assets.ItemIcons = {
 	RainbowTrail = "rbxassetid://0", -- art/item-rainbow-trail.png
@@ -305,6 +313,7 @@ Config.Sounds = Assets.Sounds or {}
 Config.Music = Assets.Music or {}
 Config.Skyboxes = Assets.Skyboxes or {}
 Config.Floors = Assets.Floors or {}
+Config.Portals = Assets.Portals or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35
@@ -1571,9 +1580,11 @@ local function opPortal(position, facing)
 	})
 	frame.CanTouch = false
 end
-opPortal(Vector3.new(-30, BASE_Y + 6, 30), Vector3.new(0, 0, -1)) -- in the spawn plaza
+opPortal(Vector3.new(-24, BASE_Y + 6, 40), Vector3.new(0, 0, -1)) -- in the spawn plaza
 
--- World portals: one per world, in a row across the plaza (facing the spawn).
+-- World portals: grand gold-framed gates on both sides of the red carpet, facing the spawn.
+-- Each has a spinning Higgsfield vortex (Assets.Portals), a glowing ring, marble columns and a
+-- sign up top with the world name and its stage range.
 do
 	local worldColors = {
 		Color3.fromRGB(80, 170, 255),
@@ -1581,33 +1592,186 @@ do
 		Color3.fromRGB(150, 90, 255),
 		Color3.fromRGB(255, 100, 30),
 	}
+	local imageKeys = { "Sky", "Candy", "Space", "Lair" }
+	local GOLD = Color3.fromRGB(255, 200, 60)
+	local MARBLE = Color3.fromRGB(245, 242, 235)
+	local slots = { 37, 19, -19, -37 } -- z, left to right as seen from the spawn
+	local PORTAL_X = -50
+	local RADIUS = 5
+	local facing = Vector3.new(1, 0, 0)
+
+	local function deco(props, className)
+		props.CanCollide = false
+		props.CanTouch = false
+		props.CanQuery = false
+		props.CastShadow = false
+		props.Parent = course
+		return part(props, className)
+	end
+
+	local function ring(center, radius, thickness, depth, color, material)
+		local segments = 32
+		for i = 0, segments - 1 do
+			local a0 = math.pi * 2 * i / segments
+			local a1 = math.pi * 2 * (i + 1) / segments
+			local p0 = center + Vector3.new(0, math.sin(a0) * radius, math.cos(a0) * radius)
+			local p1 = center + Vector3.new(0, math.sin(a1) * radius, math.cos(a1) * radius)
+			deco({
+				Name = "PortalRing",
+				Size = Vector3.new(depth, thickness, (p1 - p0).Magnitude + 0.15),
+				CFrame = CFrame.lookAt((p0 + p1) / 2, p1),
+				Color = color,
+				Material = material,
+			})
+		end
+	end
+
+	local function vortexGui(holder, face, image, color)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.LightInfluence = 0
+		gui.Brightness = 1.6
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		local function layer(size, transparency, speed)
+			local img = Instance.new("ImageLabel")
+			img.AnchorPoint = Vector2.new(0.5, 0.5)
+			img.Position = UDim2.fromScale(0.5, 0.5)
+			img.Size = UDim2.fromScale(size, size)
+			img.BackgroundColor3 = color
+			img.BackgroundTransparency = image and 1 or 0.2
+			img.Image = image or ""
+			img.ImageTransparency = transparency
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0.5, 0)
+			corner.Parent = img
+			img:SetAttribute("Spin", speed)
+			CollectionService:AddTag(img, "PortalSpin")
+			img.Parent = gui
+		end
+		layer(1, 0, 40) -- main swirl
+		layer(0.7, 0.45, -70) -- inner layer spinning the other way = depth
+		gui.Parent = holder
+	end
+
 	local count = #Config.Zones
 	for i, zone in ipairs(Config.Zones) do
-		local z = (i - (count + 1) / 2) * 13
-		local position = Vector3.new(-48, BASE_Y + 4.5, z)
-		local ring = part({
+		local z = slots[i] or (i - (count + 1) / 2) * 16
+		local color = worldColors[i] or Color3.new(1, 1, 1)
+		local floorY = BASE_Y - 0.5
+		local center = Vector3.new(PORTAL_X, floorY + 8, z)
+		local key = imageKeys[i]
+		local image = Config.Portals[key]
+		if image == "" or image == "rbxassetid://0" then
+			image = nil
+		end
+
+		-- The touch part (teleports you; see Progression.server).
+		local touch = part({
 			Name = "WorldPortal",
 			Shape = Enum.PartType.Cylinder,
-			Size = Vector3.new(0.6, 8, 8),
-			CFrame = CFrame.new(position),
-			Color = worldColors[i] or Color3.new(1, 1, 1),
+			Size = Vector3.new(0.6, RADIUS * 2, RADIUS * 2),
+			CFrame = CFrame.new(center),
+			Color = color,
 			Material = Enum.Material.ForceField,
+			Transparency = image and 1 or 0,
 			CanCollide = false,
 			Parent = course,
 		})
-		tag(ring, "WorldPortal", { Stage = zone.FirstStage, World = zone.Name })
-		label(ring, ("%s\nStage %d"):format(zone.Name, zone.FirstStage), Color3.new(1, 1, 1), 70)
-		local frame = part({
-			Name = "WorldPortalFrame",
-			Shape = Enum.PartType.Cylinder,
-			Size = Vector3.new(0.5, 9.2, 9.2),
-			CFrame = CFrame.new(position - Vector3.new(0.3, 0, 0)),
-			Color = worldColors[i] or Color3.new(1, 1, 1),
-			Material = Enum.Material.Neon,
-			CanCollide = false,
-			Parent = course,
+		tag(touch, "WorldPortal", { Stage = zone.FirstStage, World = zone.Name })
+
+		-- Spinning vortex (both sides).
+		local holder = deco({
+			Name = "PortalVortex",
+			Size = Vector3.new(0.2, RADIUS * 2, RADIUS * 2),
+			CFrame = CFrame.new(center),
+			Transparency = 1,
 		})
-		frame.CanTouch = false
+		vortexGui(holder, Enum.NormalId.Right, image, color)
+		vortexGui(holder, Enum.NormalId.Left, image, color)
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = 18
+		light.Brightness = 2.5
+		light.Parent = holder
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.EmissionDirection = Enum.NormalId.Right
+		sparks.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+		sparks.LightEmission = 1
+		sparks.Rate = 18
+		sparks.Lifetime = NumberRange.new(1, 2)
+		sparks.Speed = NumberRange.new(2, 4)
+		sparks.SpreadAngle = Vector2.new(60, 60)
+		sparks.Size = NumberSequence.new(0.35, 0)
+		sparks.Parent = holder
+
+		-- Glowing inner ring + thick gold frame with gems.
+		ring(center, RADIUS + 0.3, 0.7, 1, color, Enum.Material.Neon)
+		ring(center, RADIUS + 1.1, 1.1, 1.4, GOLD, Enum.Material.Metal)
+		for g = 0, 7 do
+			local a = math.pi * 2 * g / 8
+			deco({
+				Name = "PortalGem",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * (g % 2 == 0 and 1.3 or 0.8),
+				Position = center + Vector3.new(0.5, math.sin(a) * (RADIUS + 1.1), math.cos(a) * (RADIUS + 1.1)),
+				Color = g % 2 == 0 and color or Color3.new(1, 1, 1),
+				Material = Enum.Material.Neon,
+			})
+		end
+
+		-- Marble steps and columns with glowing caps.
+		for step, size in ipairs({ { 6, 17 }, { 4.5, 15 } }) do
+			deco({
+				Name = "PortalStep",
+				Size = Vector3.new(size[1], 0.5, size[2]),
+				Position = Vector3.new(PORTAL_X, floorY + 0.25 + (step - 1) * 0.5, z),
+				Color = step == 1 and MARBLE or GOLD,
+				Material = step == 1 and Enum.Material.Marble or Enum.Material.Metal,
+			})
+		end
+		for _, dz in ipairs({ -(RADIUS + 2.6), RADIUS + 2.6 }) do
+			local base = Vector3.new(PORTAL_X, floorY, z + dz)
+			deco({ Name = "PortalColumn", Shape = Enum.PartType.Cylinder, Size = Vector3.new(15, 1.6, 1.6), CFrame = CFrame.new(base + Vector3.new(0, 7.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = MARBLE, Material = Enum.Material.Marble })
+			deco({ Name = "PortalColumnBase", Size = Vector3.new(2.4, 1, 2.4), Position = base + Vector3.new(0, 0.5, 0), Color = GOLD, Material = Enum.Material.Metal })
+			deco({ Name = "PortalColumnTop", Size = Vector3.new(2.4, 0.8, 2.4), Position = base + Vector3.new(0, 15.2, 0), Color = GOLD, Material = Enum.Material.Metal })
+			deco({ Name = "PortalOrb", Shape = Enum.PartType.Ball, Size = Vector3.one * 1.8, Position = base + Vector3.new(0, 16.6, 0), Color = color, Material = Enum.Material.Neon })
+		end
+
+		-- Sign on top: world name + stage range, readable from the spawn.
+		local lastStage = Config.Zones[i + 1] and Config.Zones[i + 1].FirstStage - 1 or STAGES
+		local signPos = Vector3.new(PORTAL_X, floorY + 20.5, z)
+		local board = deco({
+			Name = "PortalSign",
+			Size = Vector3.new(15, 4.6, 0.6),
+			CFrame = CFrame.lookAt(signPos, signPos + facing),
+			Color = Color3.fromRGB(25, 20, 45),
+		})
+		deco({ Name = "PortalSignTrim", Size = Vector3.new(15.8, 5.4, 0.4), CFrame = board.CFrame * CFrame.new(0, 0, 0.3), Color = GOLD, Material = Enum.Material.Metal })
+		for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
+			local gui = Instance.new("SurfaceGui")
+			gui.Face = face
+			gui.LightInfluence = 0
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = 40
+			local function line(text, y, h, textColor)
+				local t = Instance.new("TextLabel")
+				t.BackgroundTransparency = 1
+				t.Position = UDim2.fromScale(0.04, y)
+				t.Size = UDim2.fromScale(0.92, h)
+				t.Font = Enum.Font.FredokaOne
+				t.TextScaled = true
+				t.Text = text
+				t.TextColor3 = textColor
+				local stroke = Instance.new("UIStroke")
+				stroke.Thickness = 3
+				stroke.Parent = t
+				t.Parent = gui
+			end
+			line(zone.Name, 0.06, 0.52, color)
+			line(("STAGES %d - %d"):format(zone.FirstStage, lastStage), 0.6, 0.32, Color3.new(1, 1, 1))
+			gui.Parent = board
+		end
 	end
 end
 
@@ -4796,6 +4960,106 @@ local function sign(position, facing, size, title, subtitle, color)
 	gui.Parent = board
 end
 
+
+-- Luxury spawn plaza: marble floor with a gold rim, red carpet with gold trim and lamp posts,
+-- twin gold fountains, a gold-framed Hall of Fame and a grand entrance arch.
+local GOLD = Color3.fromRGB(255, 200, 60)
+local MARBLE = Color3.fromRGB(245, 242, 235)
+
+local function lamp(base)
+	pillar(base + Vector3.new(0, 0.4, 0), 0.8, 1.6, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 4, 0), 8, 0.45, GOLD, Enum.Material.Metal)
+	local bulb = ball(base + Vector3.new(0, 8.6, 0), 1.6, Color3.fromRGB(255, 235, 170), Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 220, 150)
+	light.Range = 16
+	light.Brightness = 1.5
+	light.Parent = bulb
+end
+
+local function fountain(base)
+	pillar(base + Vector3.new(0, 0.6, 0), 1.2, 12, MARBLE, Enum.Material.Marble)
+	pillar(base + Vector3.new(0, 1.25, 0), 0.3, 12.4, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 1.05, 0), 0.3, 10.6, Color3.fromRGB(80, 190, 255), Enum.Material.Glass).Transparency = 0.25
+	pillar(base + Vector3.new(0, 3, 0), 4, 1.4, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 5.1, 0), 0.4, 5, GOLD, Enum.Material.Metal)
+	-- golden coin on top
+	deco({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, 3.2, 3.2),
+		CFrame = CFrame.new(base + Vector3.new(0, 7.4, 0)),
+		Color = GOLD,
+		Material = Enum.Material.Neon,
+	})
+	local spout = deco({ Size = Vector3.new(1, 0.2, 1), Position = base + Vector3.new(0, 5.4, 0), Transparency = 1 })
+	local water = Instance.new("ParticleEmitter")
+	water.Color = ColorSequence.new(Color3.fromRGB(150, 220, 255))
+	water.LightEmission = 0.4
+	water.Rate = 60
+	water.Lifetime = NumberRange.new(1, 1.4)
+	water.Speed = NumberRange.new(7, 9)
+	water.SpreadAngle = Vector2.new(25, 25)
+	water.Acceleration = Vector3.new(0, -22, 0)
+	water.Size = NumberSequence.new(0.5, 0.2)
+	water.Transparency = NumberSequence.new(0.2, 0.8)
+	water.Parent = spout
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Color = ColorSequence.new(GOLD)
+	sparkle.LightEmission = 1
+	sparkle.Rate = 6
+	sparkle.Lifetime = NumberRange.new(1.5, 2.5)
+	sparkle.Speed = NumberRange.new(1, 2)
+	sparkle.Size = NumberSequence.new(0.3, 0)
+	sparkle.Parent = spout
+end
+
+local function luxuryLobby(lobby, baseY)
+	local floorTop = baseY - 0.5
+	-- marble floor with a gold rim (walkable)
+	local rim = pillar(Vector3.new(lobby.X, floorTop - 0.17, lobby.Z), 0.3, 95, GOLD, Enum.Material.Metal)
+	local marble = pillar(Vector3.new(lobby.X, floorTop - 0.15, lobby.Z), 0.3, 92, MARBLE, Enum.Material.Marble)
+	rim.CanCollide, marble.CanCollide = true, true
+	-- gold inlay rings + centre medallion
+	pillar(Vector3.new(lobby.X, floorTop + 0.01, lobby.Z), 0.02, 70, GOLD, Enum.Material.Metal)
+	pillar(Vector3.new(lobby.X, floorTop + 0.02, lobby.Z), 0.02, 69.2, MARBLE, Enum.Material.Marble)
+
+	-- red carpet from the spawn to the Hall of Fame, with gold trim and lamp posts
+	local x0, x1 = -4, -78
+	local carpet = deco({
+		Size = Vector3.new(x0 - x1, 0.1, 7),
+		Position = Vector3.new((x0 + x1) / 2, floorTop + 0.06, 0),
+		Color = Color3.fromRGB(170, 15, 35),
+		Material = Enum.Material.Fabric,
+	})
+	carpet.Name = "RedCarpet"
+	for _, z in ipairs({ -3.7, 3.7 }) do
+		deco({
+			Size = Vector3.new(x0 - x1, 0.12, 0.5),
+			Position = Vector3.new((x0 + x1) / 2, floorTop + 0.07, z),
+			Color = GOLD,
+			Material = Enum.Material.Metal,
+		})
+	end
+	for x = -12, -60, -12 do
+		lamp(Vector3.new(x, floorTop, -5.5))
+		lamp(Vector3.new(x, floorTop, 5.5))
+	end
+
+	-- twin fountains
+	fountain(Vector3.new(-20, floorTop, -18))
+	fountain(Vector3.new(-20, floorTop, 18))
+
+	-- grand entrance arch over the carpet (gold + white)
+	gate(-8, floorTop, 9, { GOLD, MARBLE }, Enum.Material.Metal)
+
+	-- gold frame around the Hall of Fame wall
+	for _, z in ipairs({ -27.5, 27.5 }) do
+		pillar(Vector3.new(-85, floorTop + 16, z), 32, 2.6, GOLD, Enum.Material.Metal)
+		ball(Vector3.new(-85, floorTop + 33, z), 3, Color3.fromRGB(255, 235, 150), Enum.Material.Neon)
+	end
+	deco({ Size = Vector3.new(2.6, 1.2, 55), Position = Vector3.new(-85, floorTop + 30.3, 0), Color = GOLD, Material = Enum.Material.Neon })
+end
+
 ---------------------------------------------------------------- per-world scenery
 local function buildSky(x0, x1, baseY)
 	for _ = 1, 45 do
@@ -5129,6 +5393,7 @@ function Scenery.Build(opts)
 	-- Spawn plaza: a big island with room for the Hall of Fame wall, podium, portal and NPCs.
 	local LOBBY = Vector3.new(-44, 0, 0)
 	island(LOBBY, baseY - 0.55, 100, 1, true)
+	luxuryLobby(LOBBY, baseY)
 	for _, offset in ipairs({
 		Vector3.new(-14, 0, -42), Vector3.new(-14, 0, 42), Vector3.new(-40, 0, -46), Vector3.new(-40, 0, 46),
 		Vector3.new(-64, 0, -40), Vector3.new(-64, 0, 40), Vector3.new(-2, 0, -28), Vector3.new(-2, 0, 28),

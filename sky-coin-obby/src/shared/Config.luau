@@ -174,6 +174,7 @@ Config.Sounds = Assets.Sounds or {}
 Config.Music = Assets.Music or {}
 Config.Skyboxes = Assets.Skyboxes or {}
 Config.Floors = Assets.Floors or {}
+Config.Portals = Assets.Portals or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35

@@ -504,39 +504,6 @@ Remotes.CoinCollected.OnClientEvent:Connect(function(coin, respawnSeconds)
 	end)
 end)
 ]==])
-add(f_client, "LocalScript", "FloorFlow", [==[
--- Makes the world floors flow: scrolls every Texture tagged FlowTexture by its FlowU/FlowV
--- attributes (studs per second). Runs on the client so it's smooth and costs no network.
-local CollectionService = game:GetService("CollectionService")
-local RunService = game:GetService("RunService")
-
-local textures = {}
-
-local function add(texture)
-	if texture:IsA("Texture") then
-		textures[texture] = true
-	end
-end
-for _, texture in ipairs(CollectionService:GetTagged("FlowTexture")) do
-	add(texture)
-end
-CollectionService:GetInstanceAddedSignal("FlowTexture"):Connect(add)
-CollectionService:GetInstanceRemovedSignal("FlowTexture"):Connect(function(texture)
-	textures[texture] = nil
-end)
-
-RunService.RenderStepped:Connect(function()
-	local t = os.clock()
-	for texture in pairs(textures) do
-		local u = texture:GetAttribute("FlowU") or 0
-		local v = texture:GetAttribute("FlowV") or 0
-		-- a slow sway on top of the drift makes it look liquid instead of a conveyor belt
-		local sway = math.sin(t * 0.6) * 3
-		texture.OffsetStudsU = (t * u + sway) % texture.StudsPerTileU
-		texture.OffsetStudsV = (t * v - sway) % texture.StudsPerTileV
-	end
-end)
-]==])
 add(f_client, "LocalScript", "Interface", [==[
 -- All on-screen UI, built in code (nothing to set up in StarterGui):
 -- HUD (coins, stage, wins, speedrun timer), side buttons (shop, daily, invite, skip, music),
@@ -2759,5 +2726,47 @@ while true do
 		refresh()
 	end
 end
+]==])
+add(f_client, "LocalScript", "WorldFx", [==[
+-- Client-side world animation (smooth, and costs no network):
+--   FlowTexture: world floor textures drift by their FlowU/FlowV attributes (studs per second)
+--   PortalSpin: portal vortex images spin by their Spin attribute (degrees per second)
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+
+local function tracked(tagName, className)
+	local set = {}
+	local function add(instance)
+		if instance:IsA(className) then
+			set[instance] = true
+		end
+	end
+	for _, instance in ipairs(CollectionService:GetTagged(tagName)) do
+		add(instance)
+	end
+	CollectionService:GetInstanceAddedSignal(tagName):Connect(add)
+	CollectionService:GetInstanceRemovedSignal(tagName):Connect(function(instance)
+		set[instance] = nil
+	end)
+	return set
+end
+
+local textures = tracked("FlowTexture", "Texture")
+local spinners = tracked("PortalSpin", "GuiObject")
+
+RunService.RenderStepped:Connect(function()
+	local t = os.clock()
+	-- a slow sway on top of the drift makes floors look liquid instead of a conveyor belt
+	local sway = math.sin(t * 0.6) * 3
+	for texture in pairs(textures) do
+		local u = texture:GetAttribute("FlowU") or 0
+		local v = texture:GetAttribute("FlowV") or 0
+		texture.OffsetStudsU = (t * u + sway) % texture.StudsPerTileU
+		texture.OffsetStudsV = (t * v - sway) % texture.StudsPerTileV
+	end
+	for gui in pairs(spinners) do
+		gui.Rotation = (t * (gui:GetAttribute("Spin") or 30)) % 360
+	end
+end)
 ]==])
 print(keptAssets and "Sky Coin Obby updated! (your Assets ids were kept) Press Play to test." or "Sky Coin Obby installed! Press Play to test.")

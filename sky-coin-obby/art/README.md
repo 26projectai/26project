@@ -75,3 +75,11 @@ All of these are also in your Higgsfield account under your generation history.
 | `floor-candy.png` | Candy Land: bubblegum goo → `Assets.Floors.Candy` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_005747_b4ed6edf-576b-4d8e-9371-66ed286ddad4.png) |
 | `floor-space.png` | Outer Space: nebula void → `Assets.Floors.Space` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_005747_fff9db95-2823-4971-a43b-60835b020d86.png) |
 | `floor-lava.png` | Gary's Lair: magma → `Assets.Floors.Lair` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_005747_701e7851-9db6-4dd4-8847-274e2eb98e0a.png) |
+
+### Spinning world portals (upload as images, ids go in `Assets.Portals`)
+| File | World | Link |
+|---|---|---|
+| `portal-sky.png` | Sky Islands → `Assets.Portals.Sky` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010141_3587a1b7-4986-4f29-a21e-59e8284abc49.png) |
+| `portal-candy.png` | Candy Land → `Assets.Portals.Candy` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_8b323ff0-9234-4da6-9647-1c7ff6144706.png) |
+| `portal-space.png` | Outer Space → `Assets.Portals.Space` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_4911e273-b353-4647-8800-726d2264b459.png) |
+| `portal-lair.png` | Gary's Lair → `Assets.Portals.Lair` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_b9f83478-0f7a-40ba-92c3-bb65f757fa57.png) |

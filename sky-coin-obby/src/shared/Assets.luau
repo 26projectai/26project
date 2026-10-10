@@ -85,6 +85,14 @@ Assets.Floors = {
 	Lair = "rbxassetid://0", -- art/floor-lava.png (magma)
 }
 
+-- Spinning world portal swirls (art/portal-*.png). "rbxassetid://0" = plain glowing portal.
+Assets.Portals = {
+	Sky = "rbxassetid://0", -- art/portal-sky.png
+	Candy = "rbxassetid://0", -- art/portal-candy.png
+	Space = "rbxassetid://0", -- art/portal-space.png
+	Lair = "rbxassetid://0", -- art/portal-lair.png
+}
+
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
 Assets.ItemIcons = {
 	RainbowTrail = "rbxassetid://0", -- art/item-rainbow-trail.png
