@@ -75,21 +75,21 @@ Assets.Images = {
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
 Assets.Sounds = {
-	Coin = "rbxassetid://0", -- audio/sfx_coin.mp3
-	Checkpoint = "rbxassetid://0", -- audio/sfx_checkpoint.mp3
-	Purchase = "rbxassetid://0", -- audio/sfx_purchase.mp3
-	Death = "rbxassetid://0", -- audio/sfx_death.mp3
-	Win = "rbxassetid://0", -- audio/sfx_win.mp3
-	JumpPad = "rbxassetid://0", -- audio/sfx_jumppad.mp3
-	Click = "rbxassetid://0", -- audio/sfx_click.mp3
-	Daily = "rbxassetid://0", -- audio/sfx_daily.mp3
+	Coin = "rbxassetid://135149056911357", -- audio/sfx_coin.mp3
+	Checkpoint = "rbxassetid://126875471691274", -- audio/sfx_checkpoint.mp3
+	Purchase = "rbxassetid://78247685819252", -- audio/sfx_purchase.mp3
+	Death = "rbxassetid://72099297140509", -- audio/sfx_death.mp3
+	Win = "rbxassetid://82132823776612", -- audio/sfx_win.mp3
+	JumpPad = "rbxassetid://77695288042108", -- audio/sfx_jumppad.mp3
+	Click = "rbxassetid://137396748038204", -- audio/sfx_click.mp3
+	Daily = "rbxassetid://75766517135286", -- audio/sfx_daily.mp3
 }
 Assets.Music = {
-	Sky = "rbxassetid://0", -- audio/music_sky.mp3
-	Candy = "rbxassetid://0", -- audio/music_candy.mp3
-	Space = "rbxassetid://0", -- audio/music_space.mp3
-	Calm = "rbxassetid://0", -- audio/music_calm.mp3
-	Phonk = "rbxassetid://0", -- audio/music_phonk.mp3
+	Sky = "rbxassetid://100713145617299", -- audio/music_sky.mp3
+	Candy = "rbxassetid://85373980055555", -- audio/music_candy.mp3
+	Space = "rbxassetid://121210665279024", -- audio/music_space.mp3
+	Calm = "rbxassetid://137319511779687", -- audio/music_calm.mp3
+	Phonk = "rbxassetid://111141997860833", -- audio/music_phonk.mp3
 }
 
 -- Custom skyboxes (skybox/<world>_<face>.png). Upload the 18 images and paste the ids.
