@@ -60,3 +60,10 @@ file name shown, then follow **Part C** in the main README to upload them to Rob
 | `badge-op1000.png` | Badge: OP Stage 1000 | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_002227_ba781478-d086-474b-8133-915915606f64.png) |
 
 All of these are also in your Higgsfield account under your generation history.
+
+### Launch thumbnails (YouTube + extra Roblox thumbnail)
+| File | Use | Link |
+|---|---|---|
+| `youtube-escape-gary.png` | YouTube thumbnail 1: Escape Gary (also works as Roblox thumbnail) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_004000_9745fa61-7125-4896-9466-84487bd0dd76.png) |
+| `youtube-1000-stages.png` | YouTube thumbnail 2: "I beat 1000 stages?!" | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_004000_4769e2f6-ad8a-4cd3-9c91-6a720cc64871.png) |
+| `thumbnail-invite.png` | Roblox thumbnail 3: lobby + "Invite a friend = 3x coins" | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_004000_d386cb5f-79fd-484c-83e0-4fdc9c9e5782.png) |
