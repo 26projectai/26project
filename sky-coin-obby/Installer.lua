@@ -7153,7 +7153,7 @@ do
 		local camera = workspace.CurrentCamera
 		local height = camera and camera.ViewportSize.Y or 800
 		local used = 6 * 8 + 5 * 84 + 64 -- gaps + five big buttons + the music button
-		sideScale.Scale = math.clamp((height - 150) / used, 0.45, 1)
+		sideScale.Scale = math.clamp((height - 190) / used, 0.45, 1)
 	end
 	fitSideBar()
 	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(fitSideBar)
@@ -7696,10 +7696,12 @@ Remotes.Won.OnClientEvent:Connect(function(elapsed, isNewBest, reward, wins, ass
 end)
 
 ---------------------------------------------------------------- Refresh + events
+-- The real stage count comes from Config: counting the Checkpoints folder on the client is
+-- wrong when streaming only sends the nearby ones (that showed "Stage 5/22").
 local totalStages = 0
 local function countStages()
 	local folder = workspace:FindFirstChild("Checkpoints")
-	local highest = 0
+	local highest = Config.Stages or 0
 	for _, child in ipairs(folder and folder:GetChildren() or {}) do
 		highest = math.max(highest, tonumber(child.Name) or 0)
 	end
