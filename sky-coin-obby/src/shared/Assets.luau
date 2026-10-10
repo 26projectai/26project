@@ -15,7 +15,7 @@ Assets.GamePasses = {
 	GravityCoil = 0, -- hold to float
 }
 Assets.Products = {
-	SkipStage = 0, -- skip the current stage
+	SkipStage = 3717552827, -- skip the current stage
 }
 
 -- Badges (optional). Create them on the Creator Hub and paste the ids (0 = off).
