@@ -103,18 +103,18 @@ Assets.Skyboxes = {
 -- Animated floor textures (art/floor-*.png). Upload them as images and paste the ids.
 -- "rbxassetid://0" = keep the plain material floor.
 Assets.Floors = {
-	Sky = "rbxassetid://0", -- art/floor-gold.png (molten gold)
-	Candy = "rbxassetid://0", -- art/floor-candy.png (bubblegum goo)
-	Space = "rbxassetid://0", -- art/floor-space.png (nebula void)
-	Lair = "rbxassetid://0", -- art/floor-lava.png (magma)
+	Sky = "rbxassetid://118334347239534", -- art/floor-gold.png (molten gold)
+	Candy = "rbxassetid://104839541243931", -- art/floor-candy.png (bubblegum goo)
+	Space = "rbxassetid://128786772816458", -- art/floor-space.png (nebula void)
+	Lair = "rbxassetid://86492301122667", -- art/floor-lava.png (magma)
 }
 
 -- Spinning world portal swirls (art/portal-*.png). "rbxassetid://0" = plain glowing portal.
 Assets.Portals = {
-	Sky = "rbxassetid://0", -- art/portal-sky.png
-	Candy = "rbxassetid://0", -- art/portal-candy.png
-	Space = "rbxassetid://0", -- art/portal-space.png
-	Lair = "rbxassetid://0", -- art/portal-lair.png
+	Sky = "rbxassetid://133903079187908", -- art/portal-sky.png
+	Candy = "rbxassetid://122790115664473", -- art/portal-candy.png
+	Space = "rbxassetid://123080754434628", -- art/portal-space.png
+	Lair = "rbxassetid://140172290427373", -- art/portal-lair.png
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
@@ -7748,23 +7748,14 @@ if player.Character then
 	task.spawn(hideOwnPrompt, player.Character)
 end
 
----------------------------------------------------------------- Lobby teleport (button / L key) + back to stage
+---------------------------------------------------------------- Lobby teleport: one toggle button (or L key)
+-- Out on the course it says LOBBY; in the lobby the same button says BACK TO STAGE.
 local lobbyButton = button({
 	AnchorPoint = Vector2.new(0, 1),
 	Position = UDim2.new(0, 110, 1, -62),
-	Size = UDim2.fromOffset(110, 40),
+	Size = UDim2.fromOffset(150, 40),
 	BackgroundColor3 = COLORS.Blue,
 	Text = "🏠 LOBBY (L)",
-	ZIndex = 5,
-	Parent = gui,
-})
-local backButton = button({
-	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 230, 1, -62),
-	Size = UDim2.fromOffset(190, 40),
-	BackgroundColor3 = COLORS.Green,
-	Text = "↩ BACK TO STAGE",
-	Visible = false,
 	ZIndex = 5,
 	Parent = gui,
 })
@@ -7783,26 +7774,23 @@ local function teleport(remote)
 	busyTeleport = false
 end
 
-lobbyButton.Activated:Connect(function()
-	teleport(Remotes.GoLobby)
-end)
-backButton.Activated:Connect(function()
-	teleport(Remotes.BackToStage)
-end)
+local function toggleLobby()
+	teleport(player:GetAttribute("InLobby") and Remotes.BackToStage or Remotes.GoLobby)
+end
+lobbyButton.Activated:Connect(toggleLobby)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.L then
-		teleport(player:GetAttribute("InLobby") and Remotes.BackToStage or Remotes.GoLobby)
+		toggleLobby()
 	end
 end)
 
-local function refreshLobbyButtons()
+local function refreshLobbyButton()
 	local inLobby = player:GetAttribute("InLobby") == true
-	backButton.Visible = inLobby
-	lobbyButton.Text = inLobby and "🏠 IN LOBBY" or "🏠 LOBBY (L)"
-	lobbyButton.BackgroundColor3 = inLobby and COLORS.Grey or COLORS.Blue
+	lobbyButton.Text = inLobby and "↩ BACK TO STAGE" or "🏠 LOBBY (L)"
+	lobbyButton.BackgroundColor3 = inLobby and COLORS.Green or COLORS.Blue
 end
-player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButtons)
-refreshLobbyButtons()
+player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButton)
+refreshLobbyButton()
 ]==])
 add(f_client, "LocalScript", "Movement", [==[
 -- Jump pads, plus each zone's sky colours and gravity (space = moon jumps).

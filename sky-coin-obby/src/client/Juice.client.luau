@@ -337,23 +337,14 @@ if player.Character then
 	task.spawn(hideOwnPrompt, player.Character)
 end
 
----------------------------------------------------------------- Lobby teleport (button / L key) + back to stage
+---------------------------------------------------------------- Lobby teleport: one toggle button (or L key)
+-- Out on the course it says LOBBY; in the lobby the same button says BACK TO STAGE.
 local lobbyButton = button({
 	AnchorPoint = Vector2.new(0, 1),
 	Position = UDim2.new(0, 110, 1, -62),
-	Size = UDim2.fromOffset(110, 40),
+	Size = UDim2.fromOffset(150, 40),
 	BackgroundColor3 = COLORS.Blue,
 	Text = "🏠 LOBBY (L)",
-	ZIndex = 5,
-	Parent = gui,
-})
-local backButton = button({
-	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 230, 1, -62),
-	Size = UDim2.fromOffset(190, 40),
-	BackgroundColor3 = COLORS.Green,
-	Text = "↩ BACK TO STAGE",
-	Visible = false,
 	ZIndex = 5,
 	Parent = gui,
 })
@@ -372,23 +363,20 @@ local function teleport(remote)
 	busyTeleport = false
 end
 
-lobbyButton.Activated:Connect(function()
-	teleport(Remotes.GoLobby)
-end)
-backButton.Activated:Connect(function()
-	teleport(Remotes.BackToStage)
-end)
+local function toggleLobby()
+	teleport(player:GetAttribute("InLobby") and Remotes.BackToStage or Remotes.GoLobby)
+end
+lobbyButton.Activated:Connect(toggleLobby)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.L then
-		teleport(player:GetAttribute("InLobby") and Remotes.BackToStage or Remotes.GoLobby)
+		toggleLobby()
 	end
 end)
 
-local function refreshLobbyButtons()
+local function refreshLobbyButton()
 	local inLobby = player:GetAttribute("InLobby") == true
-	backButton.Visible = inLobby
-	lobbyButton.Text = inLobby and "🏠 IN LOBBY" or "🏠 LOBBY (L)"
-	lobbyButton.BackgroundColor3 = inLobby and COLORS.Grey or COLORS.Blue
+	lobbyButton.Text = inLobby and "↩ BACK TO STAGE" or "🏠 LOBBY (L)"
+	lobbyButton.BackgroundColor3 = inLobby and COLORS.Green or COLORS.Blue
 end
-player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButtons)
-refreshLobbyButtons()
+player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButton)
+refreshLobbyButton()
