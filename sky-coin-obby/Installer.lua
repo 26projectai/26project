@@ -5926,31 +5926,27 @@ local player = Players.LocalPlayer
 local stageValue = player:WaitForChild("leaderstats"):WaitForChild("Stage")
 
 ---------------------------------------------------------------- Music
-local musicGroup = Instance.new("SoundGroup")
+-- ONE music player, so two tracks can never play on top of each other.
+-- Switching fades the current track out, swaps it, then fades the new one in.
+local musicGroup = SoundService:FindFirstChild("Music") or Instance.new("SoundGroup")
 musicGroup.Name = "Music"
 musicGroup.Volume = Config.MusicVolume
 musicGroup.Parent = SoundService
 
-local tracks = {}
-local current
-
-local function trackFor(name)
-	local id = Config.Music[name]
-	if not Config.HasAsset(id) then
-		return nil
+-- Stop any music left over from older versions of the game.
+for _, child in ipairs(SoundService:GetChildren()) do
+	if child:IsA("Sound") and child.Looped and child.Name ~= "BackgroundMusic" then
+		child:Stop()
+		child:Destroy()
 	end
-	if not tracks[name] then
-		local sound = Instance.new("Sound")
-		sound.Name = name
-		sound.SoundId = id
-		sound.Looped = true
-		sound.Volume = 0
-		sound.SoundGroup = musicGroup
-		sound.Parent = SoundService
-		tracks[name] = sound
-	end
-	return tracks[name]
 end
+
+local music = SoundService:FindFirstChild("BackgroundMusic") or Instance.new("Sound")
+music.Name = "BackgroundMusic"
+music.Looped = true
+music.Volume = 0
+music.SoundGroup = musicGroup
+music.Parent = SoundService
 
 -- Radio modes (MUSIC button): World (zone music; phonk in the OP tower), Calm, Phonk, Off.
 local function wantedTrackName()
@@ -5965,32 +5961,40 @@ local function wantedTrackName()
 	return Config.ZoneForStage(stageValue.Value).Music
 end
 
+local currentId = nil
+local switchToken = 0
 local function updateMusic()
 	local name = wantedTrackName()
-	local wanted = name and trackFor(name) or nil
-	if wanted == current then
+	local id = name and Config.Music[name]
+	if not Config.HasAsset(id) then
+		id = nil
+	end
+	if id == currentId then
 		return
 	end
-	local old = current
-	current = wanted
-	if old then
-		local fade = TweenService:Create(old, TweenInfo.new(1), { Volume = 0 })
-		fade:Play()
-		fade.Completed:Once(function()
-			if current ~= old then
-				old:Pause()
-			end
-		end)
-	end
-	if wanted then
-		if not wanted.IsPlaying then
-			wanted:Resume()
-			if not wanted.IsPlaying then
-				wanted:Play()
-			end
+	currentId = id
+	switchToken += 1
+	local token = switchToken
+	task.spawn(function()
+		-- Fade out whatever is playing, then swap.
+		if music.IsPlaying then
+			local fadeOut = TweenService:Create(music, TweenInfo.new(0.6), { Volume = 0 })
+			fadeOut:Play()
+			fadeOut.Completed:Wait()
 		end
-		TweenService:Create(wanted, TweenInfo.new(1.5), { Volume = 1 }):Play()
-	end
+		if token ~= switchToken then
+			return -- a newer switch happened meanwhile
+		end
+		music:Stop()
+		if not id then
+			return
+		end
+		music.SoundId = id
+		music.TimePosition = 0
+		music.Volume = 0
+		music:Play()
+		TweenService:Create(music, TweenInfo.new(1.2), { Volume = 1 }):Play()
+	end)
 end
 
 stageValue.Changed:Connect(updateMusic)

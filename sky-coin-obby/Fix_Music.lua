@@ -1,3 +1,10 @@
+-- Fix: music plays one track at a time. Paste into the Studio command bar and press Run.
+local client = game:GetService("StarterPlayer").StarterPlayerScripts:FindFirstChild("Client")
+local audio = client and client:FindFirstChild("Audio")
+if not audio then
+	warn("Audio script not found - run the full installer instead.")
+else
+	audio.Source = [==[
 -- Background music (changes per zone, mute with the music button) and event sound effects.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -108,4 +115,7 @@ end
 player.CharacterAdded:Connect(onCharacter)
 if player.Character then
 	task.spawn(onCharacter, player.Character)
+end
+]==]
+	print("Music fix installed! Press Play to test.")
 end
