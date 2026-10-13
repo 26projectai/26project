@@ -761,13 +761,14 @@ function OPGen.BasePick(stage, rng)
 	return choices[rng:NextInteger(1, #choices)]
 end
 
-function OPGen.Section(stage, pad, rise, ctx)
+-- difficulty (0..1) is optional: the race mode passes its own instead of the tower tier's.
+function OPGen.Section(stage, pad, rise, ctx, difficulty)
 	local rng = Random.new(stage * 104729)
 	local tier = OPGen.TierOf(stage)
 	local within = (stage - (tier - 1) * OP.TierSize - 1) / OP.TierSize
-	local d = math.clamp((tier - 1) / (#OP.Tiers - 1) + within * 0.05, 0, 1)
+	local d = difficulty or math.clamp((tier - 1) / (#OP.Tiers - 1) + within * 0.05, 0, 1)
 
-	ctx.coin = function(position)
+	ctx.coin = ctx.coin or function(position)
 		local coin = Instance.new("Part")
 		coin.Name = "Coin"
 		coin.Shape = Enum.PartType.Cylinder
@@ -781,7 +782,7 @@ function OPGen.Section(stage, pad, rise, ctx)
 		coin.Parent = ctx.coins
 		return coin
 	end
-	ctx.kill = function(position, size)
+	ctx.kill = ctx.kill or function(position, size)
 		return ctx.part({
 			Name = "Lava",
 			Size = size,

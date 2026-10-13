@@ -77,7 +77,9 @@ end
 local function applyMovement(zone)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	workspace.Gravity = zone.Gravity
+	-- Server event LOW GRAVITY PARTY: lower gravity, same jump power = floaty moon jumps.
+	local lowGrav = (workspace:GetAttribute("LowGravUntil") or 0) > workspace:GetServerTimeNow()
+	workspace.Gravity = lowGrav and zone.Gravity * 0.45 or zone.Gravity
 	if not humanoid then
 		return
 	end
@@ -172,6 +174,11 @@ end
 player.CharacterAdded:Connect(function(character)
 	character:WaitForChild("Humanoid")
 	applyZone()
+end)
+workspace:GetAttributeChangedSignal("LowGravUntil"):Connect(function()
+	applyZone()
+	local ends = workspace:GetAttribute("LowGravUntil") or 0
+	task.delay(math.max(0, ends - workspace:GetServerTimeNow()) + 0.2, applyZone) -- back to normal
 end)
 applyZone()
 

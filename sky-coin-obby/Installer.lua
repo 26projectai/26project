@@ -413,6 +413,7 @@ return {
 	Slap = get("Slap", "RemoteEvent"), -- client -> server: slap hand hit (target player)
 	GoLobby = get("GoLobby", "RemoteFunction"), -- client -> server: teleport to the spawn plaza
 	BackToStage = get("BackToStage", "RemoteFunction"), -- client -> server: return to your checkpoint
+	RaceState = get("RaceState", "RemoteEvent"), -- server -> racers: countdown / live board / results
 	Fx = get("Fx", "RemoteEvent"), -- server -> client: (effectName, ...) jumpscare / shake / confetti
 }
 ]==])
@@ -1245,6 +1246,9 @@ local function onCharacterAdded(player, character)
 	local root = character:WaitForChild("HumanoidRootPart", 10)
 	if not data or not root or data.Mode == "OP" then
 		return -- OP Obby spawning is handled by OPObby.server
+	end
+	if player:GetAttribute("Racing") then
+		return -- racers respawn on their race checkpoint (Race.server)
 	end
 	-- CharacterAdded fires before the character is placed in the world;
 	-- wait for Roblox's own spawn positioning, or it overrides our teleport.
@@ -2662,6 +2666,131 @@ while true do
 		end
 	end
 end
+]==])
+add(f_server, "Script", "Events", [==[
+-- SERVER EVENTS: every few minutes a random event runs for everyone on the server for 60 seconds.
+--   🪙 COIN RAIN      - coins fall all over the lobby; grab as many as you can
+--   💰 2X COIN FRENZY - every coin you earn is doubled
+--   🌙 LOW GRAVITY    - floaty moon jumps everywhere
+-- The banner + timer are shown by Modes.client (workspace attributes EventName / EventEnds).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PlayerData"))
+
+local EVENT_SECONDS = 60
+local FIRST_EVENT_AFTER = 120 -- seconds after the server starts
+local GAP_MIN, GAP_MAX = 6 * 60, 9 * 60 -- time between events
+local RAIN_COIN_VALUE = 10
+
+local firstPad = workspace:WaitForChild("Checkpoints"):WaitForChild("1")
+local LOBBY = firstPad.Position + Vector3.new(-44, 0, 0)
+
+local function announce(text)
+	for _, player in ipairs(Players:GetPlayers()) do
+		Remotes.Notify:FireClient(player, text, "gold")
+		Remotes.Fx:FireClient(player, "Confetti")
+	end
+end
+
+---------------------------------------------------------------- Coin rain
+local function dropCoin(folder)
+	local angle = math.random() * math.pi * 2
+	local radius = math.random() * 40
+	local ground = LOBBY + Vector3.new(math.cos(angle) * radius, 2.2, math.sin(angle) * radius)
+	local coin = Instance.new("Part")
+	coin.Name = "RainCoin"
+	coin.Shape = Enum.PartType.Cylinder
+	coin.Size = Vector3.new(0.5, 3, 3)
+	coin.Color = Color3.fromRGB(255, 205, 40)
+	coin.Material = Enum.Material.Neon
+	coin.Anchored = true
+	coin.CanCollide = false
+	coin.CastShadow = false
+	coin.CFrame = CFrame.new(ground + Vector3.new(0, 45, 0)) * CFrame.Angles(0, angle, 0)
+	coin.Parent = folder
+	TweenService:Create(coin, TweenInfo.new(1.4, Enum.EasingStyle.Bounce), { CFrame = CFrame.new(ground) * CFrame.Angles(0, angle, 0) }):Play()
+	local taken = false
+	coin.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		if taken or not player then
+			return
+		end
+		taken = true
+		coin:Destroy()
+		local amount = PlayerData.AddCoins(player, RAIN_COIN_VALUE, true)
+		Remotes.CoinCollected:FireClient(player, nil, 0, amount)
+	end)
+end
+
+local function coinRain(ends)
+	local folder = Instance.new("Folder")
+	folder.Name = "CoinRain"
+	folder.Parent = workspace
+	while workspace:GetServerTimeNow() < ends do
+		for _ = 1, 3 do
+			dropCoin(folder)
+		end
+		task.wait(1.5)
+	end
+	task.wait(3)
+	folder:Destroy()
+end
+
+---------------------------------------------------------------- Event runner
+local EVENTS = {
+	{
+		Name = "🪙 COIN RAIN in the lobby!",
+		Start = function(ends)
+			announce("🪙 COIN RAIN! Coins are falling in the lobby - press L to grab them!")
+			coinRain(ends)
+		end,
+	},
+	{
+		Name = "💰 2X COIN FRENZY",
+		Start = function(ends)
+			workspace:SetAttribute("FrenzyUntil", ends) -- read by PlayerData.Multiplier
+			announce("💰 2X COIN FRENZY! Every coin is doubled for 60 seconds!")
+		end,
+	},
+	{
+		Name = "🌙 LOW GRAVITY PARTY",
+		Start = function(ends)
+			workspace:SetAttribute("LowGravUntil", ends) -- read by Movement.client
+			announce("🌙 LOW GRAVITY PARTY! Moon jumps for everyone!")
+		end,
+	},
+}
+
+local last
+local function runEvent()
+	local pick
+	repeat
+		pick = EVENTS[math.random(#EVENTS)]
+	until pick ~= last or #EVENTS == 1
+	last = pick
+	local ends = workspace:GetServerTimeNow() + EVENT_SECONDS
+	workspace:SetAttribute("EventName", pick.Name)
+	workspace:SetAttribute("EventEnds", ends)
+	task.spawn(pick.Start, ends)
+	task.wait(EVENT_SECONDS)
+	workspace:SetAttribute("EventName", nil)
+	workspace:SetAttribute("EventEnds", nil)
+end
+
+task.spawn(function()
+	task.wait(FIRST_EVENT_AFTER)
+	while true do
+		if #Players:GetPlayers() > 0 then
+			runEvent()
+		end
+		task.wait(math.random(GAP_MIN, GAP_MAX))
+	end
+end)
 ]==])
 add(f_server, "Script", "Leaderboards", [==[
 -- Leaderboards on in-world boards:
@@ -4094,13 +4223,14 @@ function OPGen.BasePick(stage, rng)
 	return choices[rng:NextInteger(1, #choices)]
 end
 
-function OPGen.Section(stage, pad, rise, ctx)
+-- difficulty (0..1) is optional: the race mode passes its own instead of the tower tier's.
+function OPGen.Section(stage, pad, rise, ctx, difficulty)
 	local rng = Random.new(stage * 104729)
 	local tier = OPGen.TierOf(stage)
 	local within = (stage - (tier - 1) * OP.TierSize - 1) / OP.TierSize
-	local d = math.clamp((tier - 1) / (#OP.Tiers - 1) + within * 0.05, 0, 1)
+	local d = difficulty or math.clamp((tier - 1) / (#OP.Tiers - 1) + within * 0.05, 0, 1)
 
-	ctx.coin = function(position)
+	ctx.coin = ctx.coin or function(position)
 		local coin = Instance.new("Part")
 		coin.Name = "Coin"
 		coin.Shape = Enum.PartType.Cylinder
@@ -4114,7 +4244,7 @@ function OPGen.Section(stage, pad, rise, ctx)
 		coin.Parent = ctx.coins
 		return coin
 	end
-	ctx.kill = function(position, size)
+	ctx.kill = ctx.kill or function(position, size)
 		return ctx.part({
 			Name = "Lava",
 			Size = size,
@@ -4645,6 +4775,10 @@ function PlayerData.Multiplier(player)
 	if rarity and rarity.CoinBoost then
 		mult *= rarity.CoinBoost
 	end
+	-- Server event: 2X COIN FRENZY (Events.server).
+	if (workspace:GetAttribute("FrenzyUntil") or 0) > now then
+		mult *= 2
+	end
 	-- Pets from the shop add a bonus while equipped.
 	local pet = data.Equipped and data.Equipped.Pet and ShopCatalog.Get(data.Equipped.Pet)
 	if pet and pet.CoinBoost and data.Owned[pet.Id] then
@@ -5125,6 +5259,517 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerRemoving:Connect(function(player)
 	lastReset[player], deaths[player], chestClaims[player], scared[player], portalCooldown[player] = nil, nil, nil, nil, nil
+end)
+]==])
+add(f_server, "Script", "Race", [==[
+-- OBBY RACE: a separate game mode. Stand on the race pad in the lobby; when the countdown ends
+-- everyone on the pad is sent to a freshly built race track. 3-2-1-GO, first to the finish wins.
+--   * 4 tracks (built from the OP tower's obstacle sections), picked at random each race
+--   * race checkpoints: falling or dying puts you back on your last race checkpoint
+--   * live placements, a time limit, coin prizes by place, Race Wins + best times saved
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local Server = ServerScriptService:WaitForChild("Server")
+local PlayerData = require(Server:WaitForChild("PlayerData"))
+local OPGen = require(Server:WaitForChild("OPGen"))
+
+local TRACK_ORIGIN = Vector3.new(0, 400, -2600) -- far from the story course and the OP tower
+local SPACING = 40 -- studs between race checkpoints (the obstacle sections are built for this)
+local RISE = 2
+local PRIZES = { 150, 100, 75 } -- coins for 1st / 2nd / 3rd (other finishers get FINISH_PRIZE)
+local FINISH_PRIZE = 40
+local TRY_PRIZE = 10 -- for joining a race with other people, even without finishing
+
+local MAPS = {
+	{ Id = "SkySprint", Name = "SKY SPRINT", Sections = 6, Difficulty = 0.12, Seed = 7000, Color = Color3.fromRGB(80, 170, 255) },
+	{ Id = "CandyRush", Name = "CANDY RUSH", Sections = 7, Difficulty = 0.25, Seed = 7100, Color = Color3.fromRGB(255, 120, 200) },
+	{ Id = "LaserDash", Name = "LASER DASH", Sections = 8, Difficulty = 0.4, Seed = 7200, Color = Color3.fromRGB(150, 90, 255) },
+	{ Id = "GaryGauntlet", Name = "GARY'S GAUNTLET", Sections = 9, Difficulty = 0.55, Seed = 7300, Color = Color3.fromRGB(255, 100, 30) },
+}
+
+local function padPosition(index) -- 0 = start line (virtual pad), 1..N = race checkpoints
+	return TRACK_ORIGIN + Vector3.new(8 + SPACING * index, RISE * index, 0)
+end
+
+local function part(props, className, parent)
+	local p = Instance.new(className or "Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for key, value in pairs(props) do
+		p[key] = value
+	end
+	p.Parent = parent
+	return p
+end
+
+local function billboard(parentPart, text, color, size, offset)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = size or UDim2.fromOffset(260, 70)
+	gui.StudsOffset = offset or Vector3.new(0, 6, 0)
+	gui.MaxDistance = 150
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextStrokeTransparency = 0
+	label.TextColor3 = color or Color3.new(1, 1, 1)
+	label.Text = text
+	label.Parent = gui
+	gui.Parent = parentPart
+	return label
+end
+
+---------------------------------------------------------------- Lobby race pad
+local checkpoints = workspace:WaitForChild("Checkpoints")
+local firstPad = checkpoints:WaitForChild("1")
+local lobbyFolder = Instance.new("Folder")
+lobbyFolder.Name = "RaceLobby"
+lobbyFolder.Parent = workspace
+
+local PAD_CENTER = firstPad.Position + Vector3.new(-36, -0.7, -12)
+local racePad = part({
+	Name = "RacePad",
+	Size = Vector3.new(11, 0.4, 11),
+	Position = PAD_CENTER,
+	Color = Color3.fromRGB(40, 40, 50),
+	Material = Enum.Material.Neon,
+}, "Part", lobbyFolder)
+-- checkered top
+for x = 0, 4 do
+	for z = 0, 4 do
+		part({
+			Name = "Checker",
+			Size = Vector3.new(2.1, 0.1, 2.1),
+			Position = PAD_CENTER + Vector3.new(-4.4 + x * 2.2, 0.22, -4.4 + z * 2.2),
+			Color = (x + z) % 2 == 0 and Color3.new(1, 1, 1) or Color3.fromRGB(20, 20, 25),
+			CanCollide = false,
+			CanTouch = false,
+		}, "Part", lobbyFolder)
+	end
+end
+-- start-line arch with a checkered banner
+for _, dz in ipairs({ -6.2, 6.2 }) do
+	part({ Name = "ArchPole", Size = Vector3.new(0.8, 12, 0.8), Position = PAD_CENTER + Vector3.new(0, 6, dz), Color = Color3.fromRGB(255, 200, 60), Material = Enum.Material.Metal }, "Part", lobbyFolder)
+end
+for k = 0, 11 do
+	for row = 0, 1 do
+		part({
+			Name = "Banner",
+			Size = Vector3.new(0.3, 1, 1.05),
+			Position = PAD_CENTER + Vector3.new(0, 11 + row, -5.8 + k * 1.05),
+			Color = (k + row) % 2 == 0 and Color3.new(1, 1, 1) or Color3.fromRGB(20, 20, 25),
+			CanCollide = false,
+			CanTouch = false,
+		}, "Part", lobbyFolder)
+	end
+end
+local padLabel = billboard(racePad, "🏁 OBBY RACE\nStand here to join!", Color3.fromRGB(255, 230, 90), UDim2.fromOffset(300, 90), Vector3.new(0, 15, 0))
+
+local function playersOnPad()
+	local found, list = {}, {}
+	local parts = workspace:GetPartBoundsInBox(racePad.CFrame * CFrame.new(0, 4, 0), racePad.Size + Vector3.new(0, 8, 0))
+	for _, p in ipairs(parts) do
+		local player = Players:GetPlayerFromCharacter(p.Parent)
+		local humanoid = player and p.Parent:FindFirstChildOfClass("Humanoid")
+		if player and not found[player] and humanoid and humanoid.Health > 0 then
+			found[player] = true
+			table.insert(list, player)
+		end
+	end
+	return list
+end
+
+---------------------------------------------------------------- Track building
+local track -- { Folder, Kills, Map, Total, Gate }
+
+local function destroyTrack()
+	if track then
+		track.Folder:Destroy()
+		track.Kills:Destroy()
+		track = nil
+	end
+end
+
+local function buildTrack(map)
+	destroyTrack()
+	local folder = Instance.new("Folder")
+	folder.Name = "RaceTrack"
+	local killParts = workspace:FindFirstChild("KillParts") or Instance.new("Folder")
+	killParts.Name = "KillParts"
+	killParts.Parent = workspace
+	local kills = Instance.new("Folder")
+	kills.Name = "RaceTrack"
+	kills.Parent = killParts
+
+	local light = map.Color:Lerp(Color3.new(1, 1, 1), 0.35)
+	local dark = map.Color:Lerp(Color3.new(0, 0, 0), 0.25)
+	local total = map.Sections
+
+	-- Start platform + the gate that drops at GO.
+	local start = part({ Name = "RaceStart", Size = Vector3.new(24, 1, 30), Position = TRACK_ORIGIN, Color = Color3.fromRGB(40, 40, 50) }, "Part", folder)
+	billboard(start, "🏁 " .. map.Name, map.Color, UDim2.fromOffset(360, 70), Vector3.new(0, 14, 0))
+	local gate = part({
+		Name = "RaceGate",
+		Size = Vector3.new(1, 12, 30),
+		Position = TRACK_ORIGIN + Vector3.new(12.5, 6.5, 0),
+		Color = Color3.fromRGB(255, 60, 60),
+		Material = Enum.Material.ForceField,
+		Transparency = 0.2,
+	}, "Part", folder)
+	for _, dz in ipairs({ -15.5, 15.5 }) do
+		part({ Name = "StartWall", Size = Vector3.new(24, 6, 1), Position = TRACK_ORIGIN + Vector3.new(0, 3.5, dz), Color = map.Color, Transparency = 0.5 }, "Part", folder)
+	end
+	part({ Name = "StartWall", Size = Vector3.new(1, 6, 30), Position = TRACK_ORIGIN + Vector3.new(-12.5, 3.5, 0), Color = map.Color, Transparency = 0.5 }, "Part", folder)
+
+	-- Checkpoints + obstacle sections between them.
+	local ctx = {
+		part = function(props, className, parent)
+			return part(props, className, parent or folder)
+		end,
+		tag = function(p, tagName, attributes)
+			CollectionService:AddTag(p, tagName)
+			for key, value in pairs(attributes or {}) do
+				p:SetAttribute(key, value)
+			end
+			return p
+		end,
+		kills = kills,
+		light = light,
+		dark = dark,
+		color = map.Color,
+		coin = function() end, -- no coins in races: just speed
+	}
+	for i = 1, total do
+		OPGen.Section(map.Seed + i, padPosition(i - 1), RISE, ctx, map.Difficulty)
+		local isFinish = i == total
+		local pad = part({
+			Name = isFinish and "RaceFinish" or "RaceCheckpoint",
+			Size = isFinish and Vector3.new(16, 1, 16) or Vector3.new(8, 1, 10),
+			Position = padPosition(i),
+			Color = isFinish and Color3.fromRGB(255, 205, 40) or map.Color,
+			Material = Enum.Material.Neon,
+		}, "Part", folder)
+		pad:SetAttribute("Index", i)
+		CollectionService:AddTag(pad, isFinish and "RaceFinish" or "RaceCheckpoint")
+		billboard(pad, isFinish and "🏁 FINISH!" or ("CP %d/%d"):format(i, total - 1), Color3.new(1, 1, 1), UDim2.fromOffset(160, 40), Vector3.new(0, 4, 0))
+	end
+
+	-- Lava under the whole track.
+	local length = SPACING * (total + 1) + 80
+	part({
+		Name = "RaceLava",
+		Size = Vector3.new(length, 2, 160),
+		Position = TRACK_ORIGIN + Vector3.new(length / 2 - 40, -30, 0),
+		Color = Color3.fromRGB(255, 80, 20),
+		Material = Enum.Material.CrackedLava,
+	}, "Part", kills)
+
+	folder.Parent = workspace
+	track = { Folder = folder, Kills = kills, Map = map, Total = total, Gate = gate }
+	return track
+end
+
+---------------------------------------------------------------- Race state
+local phase = "Idle" -- Idle -> Queue -> Starting -> Racing -> Results
+local queueEnds = 0
+local racers = {} -- [Player] = { CP = 0, Finished = false, Time = nil, Place = nil }
+local finishOrder = {}
+local raceStart, raceEnds = 0, 0
+
+local function racerCount()
+	local n = 0
+	for _ in pairs(racers) do
+		n += 1
+	end
+	return n
+end
+
+local function board()
+	local rows = {}
+	for player, info in pairs(racers) do
+		table.insert(rows, { Name = player.DisplayName, UserId = player.UserId, CP = info.CP, Done = info.Finished, Time = info.Time, Place = info.Place })
+	end
+	table.sort(rows, function(a, b)
+		if a.Done ~= b.Done then
+			return a.Done
+		end
+		if a.Done then
+			return a.Place < b.Place
+		end
+		return a.CP > b.CP
+	end)
+	return rows
+end
+
+local function sendAll(payload)
+	for player in pairs(racers) do
+		Remotes.RaceState:FireClient(player, payload)
+	end
+end
+
+local function lobbyCFrame()
+	local spot = firstPad.Position + Vector3.new(-26, 4, math.random(-6, 6))
+	return CFrame.lookAt(spot, spot + Vector3.new(1, 0, 0))
+end
+
+local function removeRacer(player, toLobby)
+	if not racers[player] then
+		return
+	end
+	racers[player] = nil
+	player:SetAttribute("Racing", nil)
+	Remotes.RaceState:FireClient(player, { Phase = "Left" })
+	if toLobby and player.Character then
+		player.Character:PivotTo(lobbyCFrame())
+		player:SetAttribute("InLobby", true)
+	end
+end
+
+local function placeAtCheckpoint(player)
+	local info = racers[player]
+	local character = player.Character
+	if not info or not character or not track then
+		return
+	end
+	local index = info.CP
+	local position
+	if index <= 0 then
+		position = TRACK_ORIGIN + Vector3.new(math.random(-8, 6), 4, math.random(-10, 10))
+	else
+		position = padPosition(index) + Vector3.new(0, 4, 0)
+	end
+	character:PivotTo(CFrame.lookAt(position, position + Vector3.new(1, 0, 0)))
+end
+
+local function finishRace()
+	if phase ~= "Racing" then
+		return
+	end
+	phase = "Results"
+	local results = board()
+	sendAll({ Phase = "Results", Map = track and track.Map.Name, Board = results })
+	local multiplayer = #results >= 2
+	for player, info in pairs(racers) do
+		if not info.Finished and multiplayer then
+			local amount = PlayerData.AddCoins(player, TRY_PRIZE, true)
+			Remotes.Notify:FireClient(player, ("Race over! +%d coins for taking part."):format(amount), "gold")
+		end
+	end
+	task.delay(7, function()
+		for player in pairs(racers) do
+			removeRacer(player, true)
+		end
+		racers, finishOrder = {}, {}
+		destroyTrack()
+		phase = "Idle"
+	end)
+end
+
+local function onFinish(player)
+	local info = racers[player]
+	if phase ~= "Racing" or not info or info.Finished then
+		return
+	end
+	info.Finished = true
+	info.CP = track.Total
+	info.Time = workspace:GetServerTimeNow() - raceStart
+	table.insert(finishOrder, player)
+	info.Place = #finishOrder
+	local multiplayer = racerCount() >= 2
+	local prize = PRIZES[info.Place] or FINISH_PRIZE
+	if not multiplayer then
+		prize = FINISH_PRIZE -- solo time trials pay the finisher prize
+	end
+	local amount = PlayerData.AddCoins(player, prize, true)
+
+	local data = PlayerData.Get(player)
+	local mapId = track.Map.Id
+	local newBest = false
+	if data then
+		data.RaceBest = data.RaceBest or {}
+		if not data.RaceBest[mapId] or info.Time < data.RaceBest[mapId] then
+			data.RaceBest[mapId] = math.floor(info.Time * 100) / 100
+			newBest = true
+		end
+		if info.Place == 1 and multiplayer then
+			data.RaceWins = (data.RaceWins or 0) + 1
+			player:SetAttribute("RaceWins", data.RaceWins)
+		end
+		PlayerData.Sync(player)
+	end
+	local placeText = ({ "1ST", "2ND", "3RD" })[info.Place] or (info.Place .. "TH")
+	Remotes.Notify:FireClient(player, ("%s PLACE! %.2fs  +%d coins%s"):format(placeText, info.Time, amount, newBest and "  NEW BEST!" or ""), "gold")
+	Remotes.Fx:FireClient(player, "Confetti")
+	for other in pairs(racers) do
+		if other ~= player then
+			Remotes.Notify:FireClient(other, ("%s finished %s!"):format(player.DisplayName, placeText), "good")
+		end
+	end
+	-- Everyone done? End early.
+	local allDone = true
+	for _, other in pairs(racers) do
+		if not other.Finished then
+			allDone = false
+		end
+	end
+	if allDone then
+		task.delay(2, finishRace)
+	else
+		raceEnds = math.min(raceEnds, workspace:GetServerTimeNow() + 30) -- 30s for the rest after a finish
+	end
+end
+
+local function hookCheckpoint(pad)
+	if not pad:IsA("BasePart") then
+		return
+	end
+	pad.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		local info = player and racers[player]
+		if not info or phase ~= "Racing" then
+			return
+		end
+		if CollectionService:HasTag(pad, "RaceFinish") then
+			onFinish(player)
+			return
+		end
+		local index = pad:GetAttribute("Index") or 0
+		if index > info.CP then
+			info.CP = index
+		end
+	end)
+end
+CollectionService:GetInstanceAddedSignal("RaceCheckpoint"):Connect(hookCheckpoint)
+CollectionService:GetInstanceAddedSignal("RaceFinish"):Connect(hookCheckpoint)
+
+local function startRace(list)
+	phase = "Starting"
+	local map = MAPS[math.random(#MAPS)]
+	buildTrack(map)
+	racers, finishOrder = {}, {}
+	for k, player in ipairs(list) do
+		racers[player] = { CP = 0, Finished = false }
+		player:SetAttribute("Racing", true)
+		player:SetAttribute("InLobby", nil)
+		local session = PlayerData.Session(player)
+		if session then
+			session.RunStart = nil -- leaving the course ends a timed story run
+		end
+		PlayerData.Sync(player)
+		local character = player.Character
+		if character then
+			local col, row = (k - 1) % 5, math.floor((k - 1) / 5)
+			local spot = TRACK_ORIGIN + Vector3.new(7 - row * 4, 4, -10 + col * 5)
+			character:PivotTo(CFrame.lookAt(spot, spot + Vector3.new(1, 0, 0)))
+		end
+	end
+	task.spawn(function()
+		for count = 3, 1, -1 do
+			sendAll({ Phase = "Countdown", Map = map.Name, Count = count, Total = track.Total })
+			task.wait(1)
+		end
+		if not track then
+			return
+		end
+		track.Gate:Destroy()
+		raceStart = workspace:GetServerTimeNow()
+		raceEnds = raceStart + 45 + map.Sections * 12
+		phase = "Racing"
+		sendAll({ Phase = "Go", Map = map.Name, Total = track.Total, Ends = raceEnds })
+	end)
+end
+
+---------------------------------------------------------------- Main loop
+task.spawn(function()
+	local lastBoard = 0
+	while true do
+		task.wait(0.5)
+		local now = workspace:GetServerTimeNow()
+		if phase == "Idle" or phase == "Queue" then
+			local queue = {}
+			for _, player in ipairs(playersOnPad()) do
+				local data = PlayerData.Get(player)
+				if data and data.Mode ~= "OP" then
+					table.insert(queue, player)
+				end
+			end
+			if #queue == 0 then
+				phase = "Idle"
+				padLabel.Text = "🏁 OBBY RACE\nStand here to join!"
+			else
+				if phase == "Idle" then
+					phase = "Queue"
+					queueEnds = now + (#queue >= 2 and 10 or 15)
+				elseif #queue >= 2 then
+					queueEnds = math.min(queueEnds, now + 10)
+				end
+				local left = math.max(0, math.ceil(queueEnds - now))
+				padLabel.Text = ("🏁 RACE: %d racer%s\nStarting in %d...%s"):format(#queue, #queue == 1 and "" or "s", left, #queue == 1 and "\n(solo = time trial)" or "")
+				if now >= queueEnds then
+					startRace(queue)
+				end
+			end
+		elseif phase == "Racing" then
+			-- Drop racers who left, went to the lobby or teleported away.
+			for player in pairs(racers) do
+				local root = player.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if not player.Parent or not player:GetAttribute("Racing") or player:GetAttribute("InLobby") then
+					removeRacer(player, false)
+				elseif root and (root.Position - TRACK_ORIGIN).Magnitude > 1500 then
+					removeRacer(player, false)
+				end
+			end
+			if racerCount() == 0 then
+				finishRace()
+			elseif now >= raceEnds then
+				finishRace()
+			elseif now - lastBoard >= 1 then
+				lastBoard = now
+				sendAll({ Phase = "Racing", Map = track.Map.Name, Total = track.Total, Ends = raceEnds, Board = board() })
+			end
+			padLabel.Text = ("🏁 Race in progress...\n%d:%02d left"):format(math.max(0, raceEnds - now) // 60, math.max(0, raceEnds - now) % 60)
+		end
+	end
+end)
+
+---------------------------------------------------------------- Respawning mid-race
+local function onCharacterAdded(player, character)
+	if not racers[player] then
+		return
+	end
+	if not character:IsDescendantOf(workspace) then
+		character.AncestryChanged:Wait()
+	end
+	task.wait(0.15)
+	placeAtCheckpoint(player)
+end
+
+local function onPlayerAdded(player)
+	player.CharacterAdded:Connect(function(character)
+		onCharacterAdded(player, character)
+	end)
+	player:SetAttribute("Racing", nil)
+	task.spawn(function()
+		local data = PlayerData.WaitFor(player)
+		if data then
+			player:SetAttribute("RaceWins", data.RaceWins or 0)
+		end
+	end)
+end
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, player in ipairs(Players:GetPlayers()) do
+	onPlayerAdded(player)
+end
+Players.PlayerRemoving:Connect(function(player)
+	racers[player] = nil
 end)
 ]==])
 add(f_server, "Script", "Rewards", [==[
@@ -6438,7 +7083,7 @@ local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChi
 
 ---------------------------------------------------------------- Tether
 local pending = {} -- [requester] = { Target = Player, At = os.clock() }
-local ropes = {} -- [Player] = RopeConstraint (stored on both players of a pair)
+local ropes = {} -- [Player] = Beam (stored on both players of a pair)
 
 local function partnerOf(player)
 	local session = PlayerData.Session(player)
@@ -6453,6 +7098,9 @@ local function removeRope(player)
 	ropes[player] = nil
 end
 
+-- The tether is a glowing Beam: purely visual, no physics. (The old RopeConstraint joined two
+-- characters that are simulated on two different computers, which made both players lag.)
+-- Staying together is enforced by distance instead (see the loop below).
 local function attachRope(a, b)
 	removeRope(a)
 	removeRope(b)
@@ -6467,20 +7115,22 @@ local function attachRope(a, b)
 	local att1 = Instance.new("Attachment")
 	att1.Name = "TetherAttachment"
 	att1.Parent = rootB
-	local rope = Instance.new("RopeConstraint")
-	rope.Name = "Tether"
-	rope.Attachment0 = att0
-	rope.Attachment1 = att1
-	rope.Length = Config.TetherLength
-	rope.Visible = true
-	rope.Thickness = 0.25
-	rope.Color = BrickColor.new("Hot pink")
-	rope.Parent = rootA
-	rope.Destroying:Connect(function()
+	local beam = Instance.new("Beam")
+	beam.Name = "Tether"
+	beam.Attachment0 = att0
+	beam.Attachment1 = att1
+	beam.Width0, beam.Width1 = 0.35, 0.35
+	beam.FaceCamera = true
+	beam.LightEmission = 0.8
+	beam.Segments = 12
+	beam.CurveSize0, beam.CurveSize1 = -1.5, 1.5 -- a little sag, like a rope
+	beam.Color = ColorSequence.new(Color3.fromRGB(255, 90, 200), Color3.fromRGB(255, 220, 90))
+	beam.Parent = rootA
+	beam.Destroying:Connect(function()
 		att0:Destroy()
 		att1:Destroy()
 	end)
-	ropes[a], ropes[b] = rope, rope
+	ropes[a], ropes[b] = beam, beam
 end
 
 local function untether(player, reason)
@@ -6583,8 +7233,13 @@ task.spawn(function()
 			local partner = partnerOf(player)
 			local a = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			local b = partner and partner.Character and partner.Character:FindFirstChild("HumanoidRootPart")
-			if partner and a and b and (a.Position - b.Position).Magnitude > 120 then
+			local gap = partner and a and b and (a.Position - b.Position).Magnitude
+			if gap and gap > 120 then
 				untether(player, "Tether snapped - you got too far apart!")
+			elseif gap and gap > 70 and player.UserId < partner.UserId then
+				for _, p in ipairs({ player, partner }) do
+					Remotes.Notify:FireClient(p, "Stay close to your teammate or the tether snaps!", "bad")
+				end
 			end
 		end
 	end
@@ -6620,8 +7275,11 @@ task.spawn(function()
 					end
 				end
 			end
-			for _, plate in ipairs(plates) do
-				plate.Color = next(playersOn(plate)) and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+			for i, plate in ipairs(plates) do
+				local color = next(i == 1 and onA or onB) and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+				if plate.Color ~= color then -- only send a change when it actually changes
+					plate.Color = color
+				end
 			end
 			if open and door.CanCollide then
 				door.CanCollide = false
@@ -8609,6 +9267,240 @@ end
 player:GetAttributeChangedSignal("InLobby"):Connect(refreshLobbyButton)
 refreshLobbyButton()
 ]==])
+add(f_client, "LocalScript", "Modes", [==[
+-- On-screen UI for the extra modes:
+--   OBBY RACE: 3-2-1-GO countdown, live race bar (time left, your place, checkpoint), results board
+--   SERVER EVENTS: a banner while an event is running (workspace attributes EventName / EventEnds)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
+
+local player = Players.LocalPlayer
+local FONT = Enum.Font.FredokaOne
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ModesUI"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 8
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local function label(props)
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Font = FONT
+	t.TextScaled = true
+	t.TextColor3 = Color3.new(1, 1, 1)
+	for key, value in pairs(props) do
+		t[key] = value
+	end
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3
+	stroke.Parent = t
+	return t
+end
+
+local function panel(props)
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = Color3.fromRGB(25, 22, 45)
+	f.BackgroundTransparency = 0.1
+	for key, value in pairs(props) do
+		f[key] = value
+	end
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 14)
+	corner.Parent = f
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3
+	stroke.Parent = f
+	return f
+end
+
+---------------------------------------------------------------- Race UI
+local bigText = label({
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.42),
+	Size = UDim2.fromOffset(420, 160),
+	Text = "",
+	Visible = false,
+	Parent = gui,
+})
+
+local raceBar = panel({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 175),
+	Size = UDim2.fromOffset(460, 44),
+	Visible = false,
+	Parent = gui,
+})
+local raceText = label({
+	Position = UDim2.fromOffset(10, 4),
+	Size = UDim2.new(1, -20, 1, -8),
+	Text = "",
+	Parent = raceBar,
+})
+
+local results = panel({
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(380, 330),
+	Visible = false,
+	Parent = gui,
+})
+label({
+	Position = UDim2.fromOffset(12, 8),
+	Size = UDim2.new(1, -24, 0, 40),
+	Text = "🏁 RACE RESULTS",
+	TextColor3 = Color3.fromRGB(255, 215, 60),
+	Parent = results,
+})
+local resultRows = Instance.new("Frame")
+resultRows.BackgroundTransparency = 1
+resultRows.Position = UDim2.fromOffset(16, 56)
+resultRows.Size = UDim2.new(1, -32, 1, -68)
+resultRows.Parent = results
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 4)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = resultRows
+
+local MEDALS = { "🥇", "🥈", "🥉" }
+local function ordinal(n)
+	return ({ "1st", "2nd", "3rd" })[n] or (n .. "th")
+end
+local function clock(seconds)
+	seconds = math.max(0, seconds)
+	return ("%d:%02d"):format(seconds // 60, seconds % 60)
+end
+
+local race = { Ends = 0, Total = 0, Map = "", Place = 0, Count = 0, CP = 0, Active = false }
+
+local function showBig(text, color, hold)
+	bigText.Text = text
+	bigText.TextColor3 = color
+	bigText.Visible = true
+	bigText.Size = UDim2.fromOffset(620, 240)
+	TweenService:Create(bigText, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(420, 160) }):Play()
+	local token = {}
+	bigText:SetAttribute("Token", tostring(token))
+	task.delay(hold or 0.9, function()
+		if bigText:GetAttribute("Token") == tostring(token) then
+			bigText.Visible = false
+		end
+	end)
+end
+
+local function updateFromBoard(rows)
+	race.Count = #rows
+	for i, row in ipairs(rows) do
+		if row.UserId == player.UserId then
+			race.Place = i
+			race.CP = row.CP
+		end
+	end
+end
+
+local function showResults(rows)
+	for _, child in ipairs(resultRows:GetChildren()) do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	for i, row in ipairs(rows) do
+		if i > 8 then
+			break
+		end
+		local mine = row.UserId == player.UserId
+		local text
+		if row.Done then
+			text = ("%s %s  %s  %.2fs"):format(MEDALS[row.Place] or "🏁", ordinal(row.Place), row.Name, row.Time or 0)
+		else
+			text = ("❌ DNF  %s  (CP %d)"):format(row.Name, row.CP or 0)
+		end
+		label({
+			LayoutOrder = i,
+			Size = UDim2.new(1, 0, 0, 28),
+			Text = text,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = mine and Color3.fromRGB(255, 230, 90) or Color3.new(1, 1, 1),
+			Parent = resultRows,
+		})
+	end
+	results.Visible = true
+	task.delay(6.5, function()
+		results.Visible = false
+	end)
+end
+
+Remotes.RaceState.OnClientEvent:Connect(function(state)
+	if state.Phase == "Countdown" then
+		race.Active = false
+		race.Map = state.Map or ""
+		race.Total = state.Total or 0
+		raceBar.Visible = true
+		raceText.Text = "🏁 " .. race.Map .. "  •  GET READY!"
+		showBig(tostring(state.Count), Color3.fromRGB(255, 230, 90), 0.9)
+		Sfx.Play("Click", 0.8 + (3 - (state.Count or 3)) * 0.15)
+	elseif state.Phase == "Go" then
+		race.Active = true
+		race.Ends = state.Ends or 0
+		race.Total = state.Total or race.Total
+		showBig("GO!", Color3.fromRGB(90, 255, 120), 0.9)
+		Sfx.Play("Checkpoint", 1.3)
+	elseif state.Phase == "Racing" then
+		race.Active = true
+		race.Ends = state.Ends or race.Ends
+		updateFromBoard(state.Board or {})
+	elseif state.Phase == "Results" then
+		race.Active = false
+		raceBar.Visible = false
+		showResults(state.Board or {})
+		Sfx.Play("Win")
+	elseif state.Phase == "Left" then
+		race.Active = false
+		raceBar.Visible = false
+	end
+end)
+
+---------------------------------------------------------------- Server event banner
+local eventBar = panel({
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 175),
+	Size = UDim2.fromOffset(420, 40),
+	BackgroundColor3 = Color3.fromRGB(120, 40, 160),
+	Visible = false,
+	Parent = gui,
+})
+local eventText = label({
+	Position = UDim2.fromOffset(10, 4),
+	Size = UDim2.new(1, -20, 1, -8),
+	Text = "",
+	Parent = eventBar,
+})
+
+RunService.Heartbeat:Connect(function()
+	local now = workspace:GetServerTimeNow()
+	if race.Active then
+		local cpText = race.Total > 1 and ("CP %d/%d"):format(math.min(race.CP, race.Total - 1), race.Total - 1) or ""
+		local placeText = race.Place > 0 and ("%s / %d"):format(ordinal(race.Place), race.Count) or ""
+		raceText.Text = ("🏁 %s  •  ⏱ %s  •  %s  •  %s"):format(race.Map, clock(race.Ends - now), placeText, cpText)
+	end
+	local name = workspace:GetAttribute("EventName")
+	local ends = workspace:GetAttribute("EventEnds") or 0
+	if name and ends > now then
+		eventBar.Visible = true
+		-- sit below the race bar when both are on screen
+		eventBar.Position = UDim2.new(0.5, 0, 0, raceBar.Visible and 225 or 175)
+		eventText.Text = ("%s  %s"):format(name, clock(ends - now))
+	else
+		eventBar.Visible = false
+	end
+end)
+]==])
 add(f_client, "LocalScript", "Movement", [==[
 -- Jump pads, plus each zone's sky colours and gravity (space = moon jumps).
 -- Runs on the client because players' characters are simulated on their own device.
@@ -8689,7 +9581,9 @@ end
 local function applyMovement(zone)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	workspace.Gravity = zone.Gravity
+	-- Server event LOW GRAVITY PARTY: lower gravity, same jump power = floaty moon jumps.
+	local lowGrav = (workspace:GetAttribute("LowGravUntil") or 0) > workspace:GetServerTimeNow()
+	workspace.Gravity = lowGrav and zone.Gravity * 0.45 or zone.Gravity
 	if not humanoid then
 		return
 	end
@@ -8784,6 +9678,11 @@ end
 player.CharacterAdded:Connect(function(character)
 	character:WaitForChild("Humanoid")
 	applyZone()
+end)
+workspace:GetAttributeChangedSignal("LowGravUntil"):Connect(function()
+	applyZone()
+	local ends = workspace:GetAttribute("LowGravUntil") or 0
+	task.delay(math.max(0, ends - workspace:GetServerTimeNow()) + 0.2, applyZone) -- back to normal
 end)
 applyZone()
 

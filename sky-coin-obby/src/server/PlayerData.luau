@@ -180,6 +180,10 @@ function PlayerData.Multiplier(player)
 	if rarity and rarity.CoinBoost then
 		mult *= rarity.CoinBoost
 	end
+	-- Server event: 2X COIN FRENZY (Events.server).
+	if (workspace:GetAttribute("FrenzyUntil") or 0) > now then
+		mult *= 2
+	end
 	-- Pets from the shop add a bonus while equipped.
 	local pet = data.Equipped and data.Equipped.Pet and ShopCatalog.Get(data.Equipped.Pet)
 	if pet and pet.CoinBoost and data.Owned[pet.Id] then

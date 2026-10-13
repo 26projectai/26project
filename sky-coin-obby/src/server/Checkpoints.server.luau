@@ -141,6 +141,9 @@ local function onCharacterAdded(player, character)
 	if not data or not root or data.Mode == "OP" then
 		return -- OP Obby spawning is handled by OPObby.server
 	end
+	if player:GetAttribute("Racing") then
+		return -- racers respawn on their race checkpoint (Race.server)
+	end
 	-- CharacterAdded fires before the character is placed in the world;
 	-- wait for Roblox's own spawn positioning, or it overrides our teleport.
 	if not character:IsDescendantOf(workspace) then

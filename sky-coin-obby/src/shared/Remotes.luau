@@ -52,5 +52,6 @@ return {
 	Slap = get("Slap", "RemoteEvent"), -- client -> server: slap hand hit (target player)
 	GoLobby = get("GoLobby", "RemoteFunction"), -- client -> server: teleport to the spawn plaza
 	BackToStage = get("BackToStage", "RemoteFunction"), -- client -> server: return to your checkpoint
+	RaceState = get("RaceState", "RemoteEvent"), -- server -> racers: countdown / live board / results
 	Fx = get("Fx", "RemoteEvent"), -- server -> client: (effectName, ...) jumpscare / shake / confetti
 }

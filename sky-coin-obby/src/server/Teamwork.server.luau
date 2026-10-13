@@ -12,7 +12,7 @@ local PlayerData = require(ServerScriptService:WaitForChild("Server"):WaitForChi
 
 ---------------------------------------------------------------- Tether
 local pending = {} -- [requester] = { Target = Player, At = os.clock() }
-local ropes = {} -- [Player] = RopeConstraint (stored on both players of a pair)
+local ropes = {} -- [Player] = Beam (stored on both players of a pair)
 
 local function partnerOf(player)
 	local session = PlayerData.Session(player)
@@ -27,6 +27,9 @@ local function removeRope(player)
 	ropes[player] = nil
 end
 
+-- The tether is a glowing Beam: purely visual, no physics. (The old RopeConstraint joined two
+-- characters that are simulated on two different computers, which made both players lag.)
+-- Staying together is enforced by distance instead (see the loop below).
 local function attachRope(a, b)
 	removeRope(a)
 	removeRope(b)
@@ -41,20 +44,22 @@ local function attachRope(a, b)
 	local att1 = Instance.new("Attachment")
 	att1.Name = "TetherAttachment"
 	att1.Parent = rootB
-	local rope = Instance.new("RopeConstraint")
-	rope.Name = "Tether"
-	rope.Attachment0 = att0
-	rope.Attachment1 = att1
-	rope.Length = Config.TetherLength
-	rope.Visible = true
-	rope.Thickness = 0.25
-	rope.Color = BrickColor.new("Hot pink")
-	rope.Parent = rootA
-	rope.Destroying:Connect(function()
+	local beam = Instance.new("Beam")
+	beam.Name = "Tether"
+	beam.Attachment0 = att0
+	beam.Attachment1 = att1
+	beam.Width0, beam.Width1 = 0.35, 0.35
+	beam.FaceCamera = true
+	beam.LightEmission = 0.8
+	beam.Segments = 12
+	beam.CurveSize0, beam.CurveSize1 = -1.5, 1.5 -- a little sag, like a rope
+	beam.Color = ColorSequence.new(Color3.fromRGB(255, 90, 200), Color3.fromRGB(255, 220, 90))
+	beam.Parent = rootA
+	beam.Destroying:Connect(function()
 		att0:Destroy()
 		att1:Destroy()
 	end)
-	ropes[a], ropes[b] = rope, rope
+	ropes[a], ropes[b] = beam, beam
 end
 
 local function untether(player, reason)
@@ -157,8 +162,13 @@ task.spawn(function()
 			local partner = partnerOf(player)
 			local a = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			local b = partner and partner.Character and partner.Character:FindFirstChild("HumanoidRootPart")
-			if partner and a and b and (a.Position - b.Position).Magnitude > 120 then
+			local gap = partner and a and b and (a.Position - b.Position).Magnitude
+			if gap and gap > 120 then
 				untether(player, "Tether snapped - you got too far apart!")
+			elseif gap and gap > 70 and player.UserId < partner.UserId then
+				for _, p in ipairs({ player, partner }) do
+					Remotes.Notify:FireClient(p, "Stay close to your teammate or the tether snaps!", "bad")
+				end
 			end
 		end
 	end
@@ -194,8 +204,11 @@ task.spawn(function()
 					end
 				end
 			end
-			for _, plate in ipairs(plates) do
-				plate.Color = next(playersOn(plate)) and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+			for i, plate in ipairs(plates) do
+				local color = next(i == 1 and onA or onB) and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+				if plate.Color ~= color then -- only send a change when it actually changes
+					plate.Color = color
+				end
 			end
 			if open and door.CanCollide then
 				door.CanCollide = false
