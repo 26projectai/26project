@@ -35,21 +35,21 @@ Assets.Badges = {
 -- (format: "rbxassetid://1234567890"). "rbxassetid://0" = use the built-in fallback look.
 Assets.Images = {
 	Coin = "rbxassetid://0", -- art/ui-coin.png
-	ShopButton = "rbxassetid://0", -- art/ui-shop-button.png
+	ShopButton = "rbxassetid://78535308849443", -- art/ui-shop-button.png
 	Daily = "rbxassetid://0", -- art/ui-daily.png
 	Invite = "rbxassetid://0", -- art/ui-invite.png
-	Skip = "rbxassetid://0", -- art/ui-skip.png
+	Skip = "rbxassetid://95334950428606", -- art/ui-skip.png
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
-	Music = "rbxassetid://0", -- art/ui-music.png
-	Passes = "rbxassetid://0", -- art/ui-passes.png
-	Rewards = "rbxassetid://0", -- art/ui-rewards.png
+	Music = "rbxassetid://89477635125268", -- art/ui-music.png
+	Passes = "rbxassetid://104939527740086", -- art/ui-passes.png
+	Rewards = "rbxassetid://89004888317805", -- art/ui-rewards.png
 	DrawCommon = "rbxassetid://0", -- art/draw-common.png
 	DrawRare = "rbxassetid://0", -- art/draw-rare.png
 	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
 	Gary = "rbxassetid://0", -- art/gary.png (jumpscare)
-	Teleport = "rbxassetid://0", -- art/icon-teleport.png
-	Rebirth = "rbxassetid://0", -- art/icon-rebirth.png
-	Race = "rbxassetid://0", -- art/icon-race.png
+	Teleport = "rbxassetid://116732858840390", -- art/icon-teleport.png
+	Rebirth = "rbxassetid://130358756084367", -- art/icon-rebirth.png
+	Race = "rbxassetid://107022713439314", -- art/icon-race.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -106,10 +106,10 @@ Assets.Lobby = {
 -- Hotbar icons for the tools (art/tool-*.png).
 Assets.ToolIcons = {
 	GrappleHook = "rbxassetid://0",
-	SlapHand = "rbxassetid://0",
+	SlapHand = "rbxassetid://118507889403725",
 	GravityCoil = "rbxassetid://0",
-	SpeedCoil = "rbxassetid://0",
-	RocketLauncher = "rbxassetid://0",
+	SpeedCoil = "rbxassetid://77078335933450",
+	RocketLauncher = "rbxassetid://98708922517254",
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
