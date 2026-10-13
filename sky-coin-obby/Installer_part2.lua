@@ -1877,7 +1877,7 @@ end)
 ---------------------------------------------------------------- Fast reset (R / button)
 local resetButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 200, 1, -16),
+	Position = UDim2.new(0, 200, 1, -96),
 	Size = UDim2.fromOffset(110, 40),
 	BackgroundColor3 = COLORS.Red,
 	Text = "RESET (R)",
@@ -1897,7 +1897,7 @@ end)
 ---------------------------------------------------------------- Co-op tether
 local untetherButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 320, 1, -16),
+	Position = UDim2.new(0, 360, 1, -96),
 	Size = UDim2.fromOffset(190, 40),
 	BackgroundColor3 = COLORS.Pink,
 	Text = "",
@@ -1933,7 +1933,7 @@ end
 -- Out on the course it says LOBBY; in the lobby the same button says BACK TO STAGE.
 local lobbyButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 200, 1, -62),
+	Position = UDim2.new(0, 200, 1, -142),
 	Size = UDim2.fromOffset(150, 40),
 	BackgroundColor3 = COLORS.Blue,
 	Text = "🏠 LOBBY (L)",
