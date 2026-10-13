@@ -18,7 +18,8 @@ local GAP_MIN, GAP_MAX = 6 * 60, 9 * 60 -- time between events
 local RAIN_COIN_VALUE = 10
 
 local firstPad = workspace:WaitForChild("Checkpoints"):WaitForChild("1")
-local LOBBY = firstPad.Position + Vector3.new(-44, 0, 0)
+local Config = require(Shared:WaitForChild("Config"))
+local LOBBY = firstPad.Position + Config.Lobby.Center
 
 local function announce(text)
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -30,7 +31,7 @@ end
 ---------------------------------------------------------------- Coin rain
 local function dropCoin(folder)
 	local angle = math.random() * math.pi * 2
-	local radius = math.random() * 40
+	local radius = math.random() * (Config.Lobby.Diameter / 2 - 20)
 	local ground = LOBBY + Vector3.new(math.cos(angle) * radius, 2.2, math.sin(angle) * radius)
 	local coin = Instance.new("Part")
 	coin.Name = "RainCoin"

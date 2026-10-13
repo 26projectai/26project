@@ -28,6 +28,19 @@ Config.Stages = 100
 Config.HubStage = 50 -- the central hub island (dashboard + NPCs) hangs off this checkpoint
 
 -- Zones change the music, sky and (in space) gravity. FirstStage = where the zone starts.
+-- Spawn lobby layout. Every position is relative to the stage 1 checkpoint (the spawn).
+Config.Lobby = {
+	Center = Vector3.new(-90, 0, 0), -- middle of the lobby island
+	Diameter = 190, -- island size (the marble floor is a bit smaller)
+	Statue = Vector3.new(-105, 0, 0), -- giant golden Gary
+	WallX = -172, -- Hall of Fame wall
+	PortalX = -55, -- world portals (two on each side of the carpet)
+	PortalZ = { 44, 22, -22, -44 },
+	RacePad = Vector3.new(-80, 0, -62),
+	OPPortal = Vector3.new(-80, 0, 62),
+	YeetPad = Vector3.new(-135, 0, -60),
+}
+
 Config.Zones = {
 	{ Name = "SKY ISLANDS", FirstStage = 1, Music = "Sky", ClockTime = 14, Gravity = 196.2 },
 	{ Name = "CANDY LAND", FirstStage = 26, Music = "Candy", ClockTime = 17.4, Gravity = 196.2 },
@@ -184,6 +197,7 @@ Config.Music = Assets.Music or {}
 Config.Skyboxes = Assets.Skyboxes or {}
 Config.Floors = Assets.Floors or {}
 Config.Portals = Assets.Portals or {}
+Config.LobbyArt = Assets.Lobby or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35

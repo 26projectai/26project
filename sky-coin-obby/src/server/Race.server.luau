@@ -70,7 +70,8 @@ local lobbyFolder = Instance.new("Folder")
 lobbyFolder.Name = "RaceLobby"
 lobbyFolder.Parent = workspace
 
-local PAD_CENTER = firstPad.Position + Vector3.new(-36, -0.7, -12)
+local Config = require(Shared:WaitForChild("Config"))
+local PAD_CENTER = firstPad.Position + Config.Lobby.RacePad + Vector3.new(0, -0.7, 0)
 local racePad = part({
 	Name = "RacePad",
 	Size = Vector3.new(11, 0.4, 11),

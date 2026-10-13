@@ -23,7 +23,7 @@ local function walkAreas()
 	local checkpoints = workspace:FindFirstChild("Checkpoints")
 	local first = checkpoints and checkpoints:FindFirstChild("1")
 	if first then
-		table.insert(areas, { Center = first.Position + Vector3.new(-30, 0, 0), Radius = 20, Count = 3 })
+		table.insert(areas, { Center = first.Position + Vector3.new(-62, 0, 0), Radius = 26, Count = 3 })
 	end
 	local hubStage = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 50))
 	if hubStage then

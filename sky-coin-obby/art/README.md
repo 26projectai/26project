@@ -83,3 +83,11 @@ All of these are also in your Higgsfield account under your generation history.
 | `portal-candy.png` | Candy Land → `Assets.Portals.Candy` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_8b323ff0-9234-4da6-9647-1c7ff6144706.png) |
 | `portal-space.png` | Outer Space → `Assets.Portals.Space` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_4911e273-b353-4647-8800-726d2264b459.png) |
 | `portal-lair.png` | Gary's Lair → `Assets.Portals.Lair` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261010_010142_b9f83478-0f7a-40ba-92c3-bb65f757fa57.png) |
+
+### Luxury lobby (upload as images, ids go in `Assets.Lobby`)
+| File | Use | Link |
+|---|---|---|
+| `lobby-marble.png` | White marble + gold veins floor → `Assets.Lobby.Marble` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051836_92365ac9-7c83-42ac-957d-d8b7799200a6.png) |
+| `lobby-carpet.png` | Red velvet + gold damask carpet → `Assets.Lobby.Carpet` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051836_3ea520e1-87cb-471c-b536-40cf9e245241.png) |
+| `lobby-wall.png` | Purple + gold art-deco Hall of Fame wall → `Assets.Lobby.Wall` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051836_c92a8735-a0d2-4ba5-b87e-1c781156df33.png) |
+| `gary-statue.png` | Golden Gary statue concept (source of the 3D model) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051837_dcb7ee23-4cd8-4d44-b249-0c26631fb95e.png) |

@@ -255,7 +255,7 @@ local function opPortal(position, facing)
 	})
 	frame.CanTouch = false
 end
-opPortal(Vector3.new(-24, BASE_Y + 6, 40), Vector3.new(0, 0, -1)) -- in the spawn plaza
+opPortal(Vector3.new(Config.Lobby.OPPortal.X, BASE_Y + 6, Config.Lobby.OPPortal.Z), Vector3.new(0, 0, -1)) -- in the spawn plaza
 
 -- World portals: grand gold-framed gates on both sides of the red carpet, facing the spawn.
 -- Each has a spinning Higgsfield vortex (Assets.Portals), a glowing ring, marble columns and a
@@ -270,8 +270,8 @@ do
 	local imageKeys = { "Sky", "Candy", "Space", "Lair" }
 	local GOLD = Color3.fromRGB(255, 200, 60)
 	local MARBLE = Color3.fromRGB(245, 242, 235)
-	local slots = { 37, 19, -19, -37 } -- z, left to right as seen from the spawn
-	local PORTAL_X = -50
+	local slots = Config.Lobby.PortalZ -- z, left to right as seen from the spawn
+	local PORTAL_X = Config.Lobby.PortalX
 	local RADIUS = 5
 	local facing = Vector3.new(1, 0, 0)
 
@@ -676,7 +676,7 @@ do
 	local yeet = part({
 		Name = "YeetPad",
 		Size = Vector3.new(5, 0.6, 5),
-		Position = Vector3.new(-26, BASE_Y + 0.3, -30),
+		Position = Vector3.new(Config.Lobby.YeetPad.X, BASE_Y - 0.2, Config.Lobby.YeetPad.Z),
 		Color = Color3.fromRGB(255, 80, 200),
 		Material = Enum.Material.Neon,
 		Parent = course,
@@ -814,8 +814,7 @@ local function board(name, tagName, position, facing, size)
 end
 -- Spawn plaza: a big Hall of Fame wall facing the start, plus the speedrun podium.
 -- The lobby island (Scenery) is centred at LOBBY_X with room for everything.
-local LOBBY_X = -44
-local wallX = LOBBY_X - 40
+local wallX = Config.Lobby.WallX
 local toCourse = Vector3.new(1, 0, 0)
 board("HallTime", "Board_Time", Vector3.new(wallX, BASE_Y + 12, -11), toCourse, Vector3.new(20, 20, 1))
 board("HallRecent", "Board_Recent", Vector3.new(wallX, BASE_Y + 12, 11), toCourse, Vector3.new(20, 20, 1))
@@ -851,6 +850,13 @@ do
 		Parent = boards,
 	})
 	wall.CanCollide = true
+	if Config.HasAsset(Config.LobbyArt.Wall) then
+		local texture = Instance.new("Texture")
+		texture.Texture = Config.LobbyArt.Wall
+		texture.Face = Enum.NormalId.Right -- faces the lobby
+		texture.StudsPerTileU, texture.StudsPerTileV = 12, 12
+		texture.Parent = wall
+	end
 
 	-- Speedrun podium: statues of the 3 fastest players (filled in by Leaderboards.server).
 	local podiumX = wallX + 18

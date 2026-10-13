@@ -2,6 +2,7 @@
 -- and per-world scenery (Sky: clouds, tree islands, rainbow; Candy: lollipops, candy canes,
 -- cupcakes, gumdrops; Space: planets, stars, asteroids), plus world gates and a finish trophy.
 -- Decoration is non-collidable and kept away from the jump paths, so it never affects gameplay.
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local Scenery = {}
 
 local rng = Random.new(2026)
@@ -205,51 +206,204 @@ local function fountain(base)
 	sparkle.Parent = spout
 end
 
+-- Applies a tiling Higgsfield texture (Assets.Lobby) to one face of a part, if the id is set.
+local function lobbyTexture(partObj, key, face, studs)
+	local id = (Config.LobbyArt or {})[key]
+	if not Config.HasAsset(id) then
+		return
+	end
+	local texture = Instance.new("Texture")
+	texture.Texture = id
+	texture.Face = face
+	texture.StudsPerTileU = studs
+	texture.StudsPerTileV = studs
+	texture.Parent = partObj
+end
+
+local function goldRing(center, radius, thickness, color, material)
+	local segments = 28
+	for i = 0, segments - 1 do
+		local a0, a1 = math.pi * 2 * i / segments, math.pi * 2 * (i + 1) / segments
+		local p0 = center + Vector3.new(math.cos(a0) * radius, 0, math.sin(a0) * radius)
+		local p1 = center + Vector3.new(math.cos(a1) * radius, 0, math.sin(a1) * radius)
+		deco({ Size = Vector3.new(thickness, thickness, (p1 - p0).Magnitude + 0.2), CFrame = CFrame.lookAt((p0 + p1) / 2, p1), Color = color or GOLD, Material = material or Enum.Material.Neon })
+	end
+end
+
+local function column(base, height)
+	deco({ Size = Vector3.new(4.4, 1.2, 4.4), Position = base + Vector3.new(0, 0.6, 0), Color = GOLD, Material = Enum.Material.Metal })
+	pillar(base + Vector3.new(0, height / 2 + 1.2, 0), height, 3, MARBLE, Enum.Material.Marble)
+	for _, y in ipairs({ 3, height - 1 }) do
+		pillar(base + Vector3.new(0, y + 1.2, 0), 0.5, 3.2, GOLD, Enum.Material.Metal)
+	end
+	deco({ Size = Vector3.new(4.4, 1.2, 4.4), Position = base + Vector3.new(0, height + 1.8, 0), Color = GOLD, Material = Enum.Material.Metal })
+	local orb = ball(base + Vector3.new(0, height + 3.6, 0), 2.4, Color3.fromRGB(255, 235, 160), Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 215, 140)
+	light.Range = 22
+	light.Brightness = 1.4
+	light.Parent = orb
+end
+
+local function topiary(base)
+	pillar(base + Vector3.new(0, 1.5, 0), 3, 5, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 3.1, 0), 0.4, 5.4, Color3.fromRGB(120, 40, 150), Enum.Material.SmoothPlastic)
+	pillar(base + Vector3.new(0, 4.5, 0), 3, 0.8, Color3.fromRGB(110, 75, 45), Enum.Material.Wood)
+	ball(base + Vector3.new(0, 7.5, 0), 6, Color3.fromRGB(70, 170, 80), Enum.Material.Grass)
+	ball(base + Vector3.new(0, 11, 0), 4, Color3.fromRGB(80, 185, 90), Enum.Material.Grass)
+end
+
+local function chandelier(center)
+	goldRing(center, 7, 0.6, GOLD, Enum.Material.Metal)
+	goldRing(center + Vector3.new(0, -2.5, 0), 4.5, 0.5, GOLD, Enum.Material.Metal)
+	for k = 0, 7 do
+		local a = math.pi * 2 * k / 8
+		local bulb = ball(center + Vector3.new(math.cos(a) * 7, 0.9, math.sin(a) * 7), 1.1, Color3.fromRGB(255, 240, 190), Enum.Material.Neon)
+		if k % 2 == 0 then
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 220, 150)
+			light.Range = 26
+			light.Brightness = 1.2
+			light.Parent = bulb
+		end
+	end
+	local gem = ball(center + Vector3.new(0, -4.5, 0), 2.2, Color3.fromRGB(170, 235, 255), Enum.Material.Neon)
+	gem.Transparency = 0.15
+	pillar(center + Vector3.new(0, 14, 0), 28, 0.25, GOLD, Enum.Material.Metal) -- chain to the sky
+end
+
+-- Giant golden Gary on a marble pedestal. Uses the imported 3D statue (ServerStorage >
+-- Landmarks > GaryStatue) if there is one; otherwise builds him out of gold parts.
+local garyModel -- set below (gary() is defined later in this file)
+local function statue(base)
+	-- pedestal
+	pillar(base + Vector3.new(0, 0.5, 0), 1, 30, MARBLE, Enum.Material.Marble)
+	pillar(base + Vector3.new(0, 1.25, 0), 0.5, 26, GOLD, Enum.Material.Metal)
+	pillar(base + Vector3.new(0, 3.25, 0), 3.5, 20, MARBLE, Enum.Material.Marble)
+	pillar(base + Vector3.new(0, 5.2, 0), 0.4, 21, GOLD, Enum.Material.Metal)
+	goldRing(base + Vector3.new(0, 1.1, 0), 15.2, 0.4)
+	local plaque = deco({ Size = Vector3.new(0.4, 2.4, 10), Position = base + Vector3.new(10.1, 3.2, 0), Color = Color3.fromRGB(30, 22, 45) })
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Right
+	gui.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.Text = "😈 GREEDY GARY 😈\nHe stole the Sky Coins. Get them back!"
+	t.TextColor3 = GOLD
+	t.Parent = gui
+	gui.Parent = plaque
+	local top = base + Vector3.new(0, 5.4, 0)
+
+	local storage = game:GetService("ServerStorage"):FindFirstChild("Landmarks")
+	local template = storage and storage:FindFirstChild("GaryStatue")
+	if template then
+		local model = template:Clone()
+		if model:IsA("BasePart") then
+			local wrapper = Instance.new("Model")
+			model.Parent = wrapper
+			model = wrapper
+		end
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored, d.CanCollide, d.CanTouch, d.CanQuery = true, false, false, false
+			end
+		end
+		local _, size = model:GetBoundingBox()
+		if size.Y > 0 then
+			model:ScaleTo(model:GetScale() * 38 / size.Y)
+		end
+		model:PivotTo(CFrame.lookAt(top, top + Vector3.new(1, 0, 0)))
+		local cf, newSize = model:GetBoundingBox()
+		model:PivotTo(model:GetPivot() + Vector3.new(top.X - cf.Position.X, top.Y - (cf.Position.Y - newSize.Y / 2), top.Z - cf.Position.Z))
+		model.Parent = folder
+	else
+		garyModel(top, 2, Vector3.new(1, 0, 0), true)
+	end
+end
+
 local function luxuryLobby(lobby, baseY)
+	local L = Config.Lobby
 	local floorTop = baseY - 0.5
-	-- marble floor with a gold rim (walkable)
-	local rim = pillar(Vector3.new(lobby.X, floorTop - 0.17, lobby.Z), 0.3, 95, GOLD, Enum.Material.Metal)
-	local marble = pillar(Vector3.new(lobby.X, floorTop - 0.15, lobby.Z), 0.3, 92, MARBLE, Enum.Material.Marble)
+	local R = L.Diameter / 2
+
+	-- marble floor with a gold rim (walkable) + Higgsfield marble texture
+	local rim = pillar(Vector3.new(lobby.X, floorTop - 0.17, lobby.Z), 0.3, L.Diameter - 4, GOLD, Enum.Material.Metal)
+	local marble = pillar(Vector3.new(lobby.X, floorTop - 0.15, lobby.Z), 0.3, L.Diameter - 9, MARBLE, Enum.Material.Marble)
 	rim.CanCollide, marble.CanCollide = true, true
-	-- gold inlay rings + centre medallion
-	pillar(Vector3.new(lobby.X, floorTop + 0.01, lobby.Z), 0.02, 70, GOLD, Enum.Material.Metal)
-	pillar(Vector3.new(lobby.X, floorTop + 0.02, lobby.Z), 0.02, 69.2, MARBLE, Enum.Material.Marble)
+	lobbyTexture(marble, "Marble", Enum.NormalId.Right, 16) -- Right = the top of an upright cylinder
+	-- gold inlay circle
+	pillar(Vector3.new(lobby.X, floorTop + 0.01, lobby.Z), 0.02, 124, GOLD, Enum.Material.Metal)
+	local inner = pillar(Vector3.new(lobby.X, floorTop + 0.02, lobby.Z), 0.02, 122.6, MARBLE, Enum.Material.Marble)
+	lobbyTexture(inner, "Marble", Enum.NormalId.Right, 16)
 
-	-- red carpet from the spawn to the Hall of Fame, with gold trim and lamp posts
-	local x0, x1 = -4, -78
-	local carpet = deco({
-		Size = Vector3.new(x0 - x1, 0.1, 7),
-		Position = Vector3.new((x0 + x1) / 2, floorTop + 0.06, 0),
-		Color = Color3.fromRGB(170, 15, 35),
-		Material = Enum.Material.Fabric,
-	})
-	carpet.Name = "RedCarpet"
-	for _, z in ipairs({ -3.7, 3.7 }) do
-		deco({
-			Size = Vector3.new(x0 - x1, 0.12, 0.5),
-			Position = Vector3.new((x0 + x1) / 2, floorTop + 0.07, z),
-			Color = GOLD,
-			Material = Enum.Material.Metal,
-		})
+	-- red carpet: spawn -> statue plaza -> Hall of Fame, with gold trim
+	local statueX = L.Statue.X
+	local function carpet(x0, x1)
+		local c = deco({ Size = Vector3.new(x0 - x1, 0.1, 9), Position = Vector3.new((x0 + x1) / 2, floorTop + 0.06, 0), Color = Color3.fromRGB(170, 15, 35), Material = Enum.Material.Fabric })
+		c.Name = "RedCarpet"
+		lobbyTexture(c, "Carpet", Enum.NormalId.Top, 9)
+		for _, z in ipairs({ -4.7, 4.7 }) do
+			deco({ Size = Vector3.new(x0 - x1, 0.12, 0.5), Position = Vector3.new((x0 + x1) / 2, floorTop + 0.07, z), Color = GOLD, Material = Enum.Material.Metal })
+		end
 	end
-	for x = -12, -60, -12 do
-		lamp(Vector3.new(x, floorTop, -5.5))
-		lamp(Vector3.new(x, floorTop, 5.5))
+	carpet(-4, statueX + 19)
+	carpet(statueX - 19, L.WallX + 6)
+	-- round carpet plaza around the statue
+	pillar(Vector3.new(statueX, floorTop + 0.05, 0), 0.08, 40, GOLD, Enum.Material.Metal)
+	local plaza = pillar(Vector3.new(statueX, floorTop + 0.07, 0), 0.08, 38, Color3.fromRGB(170, 15, 35), Enum.Material.Fabric)
+	lobbyTexture(plaza, "Carpet", Enum.NormalId.Right, 9)
+	statue(Vector3.new(statueX, floorTop, 0))
+
+	-- lamp posts along the carpet
+	for x = -14, statueX + 24, -12 do
+		lamp(Vector3.new(x, floorTop, -7))
+		lamp(Vector3.new(x, floorTop, 7))
+	end
+	for x = statueX - 26, L.WallX + 28, -12 do -- stops before the podium
+		lamp(Vector3.new(x, floorTop, -7))
+		lamp(Vector3.new(x, floorTop, 7))
 	end
 
-	-- twin fountains
-	fountain(Vector3.new(-20, floorTop, -18))
-	fountain(Vector3.new(-20, floorTop, 18))
+	-- twin fountains, grand entrance arch, chandeliers
+	fountain(Vector3.new(-30, floorTop, -26))
+	fountain(Vector3.new(-30, floorTop, 26))
+	gate(-10, floorTop, 12, { GOLD, MARBLE }, Enum.Material.Metal)
+	chandelier(Vector3.new(-40, floorTop + 30, 0))
+	chandelier(Vector3.new(statueX, floorTop + 52, 0))
+	chandelier(Vector3.new(L.WallX + 25, floorTop + 30, 0))
 
-	-- grand entrance arch over the carpet (gold + white)
-	gate(-8, floorTop, 9, { GOLD, MARBLE }, Enum.Material.Metal)
+	-- marble colonnade around the edge (open at the spawn entrance and behind the Hall of Fame)
+	for deg = 0, 359, 18 do
+		local a = math.rad(deg)
+		local fromEast = math.abs(((deg + 180) % 360) - 180)
+		if fromEast > 26 and fromEast < 158 then
+			local base = Vector3.new(lobby.X + math.cos(a) * (R - 9), floorTop, lobby.Z + math.sin(a) * (R - 9))
+			column(base, 18)
+		end
+	end
+	-- topiary trees in gold pots
+	for _, deg in ipairs({ 40, 140, 220, 320 }) do
+		local a = math.rad(deg)
+		topiary(Vector3.new(lobby.X + math.cos(a) * (R - 22), floorTop, lobby.Z + math.sin(a) * (R - 22)))
+	end
+	-- green trees just outside the colonnade
+	for deg = 9, 359, 36 do
+		local a = math.rad(deg)
+		local fromEast = math.abs(((deg + 180) % 360) - 180)
+		if fromEast > 30 then
+			tree(Vector3.new(lobby.X + math.cos(a) * (R - 3), floorTop - 0.1, lobby.Z + math.sin(a) * (R - 3)))
+		end
+	end
 
 	-- gold frame around the Hall of Fame wall
 	for _, z in ipairs({ -27.5, 27.5 }) do
-		pillar(Vector3.new(-85, floorTop + 16, z), 32, 2.6, GOLD, Enum.Material.Metal)
-		ball(Vector3.new(-85, floorTop + 33, z), 3, Color3.fromRGB(255, 235, 150), Enum.Material.Neon)
+		pillar(Vector3.new(L.WallX - 1, floorTop + 16, z), 32, 2.6, GOLD, Enum.Material.Metal)
+		ball(Vector3.new(L.WallX - 1, floorTop + 33, z), 3, Color3.fromRGB(255, 235, 150), Enum.Material.Neon)
 	end
-	deco({ Size = Vector3.new(2.6, 1.2, 55), Position = Vector3.new(-85, floorTop + 30.3, 0), Color = GOLD, Material = Enum.Material.Neon })
+	deco({ Size = Vector3.new(2.6, 1.2, 55), Position = Vector3.new(L.WallX - 1, floorTop + 30.3, 0), Color = GOLD, Material = Enum.Material.Neon })
 end
 
 ---------------------------------------------------------------- per-world scenery
@@ -505,7 +659,11 @@ end
 
 -- Greedy Gary, the villain: a giant goblin with a top hat, monocle and a sack of stolen coins.
 -- His speech bubble (tag "GaryTaunt") is updated by Villain.server.
-local function gary(position, scale, facing)
+local function gary(position, scale, facing, gold)
+	local before = {}
+	for _, child in ipairs(folder:GetChildren()) do
+		before[child] = true
+	end
 	local cf = CFrame.lookAt(position, position + facing)
 	local function at(x, y, z)
 		return (cf * CFrame.new(x * scale, y * scale, -z * scale)).Position
@@ -559,7 +717,36 @@ local function gary(position, scale, facing)
 	padding.Parent = bubble
 	gui.Parent = anchor
 	game:GetService("CollectionService"):AddTag(gui, "GaryTaunt")
+	-- Statue version: everything solid polished gold (except his pupils, so he still stares at you).
+	if gold then
+		for _, child in ipairs(folder:GetChildren()) do
+			if not before[child] and child:IsA("BasePart") and child.Transparency < 1 then
+				if child.Color ~= Color3.new(0, 0, 0) then
+					child.Color = GOLD
+					child.Material = Enum.Material.Foil
+					child.Transparency = 0
+				end
+				child.CastShadow = true
+			end
+		end
+		local shine = deco({ Size = Vector3.one, Position = at(0, 10, 4), Transparency = 1 })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 220, 120)
+		light.Range = 30
+		light.Brightness = 2
+		light.Parent = shine
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120))
+		sparkle.LightEmission = 1
+		sparkle.Rate = 12
+		sparkle.Lifetime = NumberRange.new(1, 2)
+		sparkle.Speed = NumberRange.new(2, 5)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.Size = NumberSequence.new(0.6, 0)
+		sparkle.Parent = shine
+	end
 end
+garyModel = gary
 
 -- opts: { Stages, Spacing, BaseY, Zones (Config.Zones), ZoneIndex = function(stage), HubCenter, HubDiameter }
 function Scenery.Build(opts)
@@ -582,18 +769,12 @@ function Scenery.Build(opts)
 		end
 	end
 
-	-- Spawn plaza: a big island with room for the Hall of Fame wall, podium, portal and NPCs.
-	local LOBBY = Vector3.new(-44, 0, 0)
-	island(LOBBY, baseY - 0.55, 100, 1, true)
+	-- Spawn plaza: a big luxury island with the Hall of Fame, golden Gary statue, portals and NPCs.
+	local LOBBY = Config.Lobby.Center
+	island(LOBBY, baseY - 0.55, Config.Lobby.Diameter, 1, true)
 	luxuryLobby(LOBBY, baseY)
-	for _, offset in ipairs({
-		Vector3.new(-14, 0, -42), Vector3.new(-14, 0, 42), Vector3.new(-40, 0, -46), Vector3.new(-40, 0, 46),
-		Vector3.new(-64, 0, -40), Vector3.new(-64, 0, 40), Vector3.new(-2, 0, -28), Vector3.new(-2, 0, 28),
-	}) do
-		tree(Vector3.new(offset.X, padTop - 0.6, offset.Z))
-	end
 	-- Title sign above the Hall of Fame wall.
-	sign(Vector3.new(-85.5, baseY + 36, 0), Vector3.new(1, 0, 0), Vector3.new(52, 11, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  CO-OP", Color3.fromRGB(255, 215, 60))
+	sign(Vector3.new(Config.Lobby.WallX - 1.5, baseY + 36, 0), Vector3.new(1, 0, 0), Vector3.new(52, 11, 1), "ESCAPE GREEDY GARY!", opts.Stages .. " STORY STAGES  •  1000-STAGE OP TOWER  •  OBBY RACE", Color3.fromRGB(255, 215, 60))
 
 	-- Everything built so far (lobby, checkpoint islands) survives the plaza cleanup below.
 	for _, p in ipairs(folder:GetChildren()) do
@@ -625,8 +806,8 @@ function Scenery.Build(opts)
 
 	-- Keep the spawn plaza clear of world decoration.
 	for _, p in ipairs(folder:GetChildren()) do
-		local offset = p.Position - Vector3.new(LOBBY.X, baseY, 0)
-		if Vector2.new(offset.X, offset.Z).Magnitude < 62 and offset.Y > -40 and offset.Y < 60 and not p:GetAttribute("Keep") then
+		local offset = p.Position - Vector3.new(LOBBY.X, baseY, LOBBY.Z)
+		if Vector2.new(offset.X, offset.Z).Magnitude < Config.Lobby.Diameter / 2 + 12 and offset.Y > -40 and offset.Y < 60 and not p:GetAttribute("Keep") then
 			p:Destroy()
 		end
 	end
@@ -653,8 +834,7 @@ function Scenery.Build(opts)
 		placeLandmark("Space", Vector3.new(((zones[3].FirstStage - 1) + 8) * spacing, baseY + 40, -170), 160, 0)
 	end
 
-	-- Greedy Gary looms over the lobby, the hub and the finish.
-	gary(Vector3.new(-128, baseY - 10, 0), 2.8, Vector3.new(1, 0, 0))
+	-- Greedy Gary looms over the hub and the finish (the lobby has his golden statue).
 	if opts.HubCenter then
 		gary(opts.HubCenter + Vector3.new(0, 30, -36), 1.6, Vector3.new(0, 0, 1))
 	end

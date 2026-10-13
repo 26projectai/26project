@@ -93,6 +93,13 @@ Assets.Portals = {
 	Lair = "rbxassetid://140172290427373", -- art/portal-lair.png
 }
 
+-- Luxury lobby textures (art/lobby-*.png). "rbxassetid://0" = plain materials.
+Assets.Lobby = {
+	Marble = "rbxassetid://0", -- art/lobby-marble.png (floor)
+	Carpet = "rbxassetid://0", -- art/lobby-carpet.png (red carpet)
+	Wall = "rbxassetid://0", -- art/lobby-wall.png (Hall of Fame wall)
+}
+
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
 Assets.ItemIcons = {
 	RainbowTrail = "rbxassetid://0", -- art/item-rainbow-trail.png

@@ -134,7 +134,7 @@ local function safeZones()
 	local checkpoints = workspace:FindFirstChild("Checkpoints")
 	local first = checkpoints and checkpoints:FindFirstChild("1")
 	if first then
-		table.insert(zones, { Center = first.Position + Vector3.new(-44, 0, 0), Radius = 50 })
+		table.insert(zones, { Center = first.Position + Config.Lobby.Center, Radius = Config.Lobby.Diameter / 2 })
 	end
 	local hub = checkpoints and checkpoints:FindFirstChild(tostring(Config.HubStage or 50))
 	if hub then
