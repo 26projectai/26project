@@ -61,7 +61,7 @@ Assets.Images = {
 	Coin = "rbxassetid://0", -- art/ui-coin.png
 	ShopButton = "rbxassetid://78535308849443", -- art/ui-shop-button.png
 	Daily = "rbxassetid://0", -- art/ui-daily.png
-	Invite = "rbxassetid://0", -- art/ui-invite.png
+	Invite = "rbxassetid://83139416788872", -- art/ui-invite.png
 	Skip = "rbxassetid://95334950428606", -- art/ui-skip.png
 	Trophy = "rbxassetid://0", -- art/ui-trophy.png
 	Music = "rbxassetid://89477635125268", -- art/ui-music.png
@@ -129,9 +129,9 @@ Assets.Lobby = {
 
 -- Hotbar icons for the tools (art/tool-*.png).
 Assets.ToolIcons = {
-	GrappleHook = "rbxassetid://0",
+	GrappleHook = "rbxassetid://108869315186286",
 	SlapHand = "rbxassetid://118507889403725",
-	GravityCoil = "rbxassetid://0",
+	GravityCoil = "rbxassetid://121185240046291",
 	SpeedCoil = "rbxassetid://77078335933450",
 	RocketLauncher = "rbxassetid://98708922517254",
 }
