@@ -37,4 +37,21 @@ function Sfx.Play(name, pitch)
 	end)
 end
 
+-- Preload every sound once, so the first coin/checkpoint sound plays instantly (not late or silent).
+task.spawn(function()
+	local list = {}
+	for name, id in pairs(Config.Sounds) do
+		if Config.HasAsset(id) then
+			local template = Instance.new("Sound")
+			template.SoundId = id
+			template.SoundGroup = group
+			cache[name] = template
+			table.insert(list, template)
+		end
+	end
+	pcall(function()
+		game:GetService("ContentProvider"):PreloadAsync(list)
+	end)
+end)
+
 return Sfx

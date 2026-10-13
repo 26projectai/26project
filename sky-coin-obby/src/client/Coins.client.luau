@@ -1,4 +1,5 @@
 -- Spins + bobs coins locally, and hides coins you've collected until they respawn for you.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -10,9 +11,20 @@ local Sfx = require(Shared:WaitForChild("Sfx"))
 local coinsFolder = workspace:WaitForChild("Coins")
 local baseCFrames = {} -- [coin] = original CFrame
 
+local player = Players.LocalPlayer
+local predicted = {} -- [coin] = os.clock() when we played the effects locally
+local collectLocally -- defined below (needs setVisible + burst)
+
 local function track(part)
 	if part:IsA("BasePart") then
 		baseCFrames[part] = part.CFrame
+		-- Play the sound the instant YOUR character touches a coin (no waiting for the server).
+		part.Touched:Connect(function(hit)
+			local character = player.Character
+			if character and hit:IsDescendantOf(character) and collectLocally then
+				collectLocally(part)
+			end
+		end)
 	end
 end
 
@@ -71,21 +83,47 @@ local function burst(position)
 	end)
 end
 
--- Grabbing coins quickly in a row raises the pitch, like a combo.
+-- Grabbing coins quickly in a row raises the pitch a little, like a combo.
 local combo, lastCoin = 0, 0
 
-Remotes.CoinCollected.OnClientEvent:Connect(function(coin, respawnSeconds)
-	if not coin or not coin.Parent then
-		return
+local function ding(position)
+	if position then
+		burst(position)
 	end
-	burst(coin.Position)
-	combo = os.clock() - lastCoin < 1.5 and math.min(combo + 1, 8) or 0
+	combo = os.clock() - lastCoin < 1.2 and math.min(combo + 1, 5) or 0
 	lastCoin = os.clock()
-	Sfx.Play("Coin", 1 + combo * 0.06)
+	Sfx.Play("Coin", 1 + combo * 0.05)
+end
+
+local function hideUntilRespawn(coin, seconds)
 	setVisible(coin, false)
-	task.delay(respawnSeconds, function()
+	task.delay(seconds, function()
 		if coin.Parent then
 			setVisible(coin, true)
+			predicted[coin] = nil
 		end
 	end)
+end
+
+function collectLocally(coin)
+	if predicted[coin] then
+		return -- already grabbed (and hidden) on this device
+	end
+	predicted[coin] = os.clock()
+	ding(coin.Position)
+	hideUntilRespawn(coin, Config.CoinRespawnSeconds)
+end
+
+Remotes.CoinCollected.OnClientEvent:Connect(function(coin, respawnSeconds)
+	-- Coin Rain coins (and coins streamed out of view) arrive as nil: still play the sound.
+	if not coin or not coin.Parent then
+		ding(nil)
+		return
+	end
+	if predicted[coin] and os.clock() - predicted[coin] < 3 then
+		return -- we already played it the moment you touched it
+	end
+	predicted[coin] = os.clock()
+	ding(coin.Position)
+	hideUntilRespawn(coin, respawnSeconds or Config.CoinRespawnSeconds)
 end)
