@@ -27,7 +27,11 @@ local function makeDeadly(part)
 	end
 	deadly[part] = true
 	part.Touched:Connect(function(hit)
-		local humanoid = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+		-- Only real players die (luxury NPCs and statues are never killed by lava).
+		if not Players:GetPlayerFromCharacter(hit.Parent) then
+			return
+		end
+		local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.Health > 0 then
 			humanoid.Health = 0
 		end

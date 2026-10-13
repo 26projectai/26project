@@ -3357,7 +3357,8 @@ local function decorate(model, npcType)
 	gui.Parent = head
 end
 
-local function spawnNPC(npcType, area)
+local spawnNPC
+function spawnNPC(npcType, area)
 	local description = Instance.new("HumanoidDescription")
 	description.HeadColor = Color3.fromRGB(255, 220, 180)
 	description.LeftArmColor = npcType.Suit
@@ -3375,6 +3376,18 @@ local function spawnNPC(npcType, area)
 	local root = model:FindFirstChild("HumanoidRootPart")
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.WalkSpeed = 7
+	humanoid.BreakJointsOnDeath = false -- never scatter body pieces on the floor
+	humanoid.MaxHealth = math.huge
+	humanoid.Health = math.huge
+	-- If one ever does die (fell out of the world, etc.), clean it up and send a fresh one.
+	humanoid.Died:Connect(function()
+		task.delay(1, function()
+			model:Destroy()
+		end)
+		task.delay(4, function()
+			spawnNPC(npcType, area)
+		end)
+	end)
 	decorate(model, npcType)
 	model:PivotTo(CFrame.new(area.Center + Vector3.new(math.random(-6, 6), 4, math.random(-6, 6))))
 	model.Parent = workspace
@@ -3424,8 +3437,9 @@ local function spawnNPC(npcType, area)
 			end
 			conn:Disconnect()
 			task.wait(math.random(1, 4))
-			-- Safety: if it ever wanders off the island, put it back.
-			if root.Position.Y < area.Center.Y - 20 then
+			-- Safety: if it ever wanders off the island (or gets knocked away), put it back.
+			local offset = root.Position - area.Center
+			if offset.Y < -20 or Vector2.new(offset.X, offset.Z).Magnitude > area.Radius + 25 then
 				model:PivotTo(CFrame.new(area.Center + Vector3.new(0, 4, 0)))
 			end
 		end
@@ -4560,7 +4574,11 @@ local function makeDeadly(part)
 	end
 	deadly[part] = true
 	part.Touched:Connect(function(hit)
-		local humanoid = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+		-- Only real players die (luxury NPCs and statues are never killed by lava).
+		if not Players:GetPlayerFromCharacter(hit.Parent) then
+			return
+		end
+		local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.Health > 0 then
 			humanoid.Health = 0
 		end
