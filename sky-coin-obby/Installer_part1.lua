@@ -2464,15 +2464,21 @@ do
 end
 
 ---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
-require(script.Parent:WaitForChild("Scenery")).Build({
-	Stages = STAGES,
-	Spacing = SPACING,
-	BaseY = BASE_Y,
-	Zones = Config.Zones,
-	ZoneIndex = zoneIndex,
-	HubCenter = HUB_CENTER,
-	HubDiameter = HUB_DIAMETER,
-})
+-- pcall: a decoration error must never stop the course itself from appearing below.
+local sceneryOk, sceneryErr = pcall(function()
+	require(script.Parent:WaitForChild("Scenery")).Build({
+		Stages = STAGES,
+		Spacing = SPACING,
+		BaseY = BASE_Y,
+		Zones = Config.Zones,
+		ZoneIndex = zoneIndex,
+		HubCenter = HUB_CENTER,
+		HubDiameter = HUB_DIAMETER,
+	})
+end)
+if not sceneryOk then
+	warn("[CourseBuilder] Scenery failed (the course still loads): " .. tostring(sceneryErr))
+end
 
 course.Parent = workspace
 killParts.Parent = workspace
@@ -6306,27 +6312,41 @@ local function statue(base)
 
 	local storage = game:GetService("ServerStorage"):FindFirstChild("Landmarks")
 	local template = storage and storage:FindFirstChild("GaryStatue")
+	local placed = false
 	if template then
-		local model = template:Clone()
-		if model:IsA("BasePart") then
-			local wrapper = Instance.new("Model")
-			model.Parent = wrapper
-			model = wrapper
-		end
-		for _, d in ipairs(model:GetDescendants()) do
-			if d:IsA("BasePart") then
-				d.Anchored, d.CanCollide, d.CanTouch, d.CanQuery = true, false, false, false
+		-- pcall: an oddly-shaped import must never stop the rest of the lobby from building.
+		local ok, err = pcall(function()
+			local model = template:Clone()
+			if not model:IsA("Model") then
+				local wrapper = Instance.new("Model")
+				model.Parent = wrapper
+				model = wrapper
 			end
+			local parts = 0
+			for _, d in ipairs(model:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.Anchored, d.CanCollide, d.CanTouch, d.CanQuery = true, false, false, false
+					parts += 1
+				end
+			end
+			if parts == 0 then
+				error("GaryStatue has no parts")
+			end
+			local _, size = model:GetBoundingBox()
+			if size.Y > 0 then
+				model:ScaleTo(model:GetScale() * 38 / size.Y)
+			end
+			model:PivotTo(CFrame.lookAt(top, top + Vector3.new(1, 0, 0)))
+			local cf, newSize = model:GetBoundingBox()
+			model:PivotTo(model:GetPivot() + Vector3.new(top.X - cf.Position.X, top.Y - (cf.Position.Y - newSize.Y / 2), top.Z - cf.Position.Z))
+			model.Parent = folder
+		end)
+		placed = ok
+		if not ok then
+			warn("[Scenery] Couldn't place the 3D GaryStatue, using the gold-block Gary instead: " .. tostring(err))
 		end
-		local _, size = model:GetBoundingBox()
-		if size.Y > 0 then
-			model:ScaleTo(model:GetScale() * 38 / size.Y)
-		end
-		model:PivotTo(CFrame.lookAt(top, top + Vector3.new(1, 0, 0)))
-		local cf, newSize = model:GetBoundingBox()
-		model:PivotTo(model:GetPivot() + Vector3.new(top.X - cf.Position.X, top.Y - (cf.Position.Y - newSize.Y / 2), top.Z - cf.Position.Z))
-		model.Parent = folder
-	else
+	end
+	if not placed then
 		garyModel(top, 2, Vector3.new(1, 0, 0), true)
 	end
 end
@@ -6759,6 +6779,7 @@ garyModel = gary
 function Scenery.Build(opts)
 	folder = Instance.new("Folder")
 	folder.Name = "Scenery"
+	folder.Parent = workspace -- parent first, so even a half-finished build (after an error) is walkable
 
 	local spacing, baseY = opts.Spacing, opts.BaseY
 	local padTop = baseY + 0.5

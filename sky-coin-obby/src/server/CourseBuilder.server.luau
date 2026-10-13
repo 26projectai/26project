@@ -992,15 +992,21 @@ do
 end
 
 ---------------------------------------------------------------- Scenery (islands, worlds, gates, trophy)
-require(script.Parent:WaitForChild("Scenery")).Build({
-	Stages = STAGES,
-	Spacing = SPACING,
-	BaseY = BASE_Y,
-	Zones = Config.Zones,
-	ZoneIndex = zoneIndex,
-	HubCenter = HUB_CENTER,
-	HubDiameter = HUB_DIAMETER,
-})
+-- pcall: a decoration error must never stop the course itself from appearing below.
+local sceneryOk, sceneryErr = pcall(function()
+	require(script.Parent:WaitForChild("Scenery")).Build({
+		Stages = STAGES,
+		Spacing = SPACING,
+		BaseY = BASE_Y,
+		Zones = Config.Zones,
+		ZoneIndex = zoneIndex,
+		HubCenter = HUB_CENTER,
+		HubDiameter = HUB_DIAMETER,
+	})
+end)
+if not sceneryOk then
+	warn("[CourseBuilder] Scenery failed (the course still loads): " .. tostring(sceneryErr))
+end
 
 course.Parent = workspace
 killParts.Parent = workspace
