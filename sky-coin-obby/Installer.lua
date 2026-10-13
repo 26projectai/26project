@@ -71,6 +71,9 @@ Assets.Images = {
 	DrawRare = "rbxassetid://0", -- art/draw-rare.png
 	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
 	Gary = "rbxassetid://0", -- art/gary.png (jumpscare)
+	Teleport = "rbxassetid://0", -- art/icon-teleport.png
+	Rebirth = "rbxassetid://0", -- art/icon-rebirth.png
+	Race = "rbxassetid://0", -- art/icon-race.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -122,6 +125,15 @@ Assets.Lobby = {
 	Marble = "rbxassetid://0", -- art/lobby-marble.png (floor)
 	Carpet = "rbxassetid://0", -- art/lobby-carpet.png (red carpet)
 	Wall = "rbxassetid://0", -- art/lobby-wall.png (Hall of Fame wall)
+}
+
+-- Hotbar icons for the tools (art/tool-*.png).
+Assets.ToolIcons = {
+	GrappleHook = "rbxassetid://0",
+	SlapHand = "rbxassetid://0",
+	GravityCoil = "rbxassetid://0",
+	SpeedCoil = "rbxassetid://0",
+	RocketLauncher = "rbxassetid://0",
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.
@@ -344,6 +356,7 @@ Config.Skyboxes = Assets.Skyboxes or {}
 Config.Floors = Assets.Floors or {}
 Config.Portals = Assets.Portals or {}
 Config.LobbyArt = Assets.Lobby or {}
+Config.ToolIcons = Assets.ToolIcons or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35
@@ -936,6 +949,16 @@ local TOOLS = {
 		Material = Enum.Material.SmoothPlastic,
 	}),
 }
+-- Hotbar pictures (Assets.ToolIcons), if the ids have been set.
+do
+	local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+	for key, tool in pairs(TOOLS) do
+		local id = (Config.ToolIcons or {})[key]
+		if Config.HasAsset(id) then
+			tool.TextureId = id
+		end
+	end
+end
 local FREE_TOOLS = { "GrappleHook", "SlapHand" }
 
 local function giveTool(player, key)
@@ -8207,6 +8230,19 @@ local function hudPanel(order, width, iconId, iconColor, iconText, textColor)
 end
 
 local coinPanel, coinLabel = hudPanel(1, 150, Config.Images.Coin, COLORS.Gold, "$", COLORS.Gold)
+-- Green "+" on the coin counter: opens the PASSES window (2x Coins, VIP, ...).
+local coinPlus = make("TextButton", {
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -6, 0.5, 0),
+	Size = UDim2.fromOffset(30, 30),
+	BackgroundColor3 = COLORS.Green,
+	Font = FONT,
+	Text = "+",
+	TextScaled = true,
+	TextColor3 = COLORS.Text,
+	ZIndex = 4,
+	Parent = coinPanel,
+}, { corner(999), stroke(2) })
 local stagePanel, stageLabel = hudPanel(2, 150)
 -- Click the stage counter to open STAGE SELECT.
 local stageClick = make("TextButton", {
@@ -8299,25 +8335,26 @@ end
 
 ---------------------------------------------------------------- Side buttons (left)
 local sideBar = make("Frame", {
-	-- Pinned to the bottom-left, so the last button (MUSIC) can never fall off the screen.
+	-- Pinned to the bottom-left in a 2-column grid of big icon tiles.
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 12, 1, -10),
-	Size = UDim2.fromOffset(84, 540),
+	Position = UDim2.new(0, 10, 1, -10),
+	Size = UDim2.fromOffset(176, 460),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
-	make("UIListLayout", {
-		Padding = UDim.new(0, 8),
+	make("UIGridLayout", {
+		CellSize = UDim2.fromOffset(84, 84),
+		CellPadding = UDim2.fromOffset(8, 8),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		VerticalAlignment = Enum.VerticalAlignment.Bottom,
 	}),
 })
 
--- Shrink the whole column to the space the screen really has (phones, small Studio windows).
+-- Shrink the whole grid to the space the screen really has (phones, small Studio windows).
 do
 	local sideScale = Instance.new("UIScale")
 	sideScale.Parent = sideBar
-	local USED = 5 * 8 + 5 * 84 + 64 -- gaps + five big buttons + the music button
+	local USED = 5 * 84 + 4 * 8 -- five rows of tiles
 	local function fitSideBar()
 		local available = gui.AbsoluteSize.Y - 30
 		if available > 0 then
@@ -8337,7 +8374,7 @@ local function sideButton(order, title, color, iconId, fallbackText, height)
 		AutoButtonColor = true,
 		Parent = sideBar,
 	}, { corner(16), stroke(3) })
-	local iconSize = (height or 84) - 30
+	local iconSize = (height or 84) - 26
 	icon(iconId, COLORS.Panel, fallbackText, {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 4),
@@ -8361,7 +8398,30 @@ local passesButton = sideButton(2, "PASSES", COLORS.Gold, Config.Images.Passes, 
 local dailyButton = sideButton(3, "REWARDS", COLORS.Purple, Config.Images.Rewards or Config.Images.Daily, "!")
 local inviteButton = sideButton(4, "INVITE=3x", COLORS.Green, Config.Images.Invite, "+")
 local skipButton = sideButton(5, "SKIP", COLORS.Orange, Config.Images.Skip, ">>")
-local musicButton = sideButton(6, "MUSIC", COLORS.Blue, Config.Images.Music, "♪", 64)
+local teleportButton = sideButton(6, "TELEPORT", COLORS.Purple, Config.Images.Teleport, "🌀")
+local rebirthButton = sideButton(7, "REBIRTH", COLORS.Pink, Config.Images.Rebirth, "🔁")
+local raceButton = sideButton(8, "RACE", COLORS.Green, Config.Images.Race, "🏁")
+local musicButton = sideButton(9, "MUSIC", COLORS.Blue, Config.Images.Music, "♪")
+
+teleportButton.Activated:Connect(function()
+	player:SetAttribute("StageSelectOpen", not player:GetAttribute("StageSelectOpen"))
+end)
+rebirthButton.Activated:Connect(function()
+	player:SetAttribute("RewardsOpen", not player:GetAttribute("RewardsOpen")) -- rebirth lives in REWARDS
+end)
+-- RACE: walk straight onto the race pad in the lobby.
+raceButton.Activated:Connect(function()
+	local pad = workspace:FindFirstChild("RaceLobby") and workspace.RaceLobby:FindFirstChild("RacePad")
+	local character = player.Character
+	if player:GetAttribute("Racing") then
+		toast("You're already racing!", "bad")
+	elseif state.Mode == "OP" then
+		toast("Leave the OP tower first (LOBBY button), then join a race!", "bad")
+	elseif pad and character then
+		character:PivotTo(CFrame.new(pad.Position + Vector3.new(0, 4, 0)))
+		toast("Stand on the pad to join the next race!", "good")
+	end
+end)
 skipButton.Visible = Config.Products.SkipStage ~= 0
 
 local dailyDot = make("Frame", {
@@ -8889,7 +8949,7 @@ local winDetails = text({
 	ZIndex = 21,
 	Parent = winScreen,
 })
-local raceButton = make("TextButton", {
+local winInviteButton = make("TextButton", {
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -16),
 	Size = UDim2.new(1, -48, 0, 50),
@@ -8901,7 +8961,7 @@ local raceButton = make("TextButton", {
 	ZIndex = 21,
 	Parent = winScreen,
 }, { corner(12), stroke(2), make("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }) })
-raceButton.Activated:Connect(promptInvite)
+winInviteButton.Activated:Connect(promptInvite)
 
 local function confetti()
 	local character = player.Character
@@ -9068,6 +9128,11 @@ TextChatService.OnIncomingMessage = function(message)
 end
 
 passesWindow:GetPropertyChangedSignal("Visible"):Connect(syncHotbar)
+coinPlus.Activated:Connect(function()
+	Sfx.Play("Click")
+	shopWindow.Visible = false
+	passesWindow.Visible = not passesWindow.Visible
+end)
 
 ---------------------------------------------------------------- Fit small screens (phones)
 local hudScale = make("UIScale", { Parent = hud })
@@ -9380,7 +9445,7 @@ end)
 ---------------------------------------------------------------- Fast reset (R / button)
 local resetButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 110, 1, -16),
+	Position = UDim2.new(0, 200, 1, -16),
 	Size = UDim2.fromOffset(110, 40),
 	BackgroundColor3 = COLORS.Red,
 	Text = "RESET (R)",
@@ -9400,7 +9465,7 @@ end)
 ---------------------------------------------------------------- Co-op tether
 local untetherButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 230, 1, -16),
+	Position = UDim2.new(0, 320, 1, -16),
 	Size = UDim2.fromOffset(190, 40),
 	BackgroundColor3 = COLORS.Pink,
 	Text = "",
@@ -9436,7 +9501,7 @@ end
 -- Out on the course it says LOBBY; in the lobby the same button says BACK TO STAGE.
 local lobbyButton = button({
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0, 110, 1, -62),
+	Position = UDim2.new(0, 200, 1, -62),
 	Size = UDim2.fromOffset(150, 40),
 	BackgroundColor3 = COLORS.Blue,
 	Text = "🏠 LOBBY (L)",

@@ -198,6 +198,7 @@ Config.Skyboxes = Assets.Skyboxes or {}
 Config.Floors = Assets.Floors or {}
 Config.Portals = Assets.Portals or {}
 Config.LobbyArt = Assets.Lobby or {}
+Config.ToolIcons = Assets.ToolIcons or {}
 Config.VIPMultiplier = 1.5
 
 Config.MusicVolume = 0.35

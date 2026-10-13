@@ -76,6 +76,16 @@ local TOOLS = {
 		Material = Enum.Material.SmoothPlastic,
 	}),
 }
+-- Hotbar pictures (Assets.ToolIcons), if the ids have been set.
+do
+	local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+	for key, tool in pairs(TOOLS) do
+		local id = (Config.ToolIcons or {})[key]
+		if Config.HasAsset(id) then
+			tool.TextureId = id
+		end
+	end
+end
 local FREE_TOOLS = { "GrappleHook", "SlapHand" }
 
 local function giveTool(player, key)

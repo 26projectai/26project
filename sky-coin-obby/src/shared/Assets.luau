@@ -47,6 +47,9 @@ Assets.Images = {
 	DrawRare = "rbxassetid://0", -- art/draw-rare.png
 	DrawLegendary = "rbxassetid://0", -- art/draw-legendary.png
 	Gary = "rbxassetid://0", -- art/gary.png (jumpscare)
+	Teleport = "rbxassetid://0", -- art/icon-teleport.png
+	Rebirth = "rbxassetid://0", -- art/icon-rebirth.png
+	Race = "rbxassetid://0", -- art/icon-race.png
 }
 
 -- Upload the .mp3 files in /audio and paste the ids. "rbxassetid://0" = silent.
@@ -98,6 +101,15 @@ Assets.Lobby = {
 	Marble = "rbxassetid://0", -- art/lobby-marble.png (floor)
 	Carpet = "rbxassetid://0", -- art/lobby-carpet.png (red carpet)
 	Wall = "rbxassetid://0", -- art/lobby-wall.png (Hall of Fame wall)
+}
+
+-- Hotbar icons for the tools (art/tool-*.png).
+Assets.ToolIcons = {
+	GrappleHook = "rbxassetid://0",
+	SlapHand = "rbxassetid://0",
+	GravityCoil = "rbxassetid://0",
+	SpeedCoil = "rbxassetid://0",
+	RocketLauncher = "rbxassetid://0",
 }
 
 -- Shop item icons (art/item-*.png), by item Id from ShopCatalog.

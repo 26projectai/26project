@@ -91,3 +91,26 @@ All of these are also in your Higgsfield account under your generation history.
 | `lobby-carpet.png` | Red velvet + gold damask carpet → `Assets.Lobby.Carpet` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051836_3ea520e1-87cb-471c-b536-40cf9e245241.png) |
 | `lobby-wall.png` | Purple + gold art-deco Hall of Fame wall → `Assets.Lobby.Wall` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051836_c92a8735-a0d2-4ba5-b87e-1c781156df33.png) |
 | `gary-statue.png` | Golden Gary statue concept (source of the 3D model) | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_051837_dcb7ee23-4cd8-4d44-b249-0c26631fb95e.png) |
+
+### Button + tool icons (transparent PNGs). Upload, then send the IDs
+| File | Goes to | Link |
+|---|---|---|
+| `icon-shop.png` | SHOP button → `Assets.Images.ShopButton` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052540_ee44844b-781f-4e85-9842-db1fa87328d0.png) |
+| `icon-passes.png` | PASSES → `Assets.Images.Passes` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052539_324d4e1c-1a64-4b34-8143-2f5968a6d2d6.png) |
+| `icon-rewards.png` | REWARDS → `Assets.Images.Rewards` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052541_51e67455-2b06-4a3c-951d-2b7dc82eb7e6.png) |
+| `icon-invite.png` | INVITE → `Assets.Images.Invite` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052539_add94a82-67a8-4b45-8419-307351b787a2.png) |
+| `icon-skip.png` | SKIP → `Assets.Images.Skip` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052541_aa3e0949-6a67-47ce-9325-ad958c089399.png) |
+| `icon-music.png` | MUSIC → `Assets.Images.Music` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052540_45b4b717-588b-4da4-bdc2-e0d80aa89d97.png) |
+| `icon-teleport.png` | TELEPORT → `Assets.Images.Teleport` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052539_ed1bc4f2-9fc4-4f35-968d-e13c2dada47f.png) |
+| `icon-rebirth.png` | REBIRTH → `Assets.Images.Rebirth` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052539_8a630cd1-1a7d-42af-b6e6-ed064b7ecd6a.png) |
+| `icon-race.png` | RACE → `Assets.Images.Race` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052539_09551d30-1119-406e-be2d-68f3fdf0ceed.png) |
+| `tool-grapple.png` | Grappling Hook → `Assets.ToolIcons.GrappleHook` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052540_a0bfe920-ac63-4ae7-a625-09ba456f1fd5.png) |
+| `tool-slap.png` | Slap Hand → `Assets.ToolIcons.SlapHand` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052540_f416a7a5-b9a7-4f75-b60a-4c0beead531f.png) |
+| `tool-gravity-coil.png` | Gravity Coil → `Assets.ToolIcons.GravityCoil` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052543_b10cc77b-670f-4c14-bdce-429477459358.png) |
+| `tool-speed-coil.png` | Speed Coil → `Assets.ToolIcons.SpeedCoil` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052543_3c00ac0c-41ce-49ca-8829-91d24a3449cc.png) |
+| `tool-rocket.png` | Rocket Launcher → `Assets.ToolIcons.RocketLauncher` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052543_44f87ef6-7235-4c65-989b-e3ce3fe1efca.png) |
+
+### 3D golden Gary statue
+| File | Use | Link |
+|---|---|---|
+| `gary-statue.glb` | File → Import 3D, put in ServerStorage > Landmarks, name it `GaryStatue` | [link](https://d8j0ntlcm91z4.cloudfront.net/user_3Hqo9wliSzMjhk2Oqt75PKZjQan/hf_20261013_052127_db4ad288-4b06-4a65-835d-13c9c7c1912d.glb) |
