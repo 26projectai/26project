@@ -122,9 +122,9 @@ Assets.Portals = {
 
 -- Luxury lobby textures (art/lobby-*.png). "rbxassetid://0" = plain materials.
 Assets.Lobby = {
-	Marble = "rbxassetid://0", -- art/lobby-marble.png (floor)
-	Carpet = "rbxassetid://0", -- art/lobby-carpet.png (red carpet)
-	Wall = "rbxassetid://0", -- art/lobby-wall.png (Hall of Fame wall)
+	Marble = "rbxassetid://122431744080246", -- art/lobby-marble.png (floor)
+	Carpet = "rbxassetid://97588975800351", -- art/lobby-carpet.png (red carpet)
+	Wall = "rbxassetid://118217118561749", -- art/lobby-wall.png (Hall of Fame wall)
 }
 
 -- Hotbar icons for the tools (art/tool-*.png).
